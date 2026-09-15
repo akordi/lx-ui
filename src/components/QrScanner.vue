@@ -377,7 +377,10 @@ const wrapperRef = ref();
       />
       <div
         class="lx-qr-scanner lx-input-wrapper"
-        :class="{ 'lx-disabled': loading, 'lx-invalid': error }"
+        :class="{
+          'lx-disabled': loading,
+          'lx-invalid': error && (selectionKind !== 'multiple' || refreshError),
+        }"
       >
         <Transition name="fade">
           <QrcodeStream
