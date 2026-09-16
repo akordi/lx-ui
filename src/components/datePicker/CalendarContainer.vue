@@ -11,7 +11,6 @@ import {
   getTimeOrderIndex,
   getMonthNameByOrder,
   canSelectDate,
-  canSelectTime,
   isSameDay,
   isSameMonth,
   getSurroundingHours,
@@ -39,6 +38,7 @@ import {
   hasOtherSelectableYear,
   isSingleChoiceKind,
 } from '@/components/datePicker/helpers';
+import { canSelectTime } from '@/components/datePicker/timeValidation';
 import {
   isDateBasedMode,
   getCalendarLayout,
@@ -398,13 +398,9 @@ function isTimeValueSelectable(column, value) {
     value,
     props.minDateRef,
     props.maxDateRef,
-    selectedDay.value,
-    selectedMonth.value,
-    selectedYear.value,
+    { day: selectedDay.value, month: selectedMonth.value, year: selectedYear.value },
+    { hours: selectedHour.value, minutes: selectedMinute.value, seconds: selectedSecond.value },
     timeUnit,
-    selectedHour.value,
-    selectedMinute.value,
-    selectedSecond.value,
     useTimeOnlyValidation
   );
 }
@@ -1309,38 +1305,26 @@ function clearFocusDayRetryTimeout() {
 }
 
 function findFocusableDayInWeeks(weeks, month) {
-  for (let weekIndex = 0; weekIndex < weeks.length; weekIndex += 1) {
-    const week = weeks[weekIndex];
-
-    for (let dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
-      const date = week[dayIndex];
-
-      if (
-        isSameMonth(date, month) &&
-        canSelectDate(date, props.minDateRef, props.maxDateRef, 'date')
-      ) {
-        return date;
-      }
-    }
-  }
-
-  return null;
+  return (
+    weeks
+      .flat()
+      .find(
+        (date) =>
+          isSameMonth(date, month) &&
+          canSelectDate(date, props.minDateRef, props.maxDateRef, 'date')
+      ) ?? null
+  );
 }
 
 function getFirstFocusableVisibleDay() {
-  for (let monthsRowsIdx = 0; monthsRowsIdx < monthsList.value.length; monthsRowsIdx += 1) {
-    const monthsRows = monthsList.value[monthsRowsIdx];
-
-    for (let monthIdx = 0; monthIdx < monthsRows.length; monthIdx += 1) {
-      const month = monthsRows[monthIdx];
-      const weeks = getDaysInMonthGrid(month, props.firstDayOfTheWeek);
-
-      const found = findFocusableDayInWeeks(weeks, month);
-      if (found) return found;
-    }
-  }
-
-  return null;
+  return (
+    monthsList.value
+      .flat()
+      .map((month) =>
+        findFocusableDayInWeeks(getDaysInMonthGrid(month, props.firstDayOfTheWeek), month)
+      )
+      .find((date) => date) ?? null
+  );
 }
 
 function tryFocusDay(targetDate, attempt = 0) {
@@ -1596,6 +1580,13 @@ function setEndDate(date) {
   selectedEndDay.value = date.getDate();
   selectedEndMonth.value = date.getMonth();
   selectedEndYear.value = date.getFullYear();
+}
+
+function resetStartDate() {
+  selectedStartDate.value = null;
+  selectedStartDay.value = null;
+  selectedStartMonth.value = null;
+  selectedStartYear.value = null;
 }
 
 function resetEndDate() {
@@ -2581,8 +2572,8 @@ const isBackwardQuarterRange = (quarterYear, quarterItem, range) => {
 const createQuarterRange = (sMonth, eMonth) => ({
   startYear: Number(selectedStartYear.value),
   endYear: Number(selectedEndYear.value),
-  startQuarter: sMonth !== null ? quarterFromMonth(sMonth) : null,
-  endQuarter: eMonth !== null ? quarterFromMonth(eMonth) : null,
+  startQuarter: sMonth === null ? null : quarterFromMonth(sMonth),
+  endQuarter: eMonth === null ? null : quarterFromMonth(eMonth),
 });
 
 const isSelectedQuarterRange = (quarterYear, quarterItem) => {
@@ -4347,34 +4338,6 @@ function applyRangeAnchor(date) {
   }
 }
 
-function setRangeStart(date) {
-  selectedStartDate.value = date;
-  selectedStartDay.value = date.getDate();
-  selectedStartMonth.value = date.getMonth();
-  selectedStartYear.value = date.getFullYear();
-}
-
-function clearRangeStart() {
-  selectedStartDate.value = null;
-  selectedStartDay.value = null;
-  selectedStartMonth.value = null;
-  selectedStartYear.value = null;
-}
-
-function setRangeEnd(date) {
-  selectedEndDate.value = date;
-  selectedEndDay.value = date.getDate();
-  selectedEndMonth.value = date.getMonth();
-  selectedEndYear.value = date.getFullYear();
-}
-
-function clearRangeEnd() {
-  selectedEndDate.value = null;
-  selectedEndDay.value = null;
-  selectedEndMonth.value = null;
-  selectedEndYear.value = null;
-}
-
 // Validates both quarter ends and frames the quarter decade; true when the value is rejected
 function applyRangeQuarterBounds(newValue) {
   const start = parseQuarter(newValue.start);
@@ -4406,8 +4369,8 @@ function applyRangeBothEnds(newValue) {
 
   applyRangeAnchor(rangeAnchor);
 
-  setRangeStart(newValue.start);
-  setRangeEnd(newValue.end);
+  setStartDate(newValue.start);
+  setEndDate(newValue.end);
 
   applyDecadeWindow(rangeAnchor.getFullYear());
   applyQuarterDecadeWindow(rangeAnchor.getFullYear());
@@ -4430,8 +4393,8 @@ function applyRangeStartOnly(newValue) {
 
   applyRangeAnchor(newValue.start);
 
-  setRangeStart(newValue.start);
-  clearRangeEnd();
+  setStartDate(newValue.start);
+  resetEndDate();
 
   applyDecadeWindow(newValue.start.getFullYear());
 
@@ -4453,8 +4416,8 @@ function applyRangeEndOnly(newValue) {
 
   applyRangeAnchor(newValue.end);
 
-  clearRangeStart();
-  setRangeEnd(newValue.end);
+  resetStartDate();
+  setEndDate(newValue.end);
 
   applyDecadeWindow(newValue.end.getFullYear());
 

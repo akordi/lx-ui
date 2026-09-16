@@ -14,7 +14,7 @@ import {
 } from 'date-fns';
 import useLx from '@/hooks/useLx';
 import { DATE_VALIDATION_RESULT, DAYS_IN_MONTH } from '@/constants';
-import { isDefined, isNil } from '@/utils/generalUtils';
+import { isNil } from '@/utils/generalUtils';
 
 export const constants = {
   MOBILE_SCREEN_WIDTH: 700,
@@ -268,363 +268,6 @@ export const isSameDay = (d1, d2) =>
 export const isSameMonth = (d1, d2) => d1?.getMonth() === d2?.getMonth();
 
 export const isSameYear = (d1, d2) => d1?.getFullYear() === d2?.getFullYear();
-
-export function canSelectTime(
-  hourMinuteOrSecondValue,
-  minDate,
-  maxDate,
-  selectedDay,
-  selectedMonth,
-  selectedYear,
-  timeUnit,
-  selectedHours,
-  selectedMinutes,
-  selectedSeconds,
-  timeOnly
-) {
-  if (isNil(hourMinuteOrSecondValue)) return false;
-
-  // Parse minDate and maxDate if they are strings
-  const minDateParsed = minDate ? new Date(minDate) : null;
-  const maxDateParsed = maxDate ? new Date(maxDate) : null;
-
-  // If timeOnly is true, we ignore date validation and only focus on time validation
-  if (timeOnly) {
-    if (timeUnit === 'hour') {
-      const hour = Number(hourMinuteOrSecondValue);
-
-      const minHour = minDateParsed?.getHours();
-      const minMinute = minDateParsed?.getMinutes();
-      const minSecond = minDateParsed?.getSeconds();
-      const maxHour = maxDateParsed?.getHours();
-      const maxMinute = maxDateParsed?.getMinutes();
-      const maxSecond = maxDateParsed?.getSeconds();
-
-      // If no minutes selected (or no seconds when seconds are needed), validate hour normally
-      if (isNil(selectedMinutes) && isNil(selectedSeconds)) {
-        return !((minDateParsed && hour < minHour) || (maxDateParsed && hour > maxHour));
-      }
-
-      // minutes selected but no seconds
-      if (!isNil(selectedMinutes) && isNil(selectedSeconds)) {
-        if (
-          minDateParsed &&
-          (hour < minHour || (hour === minHour && selectedMinutes < minMinute))
-        ) {
-          return false;
-        }
-        if (
-          maxDateParsed &&
-          (hour > maxHour || (hour === maxHour && selectedMinutes > maxMinute))
-        ) {
-          return false;
-        }
-        return true;
-      }
-
-      // both minutes and seconds selected
-      if (!isNil(selectedMinutes) && !isNil(selectedSeconds)) {
-        if (
-          minDateParsed &&
-          (hour < minHour ||
-            (hour === minHour && selectedMinutes < minMinute) ||
-            (hour === minHour && selectedMinutes === minMinute && selectedSeconds < minSecond))
-        ) {
-          return false;
-        }
-
-        if (
-          maxDateParsed &&
-          (hour > maxHour ||
-            (hour === maxHour && selectedMinutes > maxMinute) ||
-            (hour === maxHour && selectedMinutes === maxMinute && selectedSeconds > maxSecond))
-        ) {
-          return false;
-        }
-        return true;
-      }
-
-      // only seconds selected (no minutes)
-      // keep hours within min/max hour boundaries (don’t unlock everything)
-      if (isNil(selectedMinutes) && !isNil(selectedSeconds)) {
-        return !((minDateParsed && hour < minHour) || (maxDateParsed && hour > maxHour));
-      }
-
-      return true;
-    }
-
-    if (timeUnit === 'minute') {
-      const minute = Number(hourMinuteOrSecondValue);
-
-      const minHour = minDateParsed?.getHours();
-      const minMinute = minDateParsed?.getMinutes();
-      const minSecond = minDateParsed?.getSeconds();
-
-      const maxHour = maxDateParsed?.getHours();
-      const maxMinute = maxDateParsed?.getMinutes();
-      const maxSecond = maxDateParsed?.getSeconds();
-
-      if (isNil(selectedSeconds)) {
-        // If no hour selected — allow all minutes
-        if (isNil(selectedHours)) return true;
-
-        if (
-          minDateParsed &&
-          (selectedHours < minHour || (selectedHours === minHour && minute < minMinute))
-        ) {
-          return false;
-        }
-
-        if (
-          maxDateParsed &&
-          (selectedHours > maxHour || (selectedHours === maxHour && minute > maxMinute))
-        ) {
-          return false;
-        }
-
-        return true;
-      }
-
-      if (!isNil(selectedSeconds)) {
-        // If no hour selected — allow all minutes
-        if (isNil(selectedHours)) return true;
-
-        // Below minDate
-        if (
-          minDateParsed &&
-          (selectedHours < minHour ||
-            (selectedHours === minHour && minute < minMinute) ||
-            (selectedHours === minHour && minute === minMinute && selectedSeconds < minSecond))
-        ) {
-          return false;
-        }
-
-        // Above maxDate
-        if (
-          maxDateParsed &&
-          (selectedHours > maxHour ||
-            (selectedHours === maxHour && minute > maxMinute) ||
-            (selectedHours === maxHour && minute === maxMinute && selectedSeconds > maxSecond))
-        ) {
-          return false;
-        }
-
-        return true;
-      }
-
-      return true;
-    }
-
-    if (timeUnit === 'second') {
-      // If no hours or minutes selected yet, validate seconds normally
-      if (isNil(selectedHours) || isNil(selectedMinutes)) {
-        return true;
-      }
-
-      const second = Number(hourMinuteOrSecondValue);
-
-      const minHour = minDateParsed?.getHours();
-      const minMinute = minDateParsed?.getMinutes();
-      const minSecond = minDateParsed?.getSeconds();
-
-      const maxHour = maxDateParsed?.getHours();
-      const maxMinute = maxDateParsed?.getMinutes();
-      const maxSecond = maxDateParsed?.getSeconds();
-
-      const isAfterMinHours = !minDateParsed || selectedHours > minHour;
-      const isBeforeMaxHours = !maxDateParsed || selectedHours < maxHour;
-
-      if (isAfterMinHours && isBeforeMaxHours) return true;
-
-      if (
-        minDateParsed &&
-        selectedHours === minHour &&
-        selectedMinutes === minMinute &&
-        second < minSecond
-      ) {
-        return false;
-      }
-
-      if (
-        maxDateParsed &&
-        selectedHours === maxHour &&
-        selectedMinutes === maxMinute &&
-        second > maxSecond
-      ) {
-        return false;
-      }
-
-      return !(selectedHours < minHour || selectedHours > maxHour);
-    }
-
-    // Allow any time if timeUnit isn't specified
-    return true;
-  }
-
-  // Regular date and time validation if timeOnly is false
-  // Validate hours
-  if (timeUnit === 'hour') {
-    const hasMinute = selectedMinutes !== null && selectedMinutes !== undefined;
-    const selectedDate = new Date(selectedYear, selectedMonth, selectedDay);
-    const isMinDay = selectedDate?.toDateString() === minDateParsed?.toDateString();
-    const isMaxDay = selectedDate?.toDateString() === maxDateParsed?.toDateString();
-
-    // Validate when minute is selected
-    if (hasMinute && minDateParsed && maxDateParsed) {
-      const sameDay = isMinDay && isMaxDay;
-
-      if (sameDay) {
-        if (
-          selectedMinutes === minDateParsed.getMinutes() ||
-          selectedMinutes === maxDateParsed.getMinutes() ||
-          (selectedMinutes > minDateParsed.getMinutes() &&
-            selectedMinutes < maxDateParsed.getMinutes())
-        ) {
-          return (
-            hourMinuteOrSecondValue >= minDateParsed.getHours() &&
-            hourMinuteOrSecondValue <= maxDateParsed.getHours()
-          );
-        }
-        return false;
-      }
-
-      if (isMinDay && !isMaxDay && selectedMinutes < minDateParsed.getMinutes()) {
-        return hourMinuteOrSecondValue > minDateParsed.getHours();
-      }
-
-      if (!isMinDay && isMaxDay && selectedMinutes > maxDateParsed.getMinutes()) {
-        return hourMinuteOrSecondValue < maxDateParsed.getHours();
-      }
-    }
-
-    // If no minute selected, fall back to basic min/max hour bounds
-    return !(
-      (isMinDay && hourMinuteOrSecondValue < minDateParsed?.getHours()) ||
-      (isMaxDay && hourMinuteOrSecondValue > maxDateParsed?.getHours())
-    );
-  }
-
-  // Validate minutes
-  if (timeUnit === 'minute') {
-    if (selectedYear == null || selectedMonth == null || selectedDay == null) {
-      return true;
-    }
-
-    const minute = Number(hourMinuteOrSecondValue);
-
-    if (isNil(selectedHours)) return true;
-
-    const current = new Date(
-      selectedYear,
-      selectedMonth,
-      selectedDay,
-      selectedHours,
-      minute,
-      isNil(selectedSeconds) ? 0 : selectedSeconds
-    );
-
-    return !(
-      (minDateParsed && current < minDateParsed) ||
-      (maxDateParsed && current > maxDateParsed)
-    );
-  }
-
-  // Validate seconds
-  if (timeUnit === 'second') {
-    const hasHour = isDefined(selectedHours);
-    const hasMinute = isDefined(selectedMinutes);
-
-    const isMinDay = isSameDay(new Date(selectedYear, selectedMonth, selectedDay), minDateParsed);
-    const isMaxDay = isSameDay(new Date(selectedYear, selectedMonth, selectedDay), maxDateParsed);
-
-    if (hasHour && hasMinute) {
-      // If same day
-      if (isMinDay && isMaxDay) {
-        if (selectedHours > minDateParsed.getHours() && selectedHours < maxDateParsed.getHours()) {
-          return true;
-        }
-
-        if (
-          selectedHours === minDateParsed.getHours() &&
-          selectedMinutes > minDateParsed.getMinutes() &&
-          selectedHours < maxDateParsed.getHours()
-        ) {
-          return true;
-        }
-
-        if (
-          selectedHours === maxDateParsed.getHours() &&
-          selectedMinutes < maxDateParsed.getMinutes() &&
-          selectedHours > minDateParsed.getHours()
-        ) {
-          return true;
-        }
-
-        // On min hour and min minute
-        if (
-          selectedHours === minDateParsed.getHours() &&
-          selectedMinutes === minDateParsed.getMinutes()
-        ) {
-          return hourMinuteOrSecondValue >= minDateParsed.getSeconds();
-        }
-
-        // On max hour and max minute
-        if (
-          selectedHours === maxDateParsed.getHours() &&
-          selectedMinutes === maxDateParsed.getMinutes()
-        ) {
-          return hourMinuteOrSecondValue <= maxDateParsed.getSeconds();
-        }
-
-        // Between min/max hour/minute
-        return (
-          selectedHours >= minDateParsed.getHours() &&
-          selectedHours <= maxDateParsed.getHours() &&
-          selectedMinutes >= minDateParsed.getMinutes() &&
-          selectedMinutes <= maxDateParsed.getMinutes() &&
-          hourMinuteOrSecondValue >= minDateParsed.getSeconds() &&
-          hourMinuteOrSecondValue <= maxDateParsed.getSeconds()
-        );
-      }
-
-      // Only minDate limit
-      if (isMinDay) {
-        if (
-          selectedHours === minDateParsed.getHours() &&
-          selectedMinutes === minDateParsed.getMinutes()
-        ) {
-          return hourMinuteOrSecondValue >= minDateParsed.getSeconds();
-        }
-        return (
-          selectedHours > minDateParsed.getHours() ||
-          (selectedHours === minDateParsed.getHours() &&
-            selectedMinutes > minDateParsed.getMinutes())
-        );
-      }
-
-      // Only maxDate limit
-      if (isMaxDay) {
-        if (
-          selectedHours === maxDateParsed.getHours() &&
-          selectedMinutes === maxDateParsed.getMinutes()
-        ) {
-          return hourMinuteOrSecondValue <= maxDateParsed.getSeconds();
-        }
-        return (
-          selectedHours < maxDateParsed.getHours() ||
-          (selectedHours === maxDateParsed.getHours() &&
-            selectedMinutes < maxDateParsed.getMinutes())
-        );
-      }
-    }
-
-    // If no hour or minute selected, allow all seconds
-    return true;
-  }
-
-  // Allow everything if no unit is specified
-  return true;
-}
 
 export function getSurroundingHours(arr, centerValue, isMobileScreen) {
   if (!arr.length) return [];
@@ -970,7 +613,7 @@ export function formatInputRawTimeFull(mask, newValue) {
 
 // The formatDate function remains unchanged
 function formatDate(value, mask) {
-  const cleanValue = value.replace(/[^\d]/g, ''); // Strip all non-numeric characters
+  const cleanValue = value.replaceAll(/[^\d]/g, ''); // Strip all non-numeric characters
   const maskParts = mask.split(/[^a-zA-Z]/); // Extract parts like "dd", "MM", "yyyy", "HH", "mm"
   const delimiters = mask.match(/[^a-zA-Z]/g) || []; // Extract delimiters like dots, colons, spaces
 
@@ -1098,74 +741,6 @@ export function getQuarterStringFromDate(date) {
   return `${year}-Q${quarter}`;
 }
 
-const isDefaultOrPickerVariant = (variant) => variant === 'default' || variant === 'picker';
-
-const isFullRowsColumnsOrRange = (variant, pickerType) =>
-  variant === 'full-rows' || variant === 'full-columns' || pickerType === 'range';
-const isTailWeek = (weekIndex, totalWeeks) =>
-  weekIndex === totalWeeks - 1 || weekIndex === totalWeeks - 2;
-const isFocusableOtherMonthDay = (
-  monthIndex,
-  monthsCount,
-  weekIndex,
-  totalWeeks,
-  variant,
-  pickerType
-) => {
-  if (monthIndex === 0 && weekIndex === 0) return true;
-
-  if (monthsCount === 1 && isDefaultOrPickerVariant(variant) && isTailWeek(weekIndex, totalWeeks)) {
-    return true;
-  }
-
-  if (monthIndex === 3 && variant === 'full' && isTailWeek(weekIndex, totalWeeks)) {
-    return true;
-  }
-
-  if (
-    monthIndex === 1 &&
-    isFullRowsColumnsOrRange(variant, pickerType) &&
-    isTailWeek(weekIndex, totalWeeks)
-  ) {
-    return true;
-  }
-
-  return false;
-};
-
-export const getDayTabIndex = (
-  date,
-  month,
-  weekIndex,
-  firstDayOfTheWeek,
-  monthsList,
-  variant,
-  pickerType,
-  minDateRef,
-  maxDateRef
-) => {
-  const selectable = canSelectDate(date, minDateRef, maxDateRef);
-  if (!selectable) return '-1';
-
-  if (isSameMonth(date, month)) return '0';
-
-  const flattenedMonths = monthsList.flat();
-  const monthIndex = flattenedMonths.indexOf(month);
-  const monthsCount = flattenedMonths.length;
-  const totalWeeks = getDaysInMonthGrid(month, firstDayOfTheWeek).length;
-
-  return isFocusableOtherMonthDay(
-    monthIndex,
-    monthsCount,
-    weekIndex,
-    totalWeeks,
-    variant,
-    pickerType
-  )
-    ? '0'
-    : '-1';
-};
-
 // Removes last character thats is not number or letter
 export const removeLastNonAlphanumeric = (input) => {
   if (!input) return input;
@@ -1195,7 +770,7 @@ export const sanitizeDateInput = (e, mode) => {
   }
 
   // Remove any disallowed characters
-  e.target.value = input.replace(allowedChars, '');
+  e.target.value = input.replaceAll(allowedChars, '');
 };
 
 // Helper function to get decade start year
@@ -1253,7 +828,7 @@ export function isTimeWithinMinMax(time, min, max) {
 export function normalizeFlexibleTimeInput(raw, supportSeconds = false) {
   if (!raw) return null;
 
-  const value = raw.replace(/[.,]/g, ':').replace(/\s+/g, '');
+  const value = raw.replaceAll(/[.,]/g, ':').replaceAll(/\s+/g, '');
 
   const build = (h, m, s = 0) => {
     if (!isValidTime(h, m, s, supportSeconds)) return null;
@@ -1276,7 +851,7 @@ export function normalizeFlexibleTimeInput(raw, supportSeconds = false) {
     return build(h, m, s);
   }
 
-  const digits = value.replace(/\D/g, '');
+  const digits = value.replaceAll(/\D/g, '');
 
   if (digits.length === 1) {
     const h = Number(digits);
@@ -1348,8 +923,8 @@ function resolveTwoDigitYear(twoDigits, maxYear) {
 
 function normalizeDateInputString(raw) {
   return raw
-    .replace(/[/\-\s]+/g, '.')
-    .replace(/\.+/g, '.')
+    .replaceAll(/[/\-\s]+/g, '.')
+    .replaceAll(/\.+/g, '.')
     .trim();
 }
 
@@ -1382,7 +957,7 @@ export function normalizeFlexibleDateInput(raw, maxDate = null) {
   if (!raw || typeof raw !== 'string') return '';
 
   const input = normalizeDateInputString(raw);
-  const digitsOnly = input.replace(/\D/g, '');
+  const digitsOnly = input.replaceAll(/\D/g, '');
   const maxYear = getMaxYearLimit(maxDate);
   const currentYear = new Date().getFullYear().toString();
 

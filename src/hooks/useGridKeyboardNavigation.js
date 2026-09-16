@@ -59,6 +59,20 @@ function isCellDelegated(col, customVal = false) {
   );
 }
 
+function isMountedTarget(target) {
+  return !(target instanceof HTMLElement) || target.isConnected;
+}
+
+function focusedElementSince(previouslyFocused) {
+  const { activeElement } = document;
+  const hasTakenFocus =
+    activeElement instanceof HTMLElement &&
+    activeElement !== previouslyFocused &&
+    activeElement !== document.body;
+
+  return hasTakenFocus ? activeElement : null;
+}
+
 export function useGridKeyboardNavigation({ getScrollMarginTop } = {}) {
   const activeRow = ref(0);
   const activeCol = ref(0);
@@ -83,10 +97,6 @@ export function useGridKeyboardNavigation({ getScrollMarginTop } = {}) {
     }
 
     return [{ target: targets, item: 0 }];
-  }
-
-  function isMountedTarget(target) {
-    return !(target instanceof HTMLElement) || target.isConnected;
   }
 
   function getFocusableCellTargets(row, col) {
@@ -214,16 +224,6 @@ export function useGridKeyboardNavigation({ getScrollMarginTop } = {}) {
     element.scrollIntoView(SCROLL_INTO_VIEW_OPTIONS);
 
     if (reservedOverlap > 0) element.style.removeProperty('scroll-margin-top');
-  }
-
-  function focusedElementSince(previouslyFocused) {
-    const { activeElement } = document;
-    const hasTakenFocus =
-      activeElement instanceof HTMLElement &&
-      activeElement !== previouslyFocused &&
-      activeElement !== document.body;
-
-    return hasTakenFocus ? activeElement : null;
   }
 
   function scrollResolvedTargetIntoView(target, targetElement, previouslyFocused) {

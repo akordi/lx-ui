@@ -999,7 +999,7 @@ function compareStrip(a, b, colCode) {
 
 function getFullName(person) {
   return isValidString(person.firstName) && isValidString(person.lastName)
-    ? (getLowercaseString(person.firstName) + getLowercaseString(person.lastName)).replace(
+    ? (getLowercaseString(person.firstName) + getLowercaseString(person.lastName)).replaceAll(
         /\s/g,
         ''
       )
