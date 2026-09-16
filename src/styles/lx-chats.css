@@ -136,6 +136,10 @@
   margin-left: var(--space-3000);
 }
 
+.lx-chat-wrapper .lx-chat-bubble ul {
+  list-style: initial;
+}
+
 /* --- Person header (name + AI badge) --- */
 
 .lx-chat-wrapper .lx-chat-bubble-header {
