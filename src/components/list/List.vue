@@ -1431,7 +1431,7 @@ watch(
   () => props.items,
   (newVal) => {
     triggerItemsArray();
-    if (!props.groupDefinitions && props.kind === 'draggable') {
+    if (!props.groupDefinitions) {
       ungroupedItemsArray.value = newVal;
     }
   },
