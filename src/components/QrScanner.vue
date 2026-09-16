@@ -458,7 +458,7 @@ const wrapperRef = ref();
         </div>
 
         <Transition name="fade">
-          <div v-show="accepted || error" v-if="selectionKind === 'multiple'">
+          <div v-show="(accepted || error) && !refreshError" v-if="selectionKind === 'multiple'">
             <div class="lx-qr-notification">
               <Transition name="fade">
                 <div class="lx-qr-success" v-if="accepted">
@@ -484,7 +484,7 @@ const wrapperRef = ref();
           :formats="formats"
           class="lx-qr-drag-wrapper"
           v-if="hasFileUploader"
-          v-show="(!accepted && !error) || selectionKind === 'multiple'"
+          v-show="(!accepted && !error) || (selectionKind === 'multiple' && !refreshError)"
         >
           <div class="lx-qr-drag-zone" @dragenter="dragEnter" @dragleave="dragLeave">
             <p>{{ displayTexts.dragHere }}</p>
