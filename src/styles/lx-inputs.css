@@ -3473,6 +3473,17 @@ h2.lx-section-header + p.lx-invalidation-message,
   font-weight: var(--font-weight-data);
 }
 
+.lx-rich-text-wrapper .lx-rich-text-table-wrapper {
+  width: 100%;
+  overflow: auto;
+}
+
+.lx-article.lx-rich-text-wrapper .lx-rich-text-table-wrapper > table {
+  width: max-content;
+  min-width: 100%;
+  white-space: nowrap;
+}
+
 .lx-region .lx-rich-text-wrapper.lx-article code,
 .lx-region-component .lx-rich-text-wrapper.lx-article code {
   background-color: var(--color-region-2);

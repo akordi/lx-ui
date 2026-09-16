@@ -36,6 +36,36 @@ const vCleanHtml = buildVueDompurifyHTMLDirective({
   },
 });
 
+function wrapTables(container) {
+  const parentClass = 'lx-rich-text-table-wrapper';
+
+  container.querySelectorAll('table').forEach((table) => {
+    if (table.parentElement?.classList.contains(parentClass)) {
+      return;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = parentClass;
+    table.parentNode?.insertBefore(wrapper, table);
+    wrapper.appendChild(table);
+  });
+}
+
+function transformMarkdownHtml(html, transforms = []) {
+  if (!html || typeof document === 'undefined') {
+    return html;
+  }
+
+  const container = document.createElement('div');
+  container.innerHTML = html;
+
+  transforms.forEach((transform) => {
+    transform(container);
+  });
+
+  return container.innerHTML;
+}
+
 watch(
   () => props.value,
   async (newMarkdown) => {
@@ -57,7 +87,9 @@ watch(
       return `<h${depth} id="markdown-section-${props.id}-${headingCounter}">${text}</h${depth}>`;
     };
 
-    markdown.value = await marked(newMarkdown, { renderer });
+    const parsedMarkdown = await marked(newMarkdown, { renderer });
+
+    markdown.value = transformMarkdownHtml(parsedMarkdown, [wrapTables]);
 
     markdownLoading.value = false;
   },
