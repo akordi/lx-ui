@@ -27,6 +27,7 @@ app.use(createLx, {
 `createLx` provides the following capabilities:
 
 - Installs LX/UI through Vue's standard `app.use()` plugin API.
+- Registers LX/UI's custom directives — `v-tooltip` (see [Directives](./Directives.md)).
 - Stores the provided options as LX/UI global properties.
 - Makes the global properties available to LX/UI internals through `useLx().getGlobals()`.
 - Preloads frequently used async component chunks through `preload.components`.

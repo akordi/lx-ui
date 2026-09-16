@@ -1,6 +1,8 @@
-import { test, expect, afterEach } from 'vitest';
+import { test, expect, afterEach, beforeEach, describe, vi } from 'vitest';
 import LxButton from '@/components/Button.vue';
 import { mount, RouterLinkStub } from '@vue/test-utils';
+import { nextTick } from 'vue';
+import { closeTooltip, OPEN_DELAY } from '@/directives/tooltip';
 
 let wrapper;
 
@@ -45,12 +47,15 @@ test('LxButton title', async () => {
       },
     },
   });
+  // `title` is rendered by the v-tooltip directive, not as a native title attribute
   const inputElement = wrapper.find('button');
-  expect(inputElement.attributes('title')).toBe('Test title');
+  expect(inputElement.attributes('title')).toBeUndefined();
+  expect(inputElement.attributes('data-lx-tooltip')).toBe('Test title');
 
   await wrapper.setProps({ href: { name: 'test' } });
   const hrefElement = wrapper.find('a');
-  expect(hrefElement.attributes('title')).toBe('Test title');
+  expect(hrefElement.attributes('title')).toBeUndefined();
+  expect(hrefElement.attributes('data-lx-tooltip')).toBe('Test title');
 });
 
 test('LxButton id', async () => {
@@ -405,4 +410,65 @@ test('LxButton custom class', async () => {
   await wrapper.setProps({ href: { name: 'test' } });
   const hrefElement = wrapper.find('.test-class');
   expect(hrefElement.classes('test-class')).toBe(true);
+});
+
+describe('LxButton tooltip', () => {
+  beforeEach(() => {
+    const poppers = document.createElement('div');
+    poppers.id = 'poppers';
+    document.body.appendChild(poppers);
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    closeTooltip();
+    vi.useRealTimers();
+    document.body.innerHTML = '';
+  });
+
+  function mountButton(props) {
+    return mount(LxButton, {
+      props,
+      attachTo: document.body,
+      global: { stubs: { RouterLink: RouterLinkStub } },
+    });
+  }
+
+  test('hovering shows the LX tooltip instead of a native one', () => {
+    wrapper = mountButton({ label: 'Required test label', title: 'Test title' });
+
+    const button = wrapper.find('button').element;
+    button.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 }));
+    vi.advanceTimersByTime(OPEN_DELAY);
+
+    expect(document.querySelector('#poppers .popper')).not.toBeNull();
+    expect(document.querySelector('.lx-tooltip-text').textContent).toBe('Test title');
+  });
+
+  test('busy buttons expose busyTooltip', () => {
+    wrapper = mountButton({
+      label: 'Required test label',
+      title: 'Test title',
+      busy: true,
+      busyTooltip: 'Busy tooltip',
+    });
+
+    expect(wrapper.find('button').attributes('data-lx-tooltip')).toBe('Busy tooltip');
+  });
+
+  test('icon-only buttons fall back to the label', () => {
+    wrapper = mountButton({ label: 'Required test label', icon: 'add', variant: 'icon-only' });
+
+    expect(wrapper.find('button').attributes('data-lx-tooltip')).toBe('Required test label');
+  });
+
+  test('a non-overflowing label that equals the title gets no tooltip', async () => {
+    wrapper = mountButton({ label: 'Required test label', title: 'Required test label' });
+
+    // The overflow check runs on mount and needs a re-render before accessibleTitle settles
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper.find('button').attributes('data-lx-tooltip')).toBeUndefined();
+  });
 });

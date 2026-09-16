@@ -122,7 +122,7 @@ describe('Action definitions', () => {
     const togglerButtonElement = togglerElement.find('.lx-button');
 
     expect(togglerButtonElement.attributes('id')).toBe(mainButton.id);
-    expect(togglerButtonElement.attributes('title')).toBe(mainButton.title);
+    expect(togglerButtonElement.attributes('data-lx-tooltip')).toBe(mainButton.title);
     expect(togglerButtonElement.attributes('aria-label')).toContain(mainButton.name);
 
     const panelElement = await openMenu();

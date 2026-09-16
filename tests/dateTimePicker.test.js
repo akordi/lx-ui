@@ -1240,7 +1240,7 @@ describe('LxDateTimePicker', () => {
       });
 
       expect(
-        wrapper.find('.lx-button.lx-button-ghost.lx-button-icon-only').attributes('title')
+        wrapper.find('.lx-button.lx-button-ghost.lx-button-icon-only').attributes('data-lx-tooltip')
       ).toBe('Today');
     });
 
@@ -1265,7 +1265,9 @@ describe('LxDateTimePicker', () => {
       });
 
       const clearButtons = wrapper.findAll('.lx-button.lx-button-ghost');
-      const clearButton = clearButtons.find((btn) => btn.attributes('title') === 'Attīrīt vērtību');
+      const clearButton = clearButtons.find(
+        (btn) => btn.attributes('data-lx-tooltip') === 'Attīrīt vērtību'
+      );
       expect(clearButton).toBeTruthy();
     });
 
@@ -1849,7 +1851,8 @@ describe('LxDateTimePicker', () => {
     const clearButtons = wrapper.findAll('.lx-button.lx-button-ghost');
     const clearButton = clearButtons.find(
       (btn) =>
-        btn.attributes('title') === 'Attīrīt vērtību' && btn.attributes('aria-label') === 'Attīrīt'
+        btn.attributes('data-lx-tooltip') === 'Attīrīt vērtību' &&
+        btn.attributes('aria-label') === 'Attīrīt'
     );
     expect(clearButton).toBeTruthy();
     await clearButton.trigger('click');

@@ -3,6 +3,7 @@ import useLx from '@/hooks/useLx';
 import { logWarn } from '@/utils/devUtils';
 import { setGlobalProperties, setComponentTexts } from '@/utils/global';
 import { shellModeLoaders } from '@/components/shell/shellModeLoaders';
+import { vTooltip } from '@/directives/tooltip';
 
 /**
  * Install function for Vue plugin (called by Vue.use() or app.use())
@@ -52,6 +53,8 @@ function install(Vue, options) {
   if (options.texts) {
     setComponentTexts(options.texts);
   }
+
+  Vue.directive('tooltip', vTooltip);
 
   const preloadConfig = options.preload ?? {};
   const globalEnvironment = useLx().getGlobals()?.environment;
@@ -116,5 +119,6 @@ export { setComponentTexts as setLxComponentTexts } from '@/utils/global';
 // Exports for individual use
 export * from '@/stores';
 export * from '@/components';
+export * from '@/directives';
 export * from '@/utils';
 export * from '@/constants';

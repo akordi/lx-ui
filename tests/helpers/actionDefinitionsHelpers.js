@@ -91,7 +91,7 @@ export function checkActionDefinitionsButtonsSingle(
 
     const { button } = await initButton(action);
 
-    expect(button.attributes('title')).toBe(action.title);
+    expect(button.attributes('data-lx-tooltip')).toBe(action.title);
   });
 
   test('destructive', async () => {
@@ -222,7 +222,7 @@ export function checkActionDefinitionsButtonsMultiple(
     }
 
     if (actionDefinitions[i].title) {
-      expect(buttonElement.getAttribute('title')).toBe(actionDefinitions[i].title);
+      expect(buttonElement.getAttribute('data-lx-tooltip')).toBe(actionDefinitions[i].title);
     }
 
     if (actionDefinitions[i].destructive) {

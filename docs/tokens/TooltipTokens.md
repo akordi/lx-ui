@@ -6,6 +6,9 @@
 > (`.lx-info-wrapper` / `.lx-info-wrapper-panel`) and live in the same style file -
 > `lx-info-wrappers.css`. The `--tooltip-*` tokens below apply to the tooltip variant
 > (`lx-tooltip-kind`) only.
+>
+> `LxButton` renders its `title` through the [`v-tooltip` directive](../Directives.md), which
+> reuses the same markup, so these tokens apply there too.
 
 ## Layout
 

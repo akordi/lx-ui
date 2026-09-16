@@ -4,6 +4,33 @@ As LX/UI evolves, some features are refined, simplified, or replaced by better a
 
 Our goal is to make upgrading predictable, transparent, and worth the effort.
 
+## 2.3.2 → 2.3.3
+
+### Breaking changes
+
+#### LxButton
+
+**`title` now renders an LX tooltip instead of the native browser one**
+
+`LxButton` no longer sets a `title` attribute on its `<button>` / `<a>` element. The `title` prop is
+rendered by the new [`v-tooltip` directive](docs/Directives.md), which produces the same panel as
+`LxTooltip` — the prop itself is unchanged, and so is the button's HTML structure.
+
+This affects code that reached for the rendered attribute rather than the prop. Active triggers
+carry the text in `data-lx-tooltip`, so selectors and assertions migrate one-to-one:
+
+| Old                                     | New                                              |
+| --------------------------------------- | ------------------------------------------------ |
+| `.lx-button[title="Notīrīt"]`           | `.lx-button[data-lx-tooltip="Notīrīt"]`          |
+| `button.attributes('title')`            | `button.attributes('data-lx-tooltip')`           |
+| `buttonElement.getAttribute('title')`   | `buttonElement.getAttribute('data-lx-tooltip')`  |
+
+Two behavioural notes:
+
+- The tooltip opens after 300 ms of pointer dwell and is suppressed on touch devices, matching
+  `LxTooltip`. The native `title` had browser-dependent timing and always appeared.
+- `Escape` now dismisses it (WCAG 1.4.13), which the native `title` never supported.
+
 ## 2.3 → 2.3.1
 
 ### Breaking changes

@@ -8,6 +8,7 @@ import useLx from '@/hooks/useLx';
 import { generateUUID } from '@/utils/stringUtils';
 import { getDisplayTexts } from '@/utils/generalUtils';
 import { lxDevUtils } from '@/utils';
+import { vTooltip } from '@/directives/tooltip';
 
 const emits = defineEmits(['click']);
 
@@ -217,7 +218,7 @@ defineExpose({ focus, scrollIntoView, getElement });
       { 'lx-disabled': isDisabled },
       customClass,
     ]"
-    :title="accessibleTitle"
+    v-tooltip="accessibleTitle"
     :disabled="isDisabled"
     :aria-disabled="isDisabled"
     :aria-pressed="active ? active : null"
@@ -288,7 +289,7 @@ defineExpose({ focus, scrollIntoView, getElement });
       customClass,
     ]"
     @click="click"
-    :title="accessibleTitle"
+    v-tooltip="accessibleTitle"
     :tabindex="tabindex"
     :aria-busy="busy || loading"
     :aria-label="ariaLabelWithBadge"

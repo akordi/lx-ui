@@ -455,7 +455,9 @@ describe('Search', () => {
       expect(items.length).toBe(0);
 
       await vi.advanceTimersByTimeAsync(0); // LxToolbar loads LxTextInput on demand
-      const clearButton = wrapper.get('.lx-component-toolbar .lx-button[title="Notīrīt"]');
+      const clearButton = wrapper.get(
+        '.lx-component-toolbar .lx-button[data-lx-tooltip="Notīrīt"]'
+      );
       await clearButton.trigger('click');
       await vi.advanceTimersByTimeAsync(searchDelay);
 
@@ -477,7 +479,9 @@ describe('Search', () => {
       await searchInput.setValue('x');
 
       await flushPromises(); // LxToolbar loads LxTextInput on demand
-      const clearButton = wrapper.get('.lx-component-toolbar .lx-button[title="Notīrīt"]');
+      const clearButton = wrapper.get(
+        '.lx-component-toolbar .lx-button[data-lx-tooltip="Notīrīt"]'
+      );
       await clearButton.trigger('click');
 
       expect(searchInput.text()).toBe('');

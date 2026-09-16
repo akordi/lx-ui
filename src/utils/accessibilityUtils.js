@@ -1,4 +1,4 @@
-function safeMatchMedia(query) {
+export function safeMatchMedia(query) {
   if (typeof globalThis === 'undefined' || !globalThis.matchMedia) {
     return null;
   }
