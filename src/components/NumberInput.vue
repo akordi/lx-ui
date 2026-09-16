@@ -12,6 +12,7 @@ import LxTextInput from '@/components/TextInput.vue';
 import LxButton from '@/components/Button.vue';
 import LxIcon from '@/components/Icon.vue';
 import LxInfoWrapper from '@/components/InfoWrapper.vue';
+import LxEmptyValue from '@/components/EmptyValue.vue';
 import { clampText, getDisplayTexts, isDefined, isNil } from '@/utils/generalUtils';
 import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/builderUtils';
 import { makeIntegerValidator } from '@/utils/numberInputUtils';
@@ -88,6 +89,7 @@ const textsDefault = {
   decreaseValue: 'Samazināt vērtību',
   increaseValue: 'Palielināt vērtību',
   helperTextLabel: 'Papildinformācija',
+  emptyValue: 'Nav norādīts',
 };
 
 const displayTexts = computed(() => getDisplayTexts(props.texts, textsDefault));
@@ -111,68 +113,90 @@ const describedBy = computed(() => {
 
 const emits = defineEmits(['update:modelValue']);
 
+function toWholeNumberOrNull(value) {
+  if (isNil(value) || value === '') return null;
+  const numeric = Number(value);
+  return Number.isNaN(numeric) ? null : Math.round(numeric);
+}
+
 const model = computed({
   get() {
-    return Math.round(Number(props.modelValue));
+    return toWholeNumberOrNull(props.modelValue);
   },
   set(value) {
-    emits('update:modelValue', Math.round(Number(value)));
+    emits('update:modelValue', toWholeNumberOrNull(value));
   },
 });
 
-const stepValue = computed(() => Math.round(Number(props.step)));
-const stepMultiplierValue = computed(() => Math.round(Number(props.stepMultiplier)));
-const minValue = computed(() => Math.round(Number(props.min)));
-const maxValue = computed(() => Math.round(Number(props.max)));
+const hasValue = computed(() => !isNil(model.value));
+
+const toWholeNumber = (value, fallback) => toWholeNumberOrNull(value) ?? fallback;
+
+const stepValue = computed(() => toWholeNumber(props.step, 1));
+const stepMultiplierValue = computed(() => toWholeNumber(props.stepMultiplier, 5));
+const minValue = computed(() => toWholeNumber(props.min, 0));
+const maxValue = computed(() => toWholeNumber(props.max, 9999));
+
+const clampToRange = (value) => Math.min(Math.max(value, minValue.value), maxValue.value);
 
 watch(
   () => model.value,
   (newValue) => {
-    if (newValue < minValue.value) {
-      model.value = minValue.value;
+    if (isNil(newValue)) return;
+    const clamped = clampToRange(newValue);
+    if (clamped !== newValue) {
+      model.value = clamped;
     }
-    if (newValue > maxValue.value) {
-      model.value = maxValue.value;
-    }
-  }
+  },
+  { immediate: true }
 );
 
-const tooltip = computed(() => model.value.toString());
-const liveAnnouncement = ref(model.value.toString());
+const tooltip = computed(() =>
+  hasValue.value ? model.value.toString() : displayTexts.value.emptyValue
+);
+const liveAnnouncement = ref(tooltip.value);
 let announcementTimeout;
 
-const onIncreaseMultiplier = () => {
-  model.value += stepMultiplierValue.value;
+// An unspecified value can only be stepped up - going down would read as picking zero
+const stepBy = (delta) => {
+  if (isNil(model.value) && delta < 0) return;
+  model.value = (model.value ?? 0) + delta;
 };
-const onDecreaseMultiplier = () => {
-  model.value -= stepMultiplierValue.value;
-};
-const onIncreaseStep = () => {
-  model.value += stepValue.value;
-};
-const onDecreaseStep = () => {
-  model.value -= stepValue.value;
-};
+
+const onIncreaseMultiplier = () => stepBy(stepMultiplierValue.value);
+const onDecreaseMultiplier = () => stepBy(-stepMultiplierValue.value);
+const onIncreaseStep = () => stepBy(stepValue.value);
+const onDecreaseStep = () => stepBy(-stepValue.value);
 
 const pageStep = computed(() =>
   Math.max(stepValue.value, Math.round((maxValue.value - minValue.value) / 10))
 );
 
-const onIncreasePage = () => {
-  model.value += pageStep.value;
-};
-const onDecreasePage = () => {
-  model.value -= pageStep.value;
-};
+const onIncreasePage = () => stepBy(pageStep.value);
+const onDecreasePage = () => stepBy(-pageStep.value);
 
 function onStepperButtonMouseDown(event) {
   if (props.hasInput) event.preventDefault();
 }
 
-const isDecreaseDisabled = computed(() => props.disabled || model.value <= minValue.value);
-const isIncreaseDisabled = computed(() => props.disabled || model.value >= maxValue.value);
+const isDecreaseDisabled = computed(
+  () => props.disabled || !hasValue.value || model.value <= minValue.value
+);
+const isIncreaseDisabled = computed(
+  () => props.disabled || (hasValue.value && model.value >= maxValue.value)
+);
+
+const sliderModel = computed({
+  get() {
+    return hasValue.value ? model.value : minValue.value;
+  },
+  set(value) {
+    model.value = value;
+  },
+});
+
 const fillingUp = computed(
-  () => ((model.value - minValue.value) / (maxValue.value - minValue.value)) * 100
+  () => ((sliderModel.value - minValue.value) / (maxValue.value - minValue.value)) * 100
 );
 
 const rowId = inject('rowId', ref(null));
@@ -188,11 +212,11 @@ const onMouseDown = () => {
 };
 
 watch(
-  model,
+  tooltip,
   (newValue) => {
     clearTimeout(announcementTimeout);
     announcementTimeout = globalThis.setTimeout(() => {
-      liveAnnouncement.value = newValue.toString();
+      liveAnnouncement.value = newValue;
     }, ARIA_LIVE_ANNOUNCEMENT_CONSTANTS.DELAY);
   },
   { immediate: true }
@@ -228,7 +252,10 @@ if (props.builderOptions?.useRegistry) {
     :data-id="id"
     :data-state="dataState"
   >
-    <p v-if="readOnly" class="lx-data" :aria-labelledby="labelledBy">{{ model }}</p>
+    <p v-if="readOnly" class="lx-data" :aria-labelledby="labelledBy">
+      <LxEmptyValue v-if="!hasValue" :texts="{ emptyValue: displayTexts.emptyValue }" />
+      <template v-else>{{ model }}</template>
+    </p>
     <template v-else-if="kind === 'stepper'">
       <div class="lx-number-stepper-container-wrapper">
         <div
@@ -259,7 +286,8 @@ if (props.builderOptions?.useRegistry) {
             :aria-labelledby="labelledBy"
             :aria-required="ariaRequired"
             :aria-describedby="describedBy"
-            :aria-valuenow="model"
+            :aria-valuenow="hasValue ? model : null"
+            :aria-valuetext="hasValue ? null : displayTexts.emptyValue"
             :aria-valuemin="minValue"
             :aria-valuemax="maxValue"
           >
@@ -316,7 +344,7 @@ if (props.builderOptions?.useRegistry) {
 
       <div class="input-slider" :title="tooltip">
         <input
-          v-model="model"
+          v-model="sliderModel"
           type="range"
           class="lx-number-input"
           :id="id"

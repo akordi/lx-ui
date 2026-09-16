@@ -31,6 +31,16 @@ Two behavioural notes:
   `LxTooltip`. The native `title` had browser-dependent timing and always appeared.
 - `Escape` now dismisses it (WCAG 1.4.13), which the native `title` never supported.
 
+#### LxNumberInput
+
+`modelValue` no longer coerces an unspecified value to `0` — `null`, `undefined` and a cleared input stay `null`, since an unspecified value is semantically different from zero. If you relied on the old coercion to guarantee a number, the value can now be `null`.
+
+`min` and `max` are now enforced on mount too, so a value handed in out of range is clamped and emitted during mount instead of being displayed as-is. Watch out if your form marks itself dirty on every `update:modelValue` — an out-of-range initial value will now mark it dirty on load. A `min` above `max` settles at `max` instead of oscillating between the bounds.
+
+Nil `min`, `max`, `step` and `stepMultiplier` now fall back to their defaults (`0`, `9999`, `1`, `5`) instead of becoming `0` — previously `max: null` clamped every value to `0`. Note that `min: null` still means `0`, not "no lower bound".
+
+New `texts.emptyValue` key (default `'Nav norādīts'`), shown in `readOnly` mode when no value is specified. Editable variants render blank.
+
 ## 2.3 → 2.3.1
 
 ### Breaking changes

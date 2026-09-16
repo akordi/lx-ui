@@ -18,16 +18,25 @@ afterEach(() => {
 
 const ID = 'test-slider';
 
-// Wires modelValue back like a real v-model, so consecutive steps build on each other
+// Wires modelValue back like a real v-model, so consecutive steps build on each other.
+// Values emitted during mount are queued, since `mounted` is only bound once mount() returns.
 function mountWithModel(props = {}) {
-  const mounted = mount(LxNumberInput, {
+  const emittedDuringMount = [];
+  const holder = { wrapper: null };
+  holder.wrapper = mount(LxNumberInput, {
     props: {
       id: ID,
       ...props,
-      'onUpdate:modelValue': (value) => mounted.setProps({ modelValue: value }),
+      'onUpdate:modelValue': (value) => {
+        if (holder.wrapper) holder.wrapper.setProps({ modelValue: value });
+        else emittedDuringMount.push(value);
+      },
     },
   });
-  return mounted;
+  if (emittedDuringMount.length) {
+    holder.wrapper.setProps({ modelValue: emittedDuringMount.at(-1) });
+  }
+  return holder.wrapper;
 }
 
 function emittedValues(component) {
@@ -1064,10 +1073,279 @@ describe('LxNumberInput', () => {
       expect(wrapper.find('.input-slider').attributes('title')).toBe('7');
     });
 
-    test('should not clamp anything before the model is touched', () => {
-      wrapper = mount(LxNumberInput, { props: { modelValue: 50, min: 0, max: 10 } });
+    test('should clamp a value handed in above max on mount', () => {
+      wrapper = mount(LxNumberInput, { props: { modelValue: 1000, min: 0, max: 999 } });
+
+      expect(emittedValues(wrapper)).toEqual([999]);
+    });
+
+    test('should clamp a value handed in below min on mount', () => {
+      wrapper = mount(LxNumberInput, { props: { modelValue: -50, min: 0, max: 999 } });
+
+      expect(emittedValues(wrapper)).toEqual([0]);
+    });
+
+    test('should show max, not the out-of-range value, on the stepper input', async () => {
+      wrapper = mountWithModel({ kind: 'stepper', hasInput: true, modelValue: 1000, max: 999 });
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.props().modelValue).toBe(999);
+      expect(wrapper.find(`input#${ID}`).element.value).toBe('999');
+    });
+
+    test('should show max, not the out-of-range value, on the spinbutton', async () => {
+      wrapper = mountWithModel({ kind: 'stepper', modelValue: 1000, max: 999 });
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.props().modelValue).toBe(999);
+      expect(wrapper.find('.lx-number-stepper-value').text()).toBe('999');
+    });
+
+    test('should clamp an out-of-range value in read-only too', async () => {
+      wrapper = mountWithModel({ modelValue: 1000, max: 999, readOnly: true });
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find('p.lx-data').text()).toBe('999');
+    });
+
+    test('should not emit on mount for a value already in range', () => {
+      wrapper = mount(LxNumberInput, { props: { modelValue: 50, min: 0, max: 999 } });
 
       expect(wrapper.emitted()['update:modelValue']).toBeFalsy();
+    });
+
+    test('should settle at max instead of oscillating when min is above max', async () => {
+      wrapper = mountWithModel({ kind: 'stepper', modelValue: 7, min: 10, max: 5 });
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.props().modelValue).toBe(5);
+      expect(emittedValues(wrapper)).toEqual([5]);
+    });
+  });
+
+  describe('Behaviour - unspecified value', () => {
+    test('should not overwrite a null model with 0 on mount', () => {
+      wrapper = mount(LxNumberInput, {
+        props: { id: ID, kind: 'stepper', hasInput: true, modelValue: null, min: 0, max: 10 },
+      });
+
+      expect(wrapper.emitted()['update:modelValue']).toBeFalsy();
+      expect(wrapper.props().modelValue).toBe(null);
+    });
+
+    test('should not overwrite a null model with 0 when min is null too', () => {
+      wrapper = mountWithModel({ kind: 'stepper', hasInput: true, modelValue: null, min: null });
+
+      expect(wrapper.emitted()['update:modelValue']).toBeFalsy();
+      expect(wrapper.props().modelValue).toBe(null);
+    });
+
+    test('should leave the stepper text input empty instead of showing 0', () => {
+      wrapper = mount(LxNumberInput, {
+        props: { id: ID, kind: 'stepper', hasInput: true, modelValue: null },
+      });
+
+      expect(wrapper.find(`input#${ID}`).element.value).toBe('');
+    });
+
+    test('should leave the slider text input empty instead of showing 0', () => {
+      wrapper = mount(LxNumberInput, {
+        props: { id: ID, hasInput: true, modelValue: null },
+      });
+
+      expect(wrapper.find(`input#${ID}-text`).element.value).toBe('');
+    });
+
+    test('should leave the editable spinbutton blank rather than show a placeholder', () => {
+      wrapper = mount(LxNumberInput, {
+        props: { id: ID, kind: 'stepper', modelValue: null },
+      });
+      const value = wrapper.find('.lx-number-stepper-value');
+
+      // An editable field reads as empty; the em dash is a read-only display affordance
+      expect(value.text()).toBe('');
+      expect(value.attributes('aria-valuenow')).toBeUndefined();
+      expect(value.attributes('aria-valuetext')).toBe('Nav norādīts');
+    });
+
+    test('should show the empty value in read-only instead of 0', () => {
+      wrapper = mount(LxNumberInput, { props: { modelValue: null, readOnly: true } });
+
+      expect(wrapper.find('p.lx-data').text()).not.toContain('0');
+      expect(wrapper.find('p.lx-data').text()).toContain('Nav norādīts');
+    });
+
+    test('should use an overridden emptyValue text', () => {
+      wrapper = mount(LxNumberInput, {
+        props: { modelValue: null, readOnly: true, texts: { emptyValue: 'Not specified' } },
+      });
+
+      expect(wrapper.find('p.lx-data').text()).toContain('Not specified');
+    });
+
+    test('should emit null, not 0, when the stepper input is cleared', async () => {
+      wrapper = mount(LxNumberInput, {
+        props: { id: ID, kind: 'stepper', hasInput: true, modelValue: 5, min: 0, max: 10 },
+      });
+
+      await wrapper.find(`input#${ID}`).setValue('');
+
+      expect(emittedValues(wrapper)).toEqual([null]);
+    });
+
+    test('should emit null, not 0, when the slider input is cleared', async () => {
+      wrapper = mount(LxNumberInput, {
+        props: { id: ID, hasInput: true, modelValue: 5, min: 0, max: 10 },
+      });
+
+      await wrapper.find(`input#${ID}-text`).setValue('');
+
+      expect(emittedValues(wrapper)).toEqual([null]);
+    });
+
+    test('should keep the model empty after clearing instead of jumping back to 0', async () => {
+      wrapper = mountWithModel({ kind: 'stepper', hasInput: true, modelValue: 5, min: 0, max: 10 });
+
+      await wrapper.find(`input#${ID}`).setValue('');
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.props().modelValue).toBe(null);
+      expect(emittedValues(wrapper)).toEqual([null]);
+      expect(wrapper.find(`input#${ID}`).element.value).toBe('');
+    });
+
+    test('should not clamp an unspecified value into range', async () => {
+      wrapper = mount(LxNumberInput, { props: { modelValue: 5, min: 2, max: 10 } });
+
+      await wrapper.setProps({ modelValue: null });
+
+      expect(wrapper.emitted()['update:modelValue']).toBeFalsy();
+    });
+
+    test('should offer only increase while unspecified', () => {
+      wrapper = mount(LxNumberInput, {
+        props: { id: ID, kind: 'stepper', modelValue: null, min: 0, max: 10 },
+      });
+
+      expect(wrapper.find(`button#${ID}-decrease`).attributes('disabled')).toBeDefined();
+      expect(wrapper.find(`button#${ID}-increase`).attributes('disabled')).toBeUndefined();
+    });
+
+    test('should re-enable decrease once a value is specified', async () => {
+      wrapper = mountWithModel({ kind: 'stepper', modelValue: null, min: 0, max: 10 });
+
+      await wrapper.find(`button#${ID}-increase`).trigger('click');
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.props().modelValue).toBe(1);
+      expect(wrapper.find(`button#${ID}-decrease`).attributes('disabled')).toBeUndefined();
+    });
+
+    test('should step up from zero when increasing an unspecified value', async () => {
+      wrapper = mountWithModel({ kind: 'stepper', modelValue: null, min: 0, max: 10 });
+
+      await wrapper.find(`button#${ID}-increase`).trigger('click');
+
+      expect(wrapper.props().modelValue).toBe(1);
+    });
+
+    test('should not turn an unspecified value into 0 by decreasing it', async () => {
+      wrapper = mountWithModel({ kind: 'stepper', modelValue: null, min: 0, max: 10 });
+
+      await wrapper.find(`button#${ID}-decrease`).trigger('click');
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.props().modelValue).toBe(null);
+      expect(wrapper.emitted()['update:modelValue']).toBeFalsy();
+    });
+
+    test('should ignore the keyboard decrease shortcuts while unspecified', async () => {
+      wrapper = mountWithModel({
+        kind: 'stepper',
+        hasInput: true,
+        modelValue: null,
+        min: 0,
+        max: 10,
+      });
+      const input = wrapper.find(`input#${ID}`);
+
+      await input.trigger('keydown', { key: 'ArrowDown' });
+      await input.trigger('keydown', { key: 'ArrowDown', shiftKey: true });
+      await input.trigger('keydown', { key: 'PageDown' });
+
+      expect(wrapper.props().modelValue).toBe(null);
+      expect(wrapper.emitted()['update:modelValue']).toBeFalsy();
+    });
+
+    test('should still allow the keyboard increase shortcuts while unspecified', async () => {
+      wrapper = mountWithModel({
+        kind: 'stepper',
+        hasInput: true,
+        modelValue: null,
+        min: 0,
+        max: 10,
+      });
+
+      await wrapper.find(`input#${ID}`).trigger('keydown', { key: 'ArrowUp' });
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.props().modelValue).toBe(1);
+    });
+
+    test('should rest the range input at min while unspecified', () => {
+      wrapper = mount(LxNumberInput, { props: { modelValue: null, min: 2, max: 10 } });
+
+      expect(wrapper.find('input.lx-number-input').element.value).toBe('2');
+      expect(wrapper.find('.input-slider-filled').attributes('style')).toBe('width: 0%;');
+    });
+
+    test('should announce the empty value instead of 0', async () => {
+      vi.useFakeTimers();
+      try {
+        wrapper = mount(LxNumberInput, { props: { modelValue: null, min: 0, max: 10 } });
+        vi.advanceTimersByTime(ARIA_LIVE_ANNOUNCEMENT_CONSTANTS.DELAY);
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('[role="status"]').text()).toBe('Nav norādīts');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test('should not treat an unspecified value as 0 in the slider tooltip', () => {
+      wrapper = mount(LxNumberInput, { props: { modelValue: null, min: 0, max: 10 } });
+
+      expect(wrapper.find('.input-slider').attributes('title')).toBe('Nav norādīts');
+    });
+
+    test('should still apply the prop default when modelValue is omitted', () => {
+      wrapper = mount(LxNumberInput, { props: { kind: 'stepper' } });
+
+      expect(wrapper.props().modelValue).toBe(0);
+      expect(wrapper.find('.lx-number-stepper-value').text()).toBe('0');
+    });
+
+    test('should fall back to the prop defaults when min, max and step are null', async () => {
+      wrapper = mountWithModel({
+        kind: 'stepper',
+        modelValue: 5,
+        min: null,
+        max: null,
+        step: null,
+      });
+
+      await wrapper.find(`button#${ID}-increase`).trigger('click');
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.props().modelValue).toBe(6);
+    });
+
+    test('should expose the default range on the spinbutton when min and max are null', () => {
+      wrapper = mount(LxNumberInput, { props: { kind: 'stepper', min: null, max: null } });
+      const value = wrapper.find('.lx-number-stepper-value');
+
+      expect(value.attributes('aria-valuemin')).toBe('0');
+      expect(value.attributes('aria-valuemax')).toBe('9999');
     });
   });
 
