@@ -1383,7 +1383,7 @@
 
 .lx .lx-region .lx-list-wrapper .lx-component-toolbar.lx-toolbar-sticky,
 .lx .lx-region-component .lx-list-wrapper .lx-component-toolbar.lx-toolbar-sticky,
-.lx .lx-region .lx-data-grid-wrapper .lx-component-toolbar.lx-toolbar-sticky,
+.lx .lx-region .lx-data-grid-wrapper .lx-sticky-toolbar-list-wrapper,
 .lx .lx-region-component .lx-data-grid-wrapper .lx-component-toolbar.lx-toolbar-sticky,
 .lx .lx-region .lx-value-picker-wrapper .lx-component-toolbar.lx-toolbar-sticky,
 .lx .lx-region-component .lx-value-picker-wrapper .lx-component-toolbar.lx-toolbar-sticky,
@@ -1395,8 +1395,19 @@
 .lx .lx-list-wrapper .lx-component-toolbar.lx-toolbar-sticky,
 .lx .lx-value-picker-wrapper .lx-component-toolbar.lx-toolbar-sticky,
 .lx .lx-appendable-list-wrapper .lx-component-toolbar.lx-toolbar-sticky,
-.lx .lx-data-grid-wrapper .lx-component-toolbar.lx-toolbar-sticky {
+.lx .lx-data-grid-wrapper .lx-sticky-toolbar-list-wrapper {
   background: var(--color-background);
+}
+
+.lx .lx-data-grid-wrapper .lx-sticky-toolbar-list-wrapper {
+  padding-bottom: var(--data-grid-toolbar-gap-bottom);
+  margin-left: var(--data-grid-margin-left);
+  margin-right: var(--data-grid-margin-right);
+}
+
+.lx .lx-data-grid-wrapper .lx-component-toolbar.lx-toolbar-sticky {
+  margin-left: calc(var(--data-grid-margin-left) * -1);
+  margin-right: calc(var(--data-grid-margin-right) * -1);
 }
 
 .lx .lx-form-grid>header.lx-form-with-tabs.lx-sticky+.lx-tab-control .lx-tab-body .lx-component-toolbar.lx-toolbar-sticky,

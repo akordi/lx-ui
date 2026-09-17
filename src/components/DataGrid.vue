@@ -1760,20 +1760,17 @@ const topOutOfBounds = computed(() => {
   return `${keyOpacity}: 0; ${keySize}: ${headerHeight}px;`;
 });
 
-const isFullBleedActive = computed(
-  () =>
-    props.fullBleed &&
-    props.scrollable &&
-    props.showAllColumns &&
-    lxElement &&
-    !dataGridWrapperRef.value?.closest('#modals') &&
-    !dataGridWrapperRef.value?.closest('.lx-form-grid') &&
-    width.value > 1920
-);
-
 const fullBleedMargin = computed(() => {
-  if (!isFullBleedActive.value) {
-    return `--grid-left-margin: var(--space-0); --grid-right-margin: var(--space-0);`;
+  if (
+    !props.fullBleed ||
+    !props.scrollable ||
+    !props.showAllColumns ||
+    !lxElement ||
+    dataGridWrapperRef.value?.closest('#modals') ||
+    dataGridWrapperRef.value?.closest('.lx-form-grid') ||
+    width.value <= 1920
+  ) {
+    return `--data-grid-margin-left: var(--space-0); --data-grid-margin-right: var(--space-0); --data-grid-contain: paint;`;
   }
 
   const bodyColWidth = Number.parseFloat(
@@ -1795,7 +1792,7 @@ const fullBleedMargin = computed(() => {
   const leftMargin = isDefaultLayout ? baseMargin + navBarWidth : baseMargin;
   const rightMargin = baseMargin;
 
-  return `--grid-left-margin: ${leftMargin}px; --grid-right-margin: ${rightMargin}px;`;
+  return `--data-grid-margin-left: ${leftMargin}px; --data-grid-margin-right: ${rightMargin}px; --data-grid-contain: none; --data-grid-border-width: var(--border-width-0); --data-grid-border-radius: var(--border-radius-0);`;
 });
 
 const reactiveSearchString = computed({
@@ -2138,7 +2135,6 @@ defineExpose({ cancelSelection, selectRows, sortBy });
       { 'lx-grid-sticky': stickyHeader },
       { 'lx-grid-sticky-toolbar': props.stickyToolbar },
       { 'lx-scrollable': scrollable === true || autoScrollable === true },
-      { 'lx-full-bleed': isFullBleedActive },
     ]"
   >
     <p class="lx-invisible" role="status" aria-live="polite" aria-atomic="true">

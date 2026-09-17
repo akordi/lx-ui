@@ -370,7 +370,7 @@
   --data-block-selecting-block-width: var(--list-selecting-block-width);
   --data-block-selecting-block-height: var(--list-selecting-block-height);
 
-  --appendable-list-toolbar-gap-bottom: var(--list-item-toolbar-gap-bottom);
+  --appendable-list-toolbar-gap-bottom: var(--list-toolbar-gap-bottom);
   --appendable-list-button-padding: var(--space-0250);
   --appendable-list-padding: var(--space-1000) 
                              calc(var(--button-ghost-icon-only-min-width) + var(--space-0500)) 

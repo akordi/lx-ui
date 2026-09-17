@@ -1216,10 +1216,9 @@ if (props.builderOptions.useRegistry) {
               :key="groupName"
               class="lx-button-set lx-dropdown-menu-group lx-dropdown-menu-no-panel"
             >
-              <div v-for="button in group" :key="button?.id">
+              <template v-for="button in group" :key="button?.id">
                 <LxButton
                   :id="`${id}-action-${button.id}`"
-                  :key="button.id"
                   :label="button.name || button.label"
                   :title="button.title || button.tooltip"
                   :icon="button.icon"
@@ -1237,7 +1236,7 @@ if (props.builderOptions.useRegistry) {
                   :href="button.href"
                   @click="clickHandler(button.id)"
                 />
-              </div>
+              </template>
             </div>
 
             <div
