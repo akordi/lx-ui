@@ -339,7 +339,7 @@ const dataGridItems = computed(() =>
         value: subItem[props.valueAttribute],
         group: item[props.nameAttribute],
         icon: {
-          icon: 'status-default',
+          icon: 'color-swatch',
           category: getBarColor(subItem, true),
           label: subItem[props.valueAttribute]?.toString(),
         },
@@ -352,7 +352,7 @@ const dataGridItems = computed(() =>
       value: item[props.valueAttribute],
       group: null,
       icon: {
-        icon: 'status-default',
+        icon: 'color-swatch',
         category: getBarColor(item, true),
         label: item[props.valueAttribute]?.toString(),
       },

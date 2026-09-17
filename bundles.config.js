@@ -88,6 +88,7 @@ export const bundles = {
   'lx-bt-bvkb-insurance': ['lx-pt-bvkb-insurance'],
   'lx-bt-lasis': ['lx-pt-lasis'],
   'lx-bt-viddis': ['lx-pt-viddis'],
+  'lx-bt-salsa': ['lx-pt-salsa'],
   // add new bundles here (without .css extension)
 };
 
