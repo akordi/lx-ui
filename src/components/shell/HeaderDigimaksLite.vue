@@ -730,6 +730,10 @@ provide('insideHeader', insideHeader);
                   id="lx-shell-device-fonts-toggle"
                   v-model="deviceFontsModel"
                   :disabled="headerNavDisable"
+                  :texts="{
+                    valueYes: displayTexts.systemFontsOn,
+                    valueNo: displayTexts.systemFontsOff,
+                  }"
                 />
               </LxRow>
             </LxForm>

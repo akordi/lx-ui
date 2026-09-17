@@ -14,12 +14,16 @@
 
   --color-red: #e83077;
 
-  --list-item-border-width: var(--border-width-1);
-  --list-item-border-style: solid;
-  --color-list-item-border: var(--color-chrome);
   --region-border: var(--border-width-2) solid transparent;
   --border-radius-default: calc(var(--row-size) / 2);
+
+  --list-item-border-width: var(--border-width-1);
+  --list-item-border-style: solid;
   --list-item-inner-border-radius: var(--border-radius-default);
+  --list-item-outer-border-radius: var(--border-radius-default);
+  --list-item-header-padding: 0.35rem 1.5rem 0.25rem 0.25rem;
+
+  --color-list-item-border: var(--color-chrome);
 
   --input-border-radius: var(--border-radius-default);
   --input-border-width: var(--border-width-1);
@@ -140,6 +144,30 @@
   --color-button-ghost-background-active: var(--color-button-ghost-background);
   --color-button-ghost-border-active: var(--color-button-ghost-background);
   --color-button-ghost-icon-active: var(--color-button-ghost-icon);
+
+  --color-toolbar-button-ghost-icon-hover: var(--color-toolbar-button-ghost-icon);
+  --color-toolbar-button-ghost-icon-active: var(--color-toolbar-button-ghost-icon);
+  --color-toolbar-button-ghost-icon-focus: var(--color-toolbar-button-ghost-icon);
+
+  --tag-border-radius: var(--border-radius-default);
+  --color-tag-background-hover: var(--color-tag-background);
+  --color-tag-border-hover: var(--color-tag-border);
+  --color-tag-text-hover: var(--color-tag-text);
+
+  --color-toggle-background-hover-off: var(--color-toggle-background-off);
+  --color-toggle-border-hover-off: var(--color-toggle-border-off);
+  --color-toggle-thumb-hover-off: var(--color-toggle-thumb-off);
+  --color-toggle-background-hover-on: var(--color-toggle-background-on);
+  --color-toggle-border-hover-on: var(--color-toggle-border-on);
+  --color-toggle-thumb-hover-on: var(--color-toggle-thumb-on);
+
+  --color-list-item-background-hover: var(--color-list-item-background);
+  --color-list-text-primary-hover: var(--color-list-text-primary);
+  --color-list-text-secondary-hover: var(--color-list-text-secondary);
+
+  --popover-border-radius: var(--border-radius-1000);
+
+  --color-nav-tile-background-hover: var(--color-nav-tile-background);
 }
 
 .lx.lx-theme-dark {
@@ -154,7 +182,10 @@
   --color-region-2: var(--color-background);
   --color-chrome: #0d0c10;
 
+  --color-list-item-border: var(--color-chrome);
+
   --color-input-border: var(--color-chrome);
+  --color-input-border-disabled: transparent;
 
   --color-nav-item-background-selected: var(--color-highlight);
 
@@ -246,4 +277,25 @@
   --color-button-ghost-background-active: var(--color-button-ghost-background);
   --color-button-ghost-border-active: var(--color-button-ghost-background);
   --color-button-ghost-icon-active: var(--color-button-ghost-icon);
+
+  --color-toolbar-button-ghost-icon-hover: var(--color-toolbar-button-ghost-icon);
+  --color-toolbar-button-ghost-icon-active: var(--color-toolbar-button-ghost-icon);
+  --color-toolbar-button-ghost-icon-focus: var(--color-toolbar-button-ghost-icon);
+
+  --color-tag-background-hover: var(--color-tag-background);
+  --color-tag-border-hover: var(--color-tag-border);
+  --color-tag-text-hover: var(--color-tag-text);
+
+  --color-toggle-background-hover-off: var(--color-toggle-background-off);
+  --color-toggle-border-hover-off: var(--color-toggle-border-off);
+  --color-toggle-thumb-hover-off: var(--color-toggle-thumb-off);
+  --color-toggle-background-hover-on: var(--color-toggle-background-on);
+  --color-toggle-border-hover-on: var(--color-toggle-border-on);
+  --color-toggle-thumb-hover-on: var(--color-toggle-thumb-on);
+
+  --color-list-item-background-hover: var(--color-list-item-background);
+  --color-list-text-primary-hover: var(--color-list-text-primary);
+  --color-list-text-secondary-hover: var(--color-list-text-secondary);
+
+  --color-nav-tile-background-hover: var(--color-nav-tile-background);
 }

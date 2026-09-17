@@ -19,8 +19,6 @@ const {
   selectedAlternativeProfileModel,
   selectedMegaMenuItemModel,
   themeModel,
-  animationsModel,
-  transparencyModel,
   customButtonOpenedModal,
   focusFirstMainFocusableElement,
   triggerShowAllClick,
@@ -71,8 +69,6 @@ const {
         v-model:selectedContextPerson="selectedContextPersonModel"
         v-model:selectedAlternativeProfile="selectedAlternativeProfileModel"
         v-model:theme="themeModel"
-        v-model:hasReducedAnimations="animationsModel"
-        v-model:hasReducedTransparency="transparencyModel"
         v-model:hasDeviceFonts="deviceFontsModel"
         v-model:navBarSwitch="navBarSwitchModel"
         v-model:selectedMegaMenuItem="selectedMegaMenuItemModel"
@@ -113,18 +109,18 @@ const {
         :customButtonBadgeIcon="props.customButtonBadgeIcon"
         :customButtonKind="props.customButtonKind"
         :texts="displayTexts"
-        @customButtonClick="emits('customButtonClick')"
-        @megaMenuShowAllClick="triggerShowAllClick"
-        @languageChange="languageChange"
-        @alertItemClick="alertItemClicked"
-        @alertsClick="alertsClicked"
-        @helpClick="helpClicked"
-        @goHome="goHome"
-        @goBack="goBack"
-        @logOut="logOut"
-        @navToggle="navToggle"
-        @contextPersonChange="contextPersonChange"
-        @alternativeProfileChange="alternativeProfileChange"
+        @custom-button-click="emits('customButtonClick')"
+        @mega-menu-show-all-click="triggerShowAllClick"
+        @language-change="languageChange"
+        @alert-item-click="alertItemClicked"
+        @alerts-click="alertsClicked"
+        @help-click="helpClicked"
+        @go-home="goHome"
+        @go-back="goBack"
+        @log-out="logOut"
+        @nav-toggle="navToggle"
+        @context-person-change="contextPersonChange"
+        @alternative-profile-change="alternativeProfileChange"
       />
     </header>
     <div ref="modals" id="modals"></div>
