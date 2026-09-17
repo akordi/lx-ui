@@ -64,6 +64,7 @@ const props = defineProps({
   cadenceOfMinutes: { type: Number, default: 1 }, // 1, 5, 15
   cadenceOfSeconds: { type: Number, default: 1 }, // 1, 5, 15
   pickerType: { type: String, default: 'single' }, // 'single', 'range'
+  rangeMonth: { type: String, default: 'next' }, // 'next', 'previous'
   labelledBy: { type: String, default: null },
   legacyMode: { type: Boolean, default: false }, // legacy mode flag to separate logic without breaking date mode flow and validations
   texts: {
@@ -1544,6 +1545,7 @@ onMounted(async () => {
           :cadenceOfSeconds="cadenceOfSeconds"
           :clearIfNotExact="clearIfNotExact"
           :pickerType="pickerType"
+          :rangeMonth="rangeMonth"
           :activeInput="activeInput"
           :setActiveInput="setActiveInput"
           :openSource="openSource"
@@ -1576,6 +1578,7 @@ onMounted(async () => {
       :cadenceOfSeconds="cadenceOfSeconds"
       :clearIfNotExact="clearIfNotExact"
       :pickerType="pickerType"
+      :rangeMonth="rangeMonth"
       :openSource="openSource"
       :texts="displayTexts"
       @focusActiveInput="focusInput"

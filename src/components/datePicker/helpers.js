@@ -1083,3 +1083,75 @@ export function isSingleChoiceKind(mode, currentDate, min, max) {
 
   return false;
 }
+
+export function parseTimeAdjust(timeAdjust) {
+  if (!timeAdjust || typeof timeAdjust !== 'string') return null;
+  const value = timeAdjust.trim();
+  if (!value) return null;
+
+  if (value.toLowerCase() === 'now') {
+    const now = new Date();
+    return { hours: now.getHours(), minutes: now.getMinutes(), seconds: now.getSeconds() };
+  }
+
+  const match = /^(\d{2}):(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const [hours, minutes, seconds] = match.slice(1).map(Number);
+  if (hours > 23 || minutes > 59 || seconds > 59) return null;
+
+  return { hours, minutes, seconds };
+}
+
+const TIME_ADJUST_EDGES = ['start', 'end'];
+
+// Collects every complaint about a timeAdjust value in one pass, for the prop validator to log
+export function getTimeAdjustWarnings(timeAdjust) {
+  if (!timeAdjust) return [];
+
+  const invalid = (value) => `'${value}' is not a valid time ('HH:mm:ss' or 'now') and is ignored`;
+
+  if (typeof timeAdjust === 'string') {
+    return parseTimeAdjust(timeAdjust) ? [] : [`value ${invalid(timeAdjust)}`];
+  }
+
+  const warnings = [];
+
+  const unknownKeys = Object.keys(timeAdjust).filter((key) => !TIME_ADJUST_EDGES.includes(key));
+  if (unknownKeys.length) {
+    warnings.push(
+      `object has unknown key(s) '${unknownKeys.join("', '")}', expected 'start' and 'end'`
+    );
+  }
+
+  TIME_ADJUST_EDGES.forEach((edge) => {
+    if (timeAdjust[edge] && !parseTimeAdjust(timeAdjust[edge])) {
+      warnings.push(`'${edge}' ${invalid(timeAdjust[edge])}`);
+    }
+  });
+
+  const definedEdges = TIME_ADJUST_EDGES.filter((edge) => timeAdjust[edge]);
+  if (!definedEdges.length) {
+    warnings.push("object sets neither 'start' nor 'end', so no time is applied");
+    return warnings;
+  }
+  if (definedEdges.length === 1) {
+    const [defined] = definedEdges;
+    const missing = defined === 'start' ? 'end' : 'start';
+    warnings.push(
+      `object sets only '${defined}', so the ${missing} date keeps no time. Set both ends, or pass a single value to use one time for both.`
+    );
+  }
+
+  return warnings;
+}
+
+export function applyTimeAdjust(dateObj, timeAdjust) {
+  if (!dateObj) return null;
+  const time = parseTimeAdjust(timeAdjust);
+  if (!time) return dateObj;
+
+  const adjusted = new Date(dateObj);
+  adjusted.setHours(time.hours, time.minutes, time.seconds, 0);
+  return adjusted;
+}

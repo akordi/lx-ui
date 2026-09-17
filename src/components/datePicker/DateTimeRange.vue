@@ -8,12 +8,13 @@ import {
   onUnmounted,
   onMounted,
   nextTick,
+  watch,
 } from 'vue';
 import { useResizeObserver } from '@vueuse/core';
 import useLx from '@/hooks/useLx';
 import { formatDate } from '@/utils/date/format';
 import { getMonthNames, getMonthYearString } from '@/utils/date/intl';
-import { formatDateJSON, parseDate } from '@/utils/date/parse';
+import { formatDateJSON, formatJSON, isDateValid, parseDate } from '@/utils/date/parse';
 import { generateUUID } from '@/utils/stringUtils';
 import {
   dateFromYearAndQuarter,
@@ -22,10 +23,15 @@ import {
   extractYearFromDate,
   extractYearMonthFromDate,
   getMonthNameByOrder,
+  applyTimeAdjust,
+  parseTimeAdjust,
+  getTimeAdjustWarnings,
+  normalizeDate,
 } from '@/components/datePicker/helpers';
 import LxDatePicker from '@/components/datePicker/DatePicker.vue';
 import LxEmptyValue from '@/components/EmptyValue.vue';
 import { clampText, getDisplayTexts } from '@/utils/generalUtils';
+import { lxDevUtils } from '@/utils';
 import { DATE_VALIDATION_RESULT } from '@/constants';
 import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/builderUtils';
 
@@ -58,7 +64,21 @@ const props = defineProps({
     group: 'main',
     sequence: 7,
   },
-  timeAdjust: { type: String, default: null },
+  timeAdjust: {
+    type: [String, Object],
+    default: null,
+    group: 'additional',
+    sequence: 8,
+    validator: (v, p) => {
+      getTimeAdjustWarnings(v).forEach((message) =>
+        lxDevUtils.logWarn(
+          `LxDateTimeRange [${p?.id}]: "timeAdjust" ${message}`,
+          useLx().getGlobals()?.environment
+        )
+      );
+      return true;
+    },
+  }, // 'HH:mm:ss', 'now' or { start, end }
   locale: { type: Object, default: () => useLx().getGlobals()?.locale },
   rangeMonth: {
     type: String,
@@ -141,9 +161,52 @@ const localeMasks = computed(() => {
   return props.locale?.masks ? props.locale.masks : defaultMasks;
 });
 
+// timeAdjust accepts a single time for both ends or { start, end } for each end separately
+function resolveTimeAdjust(edge) {
+  if (!props.timeAdjust) return null;
+  const value = typeof props.timeAdjust === 'string' ? props.timeAdjust : props.timeAdjust[edge];
+  return parseTimeAdjust(value) ? value : null;
+}
+
+const timeAdjustStart = computed(() => resolveTimeAdjust('start'));
+const timeAdjustEnd = computed(() => resolveTimeAdjust('end'));
+
+function formatDateValue(value, timeAdjust) {
+  if (!timeAdjust) return formatDateJSON(value);
+  const adjusted = applyTimeAdjust(parseDate(value), timeAdjust);
+  return isDateValid(adjusted) ? formatJSON(adjusted) : null;
+}
+
+function syncTimeAdjustedValue(edge, value, timeAdjust) {
+  if (!timeAdjust) return;
+  const adjusted = formatDateValue(value, timeAdjust);
+  if (adjusted && adjusted !== value) emits(`update:${edge}Date`, adjusted);
+}
+
+watch(
+  () => [props.timeAdjust, props.startDate, props.endDate, props.kind, props.readOnly],
+  () => {
+    if (props.readOnly) return;
+    if (props.kind !== 'date' && props.kind !== 'legacy') return;
+
+    syncTimeAdjustedValue('start', props.startDate, timeAdjustStart.value);
+    syncTimeAdjustedValue('end', props.endDate, timeAdjustEnd.value);
+  },
+  { immediate: true }
+);
+
+// The picker compares selections as plain days, so an adjusted time must not reach it — it
+// belongs to the emitted value alone. Without this a same-day range needs two clicks, because
+// the clicked day (midnight) never compares as >= a start already carrying a time.
+function parseDayValue(value) {
+  const parsed = parseDate(value);
+  if (props.kind !== 'date' && props.kind !== 'legacy') return parsed;
+  return normalizeDate(parsed, 'date');
+}
+
 function updateStartValue(startValue) {
   if (props.kind === 'date' || props.kind === 'legacy') {
-    const nv = formatDateJSON(startValue);
+    const nv = formatDateValue(startValue, timeAdjustStart.value);
     emits('update:startDate', nv);
   } else if (props.kind === 'month') {
     const nv = extractMonthFromDate(startValue);
@@ -162,7 +225,7 @@ function updateStartValue(startValue) {
 
 function updateEndValue(endValue) {
   if (props.kind === 'date' || props.kind === 'legacy') {
-    const nv = formatDateJSON(endValue);
+    const nv = formatDateValue(endValue, timeAdjustEnd.value);
     emits('update:endDate', nv);
   } else if (props.kind === 'month') {
     const nv = extractMonthFromDate(endValue);
@@ -289,7 +352,7 @@ const model = computed({
       return getQuarterModel();
     }
 
-    return { start: parseDate(props.startDate), end: parseDate(props.endDate) };
+    return { start: parseDayValue(props.startDate), end: parseDayValue(props.endDate) };
   },
   set(value) {
     if (!value || (!value.start && !value.end)) {
@@ -382,7 +445,7 @@ const labelledBy = computed(() => props.labelId || rowId.value);
 
 // Computed properties to handle individual updates for start and end dates
 const modelStart = computed({
-  get: () => parseDate(props.startDate),
+  get: () => parseDayValue(props.startDate),
   set: (value) => {
     if (value) {
       updateStartValue(value);
@@ -393,7 +456,7 @@ const modelStart = computed({
 });
 
 const modelEnd = computed({
-  get: () => parseDate(props.endDate),
+  get: () => parseDayValue(props.endDate),
   set: (value) => {
     if (value) {
       updateEndValue(value);
@@ -544,6 +607,7 @@ if (props.builderOptions?.useRegistry) {
           :locale="localeComputed"
           :first-day-of-the-week="localeFirstDay"
           picker-type="range"
+          :range-month="rangeMonth"
           :clearIfNotExact="clearIfNotExact"
           :texts="displayTexts"
           :required="required"

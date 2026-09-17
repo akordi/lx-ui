@@ -70,6 +70,7 @@ const props = defineProps({
   cadenceOfSeconds: { type: Number, default: 1 }, // 1, 5, 15
   clearIfNotExact: { type: Boolean, default: false },
   pickerType: { type: String, default: 'single' }, // 'single', 'range'
+  rangeMonth: { type: String, default: 'next' }, // 'next', 'previous'
   activeInput: { type: String, default: 'startInput' }, // 'startInput', 'endInput'
   setActiveInput: { type: Function, default: () => {} },
   openSource: { type: String, default: null },
@@ -3934,6 +3935,11 @@ watch(
   { immediate: true }
 );
 
+function clampToMinDate(date) {
+  if (props.minDateRef && date < new Date(props.minDateRef)) return new Date(props.minDateRef);
+  return date;
+}
+
 function getRangeOpenAnchorDate() {
   const modelRange =
     props.modelValue && typeof props.modelValue === 'object' && !(props.modelValue instanceof Date)
@@ -3955,8 +3961,15 @@ function getRangeOpenAnchorDate() {
 
   const isEndInput = props.activeInput === 'endInput';
 
-  if (isEndInput) return end || start || todayDate.value;
-  return start || end || todayDate.value;
+  const anchor = isEndInput ? end || start || todayDate.value : start || end || todayDate.value;
+
+  const hasTwoMonthPanes = isDateMode.value && !isMobileScreen.value;
+  const anchoredOnPendingStart = Boolean(start) && anchor === start && !end;
+  if (props.rangeMonth === 'previous' && hasTwoMonthPanes && !anchoredOnPendingStart) {
+    return clampToMinDate(subMonths(anchor, 1));
+  }
+
+  return anchor;
 }
 
 function getRangeFocusDate() {
