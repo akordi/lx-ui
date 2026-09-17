@@ -113,14 +113,22 @@
   --color-disabled: #888;
   --color-yellow-foreground: var(--color-region);
 
-  --color-green: #36b37e;
+  --color-green: #3da958;
+  --color-green-light: #112217;
   --color-red: #ff603a;
+  --color-red-light: #32060a;
   --color-orange: #ffab00;
-  --color-purple: #998dd9;
+  --color-orange-light: #302512;
+  --color-purple: #9d92d6;
+  --color-purple-light: #160f3c;
   --color-blue: #4c9aff;
+  --color-blue-light: #0d233e;
   --color-teal: #00b8d9;
-  --color-yellow: #f1c21b;
-  --color-grey: var(--color-label);
+  --color-teal-light: #092b2f;
+  --color-yellow: #e1c21b;
+  --color-yellow-light: #2e2516;
+  --color-grey: #979797;
+  --color-grey-light: #0d0d0d;
 
   --color-good: #198038;
   --color-bad: var(--color-red);
@@ -138,11 +146,6 @@
   --color-signed: var(--color-purple);
   --color-deleted: var(--color-grey);
   --color-error: var(--color-red);
-
-  --color-state-new: var(--color-blue);
-  --color-state-edited: var(--color-orange);
-  --color-state-finished: var(--color-green);
-  --color-state-deleted: var(--color-label);
 
   --color-notification-success-foreground: #198038;
   --color-notification-success-background: #040a06;

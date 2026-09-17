@@ -26,6 +26,7 @@
   --color-cover-title: var(--color-brand);
 
   --color-nav-item-background-selected: #fae5d7;
+  --color-state-display-background: var(--color-region);
 }
 .lx.lx-theme-dark {
 	--color-brand: #cb728c;

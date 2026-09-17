@@ -73,10 +73,6 @@ svg .lx-shade {
   align-items: center;
 }
 
-.lx-form-grid > header > .lx-group .lx-toolbar-chip > .lx-state {
-  padding: var(--space-0);
-}
-
 .lx-form-grid > header > .lx-group .lx-info-wrapper .lx-toolbar-chip {
   padding: var(--space-0500) var(--space-1000);
 }
@@ -111,10 +107,9 @@ svg .lx-shade {
   cursor: help;
 }
 
+/* The chip highlights on hover, but a state display keeps its own pill background */
 .lx:not(.lx-theme-contrast) .lx-form-grid > header > .lx-group .lx-info-wrapper-content:hover .lx-toolbar-chip,
-.lx:not(.lx-theme-contrast) .lx-form-grid > header > .lx-group .lx-info-wrapper-content:focus .lx-toolbar-chip,
-.lx:not(.lx-theme-contrast) .lx-form-grid > header > .lx-group .lx-info-wrapper-content:hover .lx-toolbar-chip > .lx-state,
-.lx:not(.lx-theme-contrast) .lx-form-grid > header > .lx-group .lx-info-wrapper-content:focus .lx-toolbar-chip > .lx-state {
+.lx:not(.lx-theme-contrast) .lx-form-grid > header > .lx-group .lx-info-wrapper-content:focus .lx-toolbar-chip {
   background-color: var(--color-data-grid-background-hover);
 }
 

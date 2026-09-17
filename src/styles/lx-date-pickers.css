@@ -860,12 +860,12 @@
 
 .lx .lx-layout .lx-calendar-container .bar-lx-new,
 .lx .lx-layout .lx-day-layer-popper-layout .bar-lx-new {
-  background-color: var(--color-state-new);
+  background-color: var(--color-new);
 }
 
 .lx .lx-layout .lx-calendar-container .bar-lx-edited,
 .lx .lx-layout .lx-day-layer-popper-layout .bar-lx-edited {
-  background-color: var(--color-state-edited);
+  background-color: var(--color-edited);
 }
 
 .lx .lx-layout .lx-calendar-container .bar-lx-inactive,
@@ -875,7 +875,7 @@
 
 .lx .lx-layout .lx-calendar-container .bar-lx-finished,
 .lx .lx-layout .lx-day-layer-popper-layout .bar-lx-finished {
-  background-color: var(--color-state-finished);
+  background-color: var(--color-finished);
 }
 
 .lx .lx-layout .lx-calendar-container .bar-lx-red,

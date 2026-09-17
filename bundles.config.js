@@ -21,6 +21,8 @@ export const commonStyles = [
   'lx-inputs',
   'lx-steps',
   'lx-forms',
+  // must stay directly after lx-forms - these styles were extracted from it
+  'lx-state-displays',
   'lx-notifications',
   'lx-modals',
   'lx-loaders',

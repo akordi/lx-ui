@@ -103,6 +103,7 @@
 .lx-dropdown-default-content .lx-value-picker-item .lx-radio-button-wrapper {
   width: 100%;
   overflow: hidden;
+  align-items: center;
 }
 
 .lx-dropdown-default-content .lx-value-picker-item > div,
@@ -110,10 +111,6 @@
 .lx-dropdown-default-content .lx-value-picker-item .lx-radio-button-text-wrapper {
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.lx-value-picker-item .lx-state .lx-state-icon {
-  margin-left: var(--space-0500);
 }
 
 .lx-value-picker-item label {

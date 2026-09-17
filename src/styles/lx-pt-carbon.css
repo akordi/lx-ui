@@ -976,6 +976,23 @@
   --badge-grid-template-columns: auto 1fr;
   --badge-grid-areas: 'icon text';
 
+  --state-display-border-width: var(--badge-border-width-s);
+  --state-display-border: var(--badge-border-s);
+  --state-display-border-radius: var(--badge-border-radius-s);
+  --state-display-padding: var(--badge-padding-s);
+  --state-display-padding-icon-only: var(--badge-padding-icon-only-s);
+  --state-display-width: var(--badge-width-s);
+  --state-display-height: var(--badge-height-s);
+  --state-display-min-width: var(--badge-min-width-s);
+  --state-display-min-height: var(--badge-min-height-s);
+  --state-display-gap: var(--badge-gap-s);
+  --state-display-icon-size: var(--badge-icon-size-s);
+  --state-display-grid-template-columns: var(--badge-grid-template-columns);
+  --state-display-grid-areas: var(--badge-grid-areas);
+  --state-display-text-font-size: var(--badge-text-font-size);
+  --state-display-text-font-weight: var(--badge-text-font-weight);
+  --state-display-text-line-height: var(--badge-text-line-height);
+
   --info-box-grid-areas: 'icon content button';
   --info-box-grid-template-columns: auto 1fr auto;
   --info-box-grid-template-rows: 1fr;

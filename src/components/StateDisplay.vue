@@ -31,6 +31,7 @@ const outlineTypes = new Set([
   'purple',
   'orange',
   'yellow',
+  'teal',
 ]);
 
 const availableIcons = new Set([
@@ -97,61 +98,51 @@ function getCustomStatusIcon(options, displayType) {
   return 'status-default';
 }
 
-const alignedRowSize = computed(() => {
-  switch (definition.value?.displayShape) {
-    case 'icon':
-    case 'custom':
-      return 'lx-aligned-row-1';
-    case 'circle':
-      return 'lx-aligned-row-4';
-    case 'diamond':
-      return 'lx-aligned-row-5';
-    default:
-      return 'lx-aligned-row-4';
-  }
+// Shapes are drawn as icons so their size stays predictable across browsers
+function getShapeIcon(displayShape, displayType) {
+  const shape = displayShape === 'diamond' ? 'diamond' : 'circle';
+  return outlineTypes.has(displayType) ? `status-${shape}-outline` : `status-${shape}-filled`;
+}
+
+const isIconOnly = computed(() => !String(definition.value?.displayName ?? '').trim());
+
+const stateIcon = computed(() => {
+  const { displayShape, displayType, options } = definition.value || {};
+
+  if (displayShape === 'icon') return getStatusIcon(displayType);
+  if (displayShape === 'custom') return getCustomStatusIcon(options, displayType);
+  return getShapeIcon(displayShape, displayType);
 });
 </script>
 <template>
   <!--
     displayTypes: 
         draft, new, editing, edited, disabling, disabled, inactive, finishing, finished, deleting, deleted, ongoing, incomplete, waiting, signed, error, default
-        red, green, blue, black, purple, orange, yellow, 
-        red-full, green-full, blue-full, black-full, purple-full, orange-full, yellow-full;
+        red, green, blue, black, purple, orange, yellow, teal,
+        red-full, green-full, blue-full, black-full, purple-full, orange-full, yellow-full, teal-full;
     displayShapes: circle, diamond, icon, custom;
   -->
 
   <div
     v-if="definition"
-    class="lx-state lx-aligned-row"
+    class="lx-state"
     :class="[
-      alignedRowSize,
       `lx-state-${definition?.displayType} ${
         definition?.displayShape ? `lx-state-shape-${definition?.displayShape}` : ''
       }`,
-      { 'lx-tooltip-state': definition?.title },
+      { 'lx-tooltip-state': definition?.title, 'lx-state-icon-only': isIconOnly },
     ]"
     :title="definition?.title"
     data-component="lx-state-display"
     :id="id"
   >
-    <div
-      v-if="definition?.displayShape !== 'icon' && definition?.displayShape !== 'custom'"
-      class="lx-state-icon"
-    >
-      <div class="lx-state-indicator"></div>
-    </div>
     <LxIcon
-      v-else
       class="lx-state-icon"
-      :value="
-        definition?.displayShape === 'icon'
-          ? getStatusIcon(definition?.displayType)
-          : getCustomStatusIcon(definition?.options, definition?.displayType)
-      "
+      :value="stateIcon"
       :title="definition?.title"
       :iconSet="definition?.iconSet"
     />
-    <p class="lx-primary">{{ definition?.displayName }}</p>
+    <div v-if="!isIconOnly" class="lx-state-text">{{ definition?.displayName }}</div>
   </div>
   <LxEmptyValue v-else :texts="{ emptyValue: displayTexts.emptyValue }" />
 </template>

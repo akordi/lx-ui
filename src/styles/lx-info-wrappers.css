@@ -119,7 +119,7 @@
 }
 
 .popper .lx-info-wrapper .lx-info-wrapper-panel .lx-secondary,
-.popper .lx-info-wrapper .lx-info-wrapper-panel label:not(.lx-state > .lx-primary) {
+.popper .lx-info-wrapper .lx-info-wrapper-panel label:not(.lx-state > .lx-state-text) {
   color: var(--color-info-wrapper-text-secondary);
   font-size: var(--info-wrapper-text-secondary-font-size);
   font-weight: var(--info-wrapper-text-secondary-font-weight);

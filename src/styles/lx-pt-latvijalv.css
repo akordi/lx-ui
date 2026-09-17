@@ -146,7 +146,7 @@
 .lx-autocomplete-default-panel .lx-value,
 .lx-autocomplete-default-panel .lx-placeholder,
 .lx-autocomplete-default-panel .lx-value .lx-item-display > p,
-.lx-autocomplete-default-panel .lx-value .lx-state > .lx-primary {
+.lx-autocomplete-default-panel .lx-value .lx-state > .lx-state-text {
   overflow-x: unset;
 }
 

@@ -53,8 +53,11 @@
 
 .lx-badge .lx-badge-text {
   grid-area: text;
+  padding-block: var(--space-0125);
+  margin-block: calc(var(--space-0125) * -1);
+  overflow: hidden;
+  text-overflow: ellipsis;
   align-self: center;
-  justify-self: center;
 }
 
 .lx-region .lx-badge,

@@ -325,7 +325,7 @@
 .lx-autocomplete-default-panel .lx-placeholder,
 .lx-rotator .lx-rotator-set .lx-rotator-tag > p,
 .lx-autocomplete-default-panel .lx-value .lx-item-display > p,
-.lx-autocomplete-default-panel .lx-value .lx-state > .lx-primary {
+.lx-autocomplete-default-panel .lx-value .lx-state > .lx-state-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1022,10 +1022,6 @@ h2.lx-section-header + p.lx-invalidation-message,
   height: 100%;
 }
 
-.lx-autocomplete .lx-value .lx-state-icon {
-  margin-left: var(--space-0500);
-}
-
 /*** LxValuePicker styles ***/
 
 .lx-value-picker-dropdown-wrapper .lx-tag-label,
@@ -1690,22 +1686,22 @@ h2.lx-section-header + p.lx-invalidation-message,
 
 .lx-markdown-text-area-wrapper .placeholder-new,
 .lx-markdown-tag-item .placeholder-new {
-  background-color: var(--color-state-new-20);
+  background-color: var(--color-blue-20);
 }
 
 .lx-markdown-text-area-wrapper .placeholder-edit,
 .lx-markdown-tag-item .placeholder-edit {
-  background-color: var(--color-state-edited-20);
+  background-color: var(--color-orange-20);
 }
 
 .lx-markdown-text-area-wrapper .placeholder-delete,
 .lx-markdown-tag-item .placeholder-delete {
-  background-color: var(--color-state-deleted-20);
+  background-color: var(--color-label-20);
 }
 
 .lx-markdown-text-area-wrapper .placeholder-finished,
 .lx-markdown-tag-item .placeholder-finished {
-  background-color: var(--color-state-finished-20);
+  background-color: var(--color-green-20);
 }
 
 .lx-markdown-text-area-wrapper .placeholder-red,
@@ -1766,7 +1762,7 @@ h2.lx-section-header + p.lx-invalidation-message,
 }
 
 .lx-value-picker-item label:not(:has(.lx-state)),
-.lx-value-picker-item .lx-state > .lx-primary,
+.lx-value-picker-item .lx-state > .lx-state-text,
 .lx-value-picker-item .lx-item-display > .lx-data,
 .lx-value-picker-item label > p,
 .lx-value-picker-item label > div {
@@ -1799,17 +1795,6 @@ h2.lx-section-header + p.lx-invalidation-message,
 .lx-autocomplete .lx-autocomplete-default-panel .lx-text-input-wrapper .lx-text-input,
 .lx-rotator .lx-rotator-set {
   margin: var(--space-0);
-}
-
-.lx-value-picker-item .lx-state,
-.lx-dropdown-default-panel .lx-state,
-.lx-autocomplete-default-panel .lx-state {
-  padding-top: var(--space-0125);
-  padding-bottom: var(--space-0125);
-}
-
-.lx-dropdown-default-panel .lx-state .lx-state-icon {
-  margin-left: var(--space-0500);
 }
 
 .lx .lx-layout div.lx-autocomplete-default {
@@ -1857,7 +1842,7 @@ h2.lx-section-header + p.lx-invalidation-message,
 }
 
 .lx-dropdown-default .lx-dropdown-input-wrapper > .lx-dropdown-default-panel > .lx-placeholder > span,
-.lx-dropdown-default .lx-dropdown-input-wrapper > .lx-dropdown-default-panel > .lx-dropdown-default-data .lx-state > .lx-primary{
+.lx-dropdown-default .lx-dropdown-input-wrapper > .lx-dropdown-default-panel > .lx-dropdown-default-data .lx-state > .lx-state-text{
 	overflow: hidden;
 	text-overflow: ellipsis;
 }

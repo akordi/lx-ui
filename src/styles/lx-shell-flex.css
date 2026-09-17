@@ -1161,7 +1161,7 @@ code {
 
 .lx .lx-form .lx-row .popper .lx-info-wrapper-panel .lx-data,
 .lx .popper .lx-info-wrapper-panel .lx-data,
-.lx .popper .lx-info-wrapper-panel label:not(.lx-state > .lx-primary) {
+.lx .popper .lx-info-wrapper-panel label:not(.lx-state > .lx-state-text) {
   color: var(--color-tooltip-text-primary);
 }
 

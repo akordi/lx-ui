@@ -620,24 +620,24 @@
 
 .lx-data-grid svg.lx-grid-column-icon.new,
 .lx-vertical svg.lx-grid-column-icon.new {
-  fill: var(--color-state-new);
+  fill: var(--color-new);
 }
 
 .lx-data-grid svg.lx-grid-column-icon.edited,
 .lx-vertical svg.lx-grid-column-icon.edited {
-  fill: var(--color-state-edited);
+  fill: var(--color-edited);
 }
 
 .lx-data-grid svg.lx-grid-column-icon.disabling,
 .lx-data-grid svg.lx-grid-column-icon.inactive,
 .lx-vertical svg.lx-grid-column-icon.inactive {
-  fill: var(--color-state-deleted);
+  fill: var(--color-inactive);
 }
 
 .lx-data-grid svg.lx-grid-column-icon.finishing,
 .lx-data-grid svg.lx-grid-column-icon.finished,
 .lx-vertical svg.lx-grid-column-icon.finished {
-  fill: var(--color-state-finished);
+  fill: var(--color-finished);
 }
 
 .lx-data-grid svg.lx-grid-column-icon.deleting,

@@ -98,11 +98,23 @@
 
 ### Other colors
 
-| Variable name    | Light mode | Dark mode |
-|------------------|------------|-----------|
-| `--color-red`    | #d0141e    | #ff603a   |
-| `--color-orange` | #c55300    | #ffab00   |
-| `--color-green`  | #198038    | #36b37e   |
-| `--color-teal`   | #178295    | #00b8d9   |
-| `--color-blue`   | #036cf5    | #4c9aff   |
-| `--color-purple` | #6554c0    | #998dd9   |
+Each base color has a `-light` variant, meant for the backgrounds of statuses, notifications, info boxes and similar components.
+
+| Variable name          | Light mode | Dark mode |
+|------------------------|------------|-----------|
+| `--color-red`          | #cb0f19    | #ff603a   |
+| `--color-red-light`    | #fcf0f1    | #32060a   |
+| `--color-orange`       | #c04e00    | #ffab00   |
+| `--color-orange-light` | #fcf7e6    | #302512   |
+| `--color-yellow`       | #f1c21b    | #e1c21b   |
+| `--color-yellow-light` | #fcf7e6    | #2e2516   |
+| `--color-green`        | #198038    | #3da958   |
+| `--color-green-light`  | #f0fff4    | #112217   |
+| `--color-teal`         | #036e81    | #00b8d9   |
+| `--color-teal-light`   | #f0fcff    | #092b2f   |
+| `--color-blue`         | #0062eb    | #4c9aff   |
+| `--color-blue-light`   | #f0f5fc    | #0d233e   |
+| `--color-purple`       | #6554c0    | #9d92d6   |
+| `--color-purple-light` | #f2f0ff    | #160f3c   |
+| `--color-grey`         | #6c6c6c    | #979797   |
+| `--color-grey-light`   | #f7f7f7    | #0d0d0d   |

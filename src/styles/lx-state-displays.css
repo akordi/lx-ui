@@ -1,0 +1,182 @@
+.lx-state {
+  --color-state-foreground: var(--color-state-default-foreground);
+  --color-state-background: var(--color-state-default-background);
+  --color-state-text: var(--color-state-foreground);
+
+  display: grid;
+  align-items: start;
+  justify-content: center;
+  width: var(--state-display-width);
+  height: var(--state-display-height);
+  min-width: var(--state-display-min-width);
+  min-height: var(--state-display-min-height);
+  padding: var(--state-display-padding);
+  color: var(--color-state-display-text, var(--color-state-text));
+  background-color: var(--color-state-display-background, var(--color-state-background));
+  column-gap: var(--state-display-gap);
+  border-radius: var(--state-display-border-radius);
+  border: var(--state-display-border);
+  line-height: var(--state-display-text-line-height);
+  font-weight: var(--state-display-text-font-weight);
+  font-size: var(--state-display-text-font-size);
+  grid-template-columns: var(--state-display-grid-template-columns);
+  grid-template-areas: var(--state-display-grid-areas);
+}
+
+.lx-state.lx-tooltip-state {
+  cursor: help;
+}
+
+/* No label: a round icon-only pill, same as an icon-only LxBadge */
+.lx-state.lx-state-icon-only {
+  padding: var(--state-display-padding-icon-only);
+  align-items: center;
+  justify-items: center;
+  --state-display-grid-template-columns: 1fr;
+  --state-display-grid-areas: 'icon';
+  --state-display-gap: var(--space-0);
+}
+
+/* .lx-layout only for specificity: `.lx-data-grid-wrapper .lx-cell svg` recolours nested icons */
+.lx-layout .lx-state .lx-state-icon {
+  grid-area: icon;
+  width: var(--state-display-icon-size);
+  height: var(--state-display-icon-size);
+  fill: var(--color-state-display-icon, var(--color-state-foreground));
+  flex-shrink: 0;
+}
+
+.lx-state .lx-state-text {
+  grid-area: text;
+  /* The 24px pill leaves a 16px row, but the label's descenders need 18px.
+     Padding gives the clip box room; the negative margin keeps the pill's size. */
+  padding-block: var(--space-0125);
+  margin-block: calc(var(--space-0125) * -1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  align-self: center;
+}
+
+/*** State colors ***/
+
+.lx-state.lx-state-default {
+  --color-state-foreground: var(--color-state-default-foreground);
+  --color-state-background: var(--color-state-default-background);
+}
+
+.lx-state.lx-state-draft {
+  --color-state-foreground: var(--color-state-draft-foreground);
+  --color-state-background: var(--color-state-draft-background);
+}
+
+.lx-state.lx-state-new {
+  --color-state-foreground: var(--color-state-new-foreground);
+  --color-state-background: var(--color-state-new-background);
+}
+
+.lx-state.lx-state-editing,
+.lx-state.lx-state-edited {
+  --color-state-foreground: var(--color-state-edited-foreground);
+  --color-state-background: var(--color-state-edited-background);
+}
+
+/* Only the icon carries the lighter disabled tint; the label stays readable grey */
+.lx-state.lx-state-disabling,
+.lx-state.lx-state-disabled {
+  --color-state-foreground: var(--color-state-disabled-foreground);
+  --color-state-background: var(--color-state-disabled-background);
+  --color-state-text: var(--color-grey);
+}
+
+.lx-state.lx-state-inactive {
+  --color-state-foreground: var(--color-state-inactive-foreground);
+  --color-state-background: var(--color-state-inactive-background);
+}
+
+.lx-state.lx-state-finishing,
+.lx-state.lx-state-finished {
+  --color-state-foreground: var(--color-state-finished-foreground);
+  --color-state-background: var(--color-state-finished-background);
+}
+
+.lx-state.lx-state-deleting,
+.lx-state.lx-state-deleted {
+  --color-state-foreground: var(--color-state-deleted-foreground);
+  --color-state-background: var(--color-state-deleted-background);
+}
+
+.lx-state.lx-state-ongoing {
+  --color-state-foreground: var(--color-state-ongoing-foreground);
+  --color-state-background: var(--color-state-ongoing-background);
+}
+
+.lx-state.lx-state-incomplete {
+  --color-state-foreground: var(--color-state-incomplete-foreground);
+  --color-state-background: var(--color-state-incomplete-background);
+}
+
+.lx-state.lx-state-waiting {
+  --color-state-foreground: var(--color-state-waiting-foreground);
+  --color-state-background: var(--color-state-waiting-background);
+}
+
+.lx-state.lx-state-signed {
+  --color-state-foreground: var(--color-state-signed-foreground);
+  --color-state-background: var(--color-state-signed-background);
+}
+
+.lx-state.lx-state-error {
+  --color-state-foreground: var(--color-state-error-foreground);
+  --color-state-background: var(--color-state-error-background);
+}
+
+.lx-state.lx-state-red,
+.lx-state.lx-state-red-full {
+  --color-state-foreground: var(--color-state-red-foreground);
+  --color-state-background: var(--color-state-red-background);
+}
+
+.lx-state.lx-state-green,
+.lx-state.lx-state-green-full {
+  --color-state-foreground: var(--color-state-green-foreground);
+  --color-state-background: var(--color-state-green-background);
+}
+
+.lx-state.lx-state-blue,
+.lx-state.lx-state-blue-full {
+  --color-state-foreground: var(--color-state-blue-foreground);
+  --color-state-background: var(--color-state-blue-background);
+}
+
+.lx-state.lx-state-purple,
+.lx-state.lx-state-purple-full {
+  --color-state-foreground: var(--color-state-purple-foreground);
+  --color-state-background: var(--color-state-purple-background);
+}
+
+.lx-state.lx-state-orange,
+.lx-state.lx-state-orange-full {
+  --color-state-foreground: var(--color-state-orange-foreground);
+  --color-state-background: var(--color-state-orange-background);
+}
+
+.lx-state.lx-state-teal,
+.lx-state.lx-state-teal-full {
+  --color-state-foreground: var(--color-state-teal-foreground);
+  --color-state-background: var(--color-state-teal-background);
+}
+
+/* The yellow and black text shouldn't be yellow or black-on-dark — only their icons carry the hue */
+.lx-state.lx-state-yellow,
+.lx-state.lx-state-yellow-full {
+  --color-state-foreground: var(--color-state-yellow-foreground);
+  --color-state-background: var(--color-state-yellow-background);
+  --color-state-text: var(--color-data);
+}
+
+.lx-state.lx-state-black,
+.lx-state.lx-state-black-full {
+  --color-state-foreground: var(--color-state-black-foreground);
+  --color-state-background: var(--color-state-black-background);
+  --color-state-text: var(--color-data);
+}

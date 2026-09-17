@@ -138,7 +138,6 @@
 
 .lx-radio-button-wrapper .lx-radio-button-text-wrapper,
 .lx-checkbox-wrapper .lx-checkbox-text-wrapper {
-  padding: var(--selecting-block-text-padding);
   cursor: pointer;
 }
 

@@ -44,7 +44,7 @@ const isEmpty = computed(
 <template>
   <div
     v-if="icon || value"
-    class="lx-badge lx-aligned-row"
+    class="lx-badge"
     :class="{
       'lx-badge-icon-only': isIconOnly,
       'lx-badge-text-only': isTextOnly,

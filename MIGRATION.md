@@ -8,6 +8,65 @@ Our goal is to make upgrading predictable, transparent, and worth the effort.
 
 ### Breaking changes
 
+#### LxStateDisplay
+
+LxStateDisplay is now built on LxBadge's structure and tokens: it is a pill with a tinted
+background, its layout tokens (`--state-display-*`) default to the matching `--badge-*` values, and
+the status shapes are drawn as icons instead of CSS shapes.
+
+Its styles also moved out of `lx-forms.css` into their own `lx-state-displays.css`. Bundles pick
+this up automatically; portals that import individual stylesheets instead of a bundle have to add
+`lx-state-displays.css` next to `lx-forms.css`.
+
+- The `.lx-state-indicator` element is gone. Circle and diamond shapes now render as
+  `status-circle-filled` / `status-circle-outline` / `status-diamond-filled` /
+  `status-diamond-outline` icons, so style `svg.lx-state-icon` instead.
+- `.lx-state` no longer carries `lx-aligned-row` / `lx-aligned-row-*` classes — it is its own grid.
+- The label is now `<div class="lx-state-text">` instead of `<p class="lx-primary">`. Style
+  `.lx-state-text` instead of `.lx-state > .lx-primary`. It deliberately does not carry `lx-data`
+  (unlike LxBadge's `lx-data lx-badge-text`): containers such as info wrapper panels, tooltips,
+  modal regions and form rows restyle `.lx-data`, which would override the pill's own label colour,
+  size and weight.
+- `teal` and `teal-full` were added as `displayType` values.
+- A dictionary entry without a `displayName` now renders as a round icon-only pill (matching an
+  icon-only LxBadge) instead of an empty-looking one with a stray label element.
+- LxValuePicker and LxAutoComplete no longer nudge a state display placed in their
+  item slots: the `margin-left` on `.lx-state-icon` and the vertical padding override on `.lx-state`
+  were compensating for the old flex layout and made the pill lopsided. If a portal relied on that
+  offset, drop it — the icon is a centered grid cell now.
+
+Per-state colors moved to `--color-state-<state>-foreground` and `--color-state-<state>-background`.
+To give every status one look (for example an always-white background), set the component-level
+`--color-state-display-background`, `--color-state-display-text` or `--color-state-display-icon`
+instead of redefining the base semantic colors. See
+[LxStateDisplay tokens](docs/tokens/StateDisplayTokens.md).
+
+**Token removals**
+
+- `--color-state-new`, `--color-state-edited`, `--color-state-finished`, `--color-state-deleted`
+  (use the semantic `--color-new`, `--color-edited`, `--color-finished`, `--color-deleted`, or the
+  new `--color-state-*-foreground` tokens)
+- `--color-state-new-20`, `--color-state-edited-20`, `--color-state-deleted-20`,
+  `--color-state-finished-20` (use `--color-blue-20`, `--color-orange-20`, `--color-label-20`,
+  `--color-green-20`)
+
+**Base color changes**
+
+Every base color gained a `-light` variant for component backgrounds
+(`--color-green-light`, `--color-red-light`, `--color-blue-light`, …), and `--color-red`,
+`--color-orange`, `--color-blue`, `--color-teal`, `--color-green` (dark), `--color-purple` (dark),
+`--color-yellow` (dark) and `--color-grey` (dark) were adjusted. See
+[Base tokens](docs/tokens/BaseTokens.md).
+
+#### LxBadge
+
+`.lx-badge` no longer carries the `lx-aligned-row` class — it defines its own grid, and
+`lx-aligned-row` only competed with it. Nothing else changes visually.
+
+The badge label is also now excluded from the `.lx .lx-form .lx-row .lx-data` rules, which
+previously forced `min-height: 2.5rem` and a top padding onto it and stretched the pill from 24px to
+48px inside any form row.
+
 #### LxButton
 
 **`title` now renders an LX tooltip instead of the native browser one**
