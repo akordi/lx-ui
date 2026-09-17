@@ -217,13 +217,23 @@ export function useGridKeyboardNavigation({ getScrollMarginTop } = {}) {
 
   function scrollIntoViewReservingOverlap(element) {
     const reservedOverlap = getStickyOverlap(element);
+    const previousReserve = element.style.scrollMarginTop;
     if (reservedOverlap > 0) {
       element.style.setProperty('scroll-margin-top', `${reservedOverlap}px`);
     }
 
     element.scrollIntoView(SCROLL_INTO_VIEW_OPTIONS);
 
-    if (reservedOverlap > 0) element.style.removeProperty('scroll-margin-top');
+    if (reservedOverlap <= 0) return;
+
+    if (previousReserve) element.style.setProperty('scroll-margin-top', previousReserve);
+    else element.style.removeProperty('scroll-margin-top');
+  }
+
+  function ensureFocusVisible(element) {
+    if (!(element instanceof HTMLElement) || getStickyOverlap(element) <= 0) return;
+
+    scrollIntoViewReservingOverlap(element);
   }
 
   function scrollResolvedTargetIntoView(target, targetElement, previouslyFocused) {
@@ -344,6 +354,7 @@ export function useGridKeyboardNavigation({ getScrollMarginTop } = {}) {
     getFocusable,
     onKeydown,
     onGridFocus,
+    ensureFocusVisible,
     setActiveFromClick,
     resetCells,
     isCellDelegated,

@@ -679,6 +679,11 @@ describe('Sticky header scroll offset', () => {
     hasVirtualization: false,
   };
 
+  // jsdom has no hit testing, so the stub below has to be taken off by hand.
+  afterEach(() => {
+    delete document.elementsFromPoint;
+  });
+
   // jsdom lays nothing out, so every rect is zero and every cell would look like it
   // sits exactly at the header's bottom edge. These stubs place the boxes the
   // occlusion check reads.
@@ -724,6 +729,20 @@ describe('Sticky header scroll offset', () => {
     });
 
     return reserve;
+  }
+
+  // Stand in for the shell header, which lives outside the grid.
+  function stubPinnedBar(height) {
+    const bar = document.createElement('div');
+    document.body.appendChild(bar);
+    stubRect(bar, 0, height);
+
+    const realGetComputedStyle = globalThis.getComputedStyle.bind(globalThis);
+    vi.spyOn(globalThis, 'getComputedStyle').mockImplementation((element, pseudoElement) =>
+      element === bar ? { position: 'fixed' } : realGetComputedStyle(element, pseudoElement)
+    );
+
+    document.elementsFromPoint = (x, y) => (y <= height ? [bar] : []);
   }
 
   function placeBodyCells(top) {
@@ -829,7 +848,89 @@ describe('Sticky header scroll offset', () => {
     expect(reserve.value).toBe('');
   });
 
-  test('reserves nothing when the header does not stick', async () => {
+  function setScrollY(value) {
+    Object.defineProperty(globalThis, 'scrollY', { value, configurable: true });
+  }
+
+  // The sort button puts the scroll back a frame after it takes focus.
+  async function focusSortButtonAcrossFrame({ buttonTop, scrolledTo }) {
+    const button = wrapper.findAll('.lx-grid-header-row .lx-cell-header-sort-button')[0];
+    stubRect(button.element, buttonTop);
+
+    const frames = [];
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((frame) => {
+      frames.push(frame);
+      return frames.length;
+    });
+    const scrollTo = vi.spyOn(globalThis, 'scrollTo').mockImplementation(() => {});
+    setScrollY(120);
+
+    await button.trigger('focus');
+
+    setScrollY(scrolledTo);
+    frames.forEach((frame) => frame());
+
+    return scrollTo;
+  }
+
+  test('keeps the scroll that took a sort button out from under a pinned bar', async () => {
+    wrapper = mountComponent({
+      props: { ...props, stickyHeader: false, hasSorting: true },
+      attachTo: document.body,
+    });
+
+    await flushVirtualizationSetup();
+    stubPinnedBar(48);
+
+    const scrollTo = await focusSortButtonAcrossFrame({ buttonTop: 20, scrolledTo: 60 });
+
+    // Putting 120 back would hide the header row again.
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 60 }));
+  });
+
+  test('still puts the scroll back for a sort button nothing covers', async () => {
+    wrapper = mountComponent({
+      props: { ...props, stickyHeader: false, hasSorting: true },
+      attachTo: document.body,
+    });
+
+    await flushVirtualizationSetup();
+    stubPinnedBar(48);
+
+    const scrollTo = await focusSortButtonAcrossFrame({ buttonTop: 200, scrolledTo: 60 });
+
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 120 }));
+  });
+
+  test('reserves the space a pinned bar covers when the header does not stick', async () => {
+    wrapper = mountComponent({ props: { ...props, stickyHeader: false }, attachTo: document.body });
+
+    await flushVirtualizationSetup();
+    stubPinnedBar(48);
+    placeBodyCells(20); // under the bar, which reaches down to 48
+    const reserve = watchReserveWhileScrolling();
+
+    await focusFirstCellThenArrowDown();
+
+    // Nothing measured this band before, so the cell landed behind the bar.
+    expect(reserve.value).toBe('48px');
+    expect(document.activeElement.style.scrollMarginTop).toBe('');
+  });
+
+  test('reserves nothing when no pinned bar covers the cell', async () => {
+    wrapper = mountComponent({ props: { ...props, stickyHeader: false }, attachTo: document.body });
+
+    await flushVirtualizationSetup();
+    stubPinnedBar(48);
+    placeBodyCells(200); // well clear of the bar
+    const reserve = watchReserveWhileScrolling();
+
+    await focusFirstCellThenArrowDown();
+
+    expect(reserve.value).toBe('');
+  });
+
+  test('reserves nothing when the page hit test is unavailable', async () => {
     wrapper = mountComponent({ props: { ...props, stickyHeader: false }, attachTo: document.body });
 
     await flushVirtualizationSetup();

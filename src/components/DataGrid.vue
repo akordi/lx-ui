@@ -50,6 +50,8 @@ import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/buil
 
 const lvCollator = new Intl.Collator('lv');
 const numberFormatters = new Map();
+// Shell header, nav bar, sticky toolbar, sticky grid header, plus one spare.
+const MAX_PINNED_BAR_LAYERS = 5;
 
 function getNumberFormatter(fractionDigits) {
   if (!numberFormatters.has(fractionDigits)) {
@@ -399,9 +401,42 @@ function isCoveredByStickyHeader(target, wrapper) {
   );
 }
 
+function isPinnedBar(element, target) {
+  if (!(element instanceof HTMLElement) || element.contains(target)) return false;
+  const position = globalThis.getComputedStyle?.(element)?.position;
+  return position === 'fixed' || position === 'sticky';
+}
+
+function getPinnedBarBottomAt(x, y, target) {
+  return globalThis.document
+    .elementsFromPoint(x, y)
+    .filter((element) => isPinnedBar(element, target))
+    .reduce((lowest, element) => Math.max(lowest, element.getBoundingClientRect().bottom), 0);
+}
+
+function getPinnedBarOverlap(target) {
+  if (typeof globalThis.document?.elementsFromPoint !== 'function') return 0;
+
+  const rect = target.getBoundingClientRect();
+  const x = Math.min(Math.max(rect.left + rect.width / 2, 0), (globalThis.innerWidth || 0) - 1);
+  let bottom = 0;
+
+  for (let layer = 0; layer < MAX_PINNED_BAR_LAYERS; layer += 1) {
+    const next = getPinnedBarBottomAt(x, bottom + 1, target);
+    if (next <= bottom) break;
+    bottom = next;
+  }
+
+  return rect.top < bottom ? bottom : 0;
+}
+
 function getStickyHeaderOverlap(target) {
+  if (!(target instanceof HTMLElement)) return 0;
+
   const wrapper = headerWrapperRef.value;
-  if (!isCoveredByStickyHeader(target, wrapper)) return 0;
+  if (!isCoveredByStickyHeader(target, wrapper)) {
+    return props.stickyHeader ? 0 : getPinnedBarOverlap(target);
+  }
 
   const stickyOffset = Number.parseFloat(globalThis.getComputedStyle?.(wrapper)?.top);
 
@@ -419,6 +454,7 @@ const {
   isCellDelegated,
   setActiveFromClick,
   resetCells,
+  ensureFocusVisible,
 } = useGridKeyboardNavigation({ getScrollMarginTop: getStickyHeaderOverlap });
 
 const isDisabled = computed(() => props.loading || props.busy);
@@ -1991,22 +2027,28 @@ function handleStickyHeaderFocusIn(event) {
   nonStickyHeaderRow.value?.focus({ preventScroll: true });
 }
 
-function handleHeaderSortButtonFocus(colId) {
+function readScrollPosition(scroller) {
+  return scroller === globalThis
+    ? { top: globalThis.scrollY, left: globalThis.scrollX }
+    : { top: scroller.scrollTop, left: scroller.scrollLeft };
+}
+
+function handleHeaderSortButtonFocus(colId, event) {
   focusedHeaderColumnId.value = colId;
 
   const scroller = resolveDataGridScrollParent(container.value) || globalThis;
-  const before =
-    scroller === globalThis
-      ? { top: globalThis.scrollY, left: globalThis.scrollX }
-      : { top: scroller.scrollTop, left: scroller.scrollLeft };
+  const before = readScrollPosition(scroller);
+  const keepsTop = getStickyHeaderOverlap(event?.target) <= 0;
 
   if (scrollCompensationRaf) cancelAnimationFrame(scrollCompensationRaf);
   scrollCompensationRaf = requestAnimationFrame(() => {
     scrollCompensationRaf = null;
+    const top = keepsTop ? before.top : readScrollPosition(scroller).top;
+
     if (scroller === globalThis) {
-      globalThis.scrollTo({ top: before.top, left: before.left, behavior: 'instant' });
+      globalThis.scrollTo({ top, left: before.left, behavior: 'instant' });
     } else {
-      scroller.scrollTop = before.top;
+      scroller.scrollTop = top;
       scroller.scrollLeft = before.left;
     }
   });
@@ -2308,6 +2350,7 @@ defineExpose({ cancelSelection, selectRows, sortBy });
         :class="[{ 'lx-data-grid-full': showAllColumns }, { 'lx-loading': loading }]"
         :tabindex="-1"
         @scroll.passive="scheduleHeaderScroll()"
+        @focusin="(e) => ensureFocusVisible(e.target)"
         @keydown="(e) => onKeydown(e, rowCount, computedGridColumnCount, isMenuOpen)"
       >
         <div
@@ -2365,7 +2408,7 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                 @click="handleHeaderClick(col.id, colIndex)"
                 @keyup.enter="handleHeaderClick(col.id, colIndex)"
                 @keyup.space.prevent="handleHeaderClick(col.id, colIndex)"
-                @focus="handleHeaderSortButtonFocus(col.id)"
+                @focus="handleHeaderSortButtonFocus(col.id, $event)"
                 @blur="handleHeaderSortButtonBlur"
                 @keydown.space.prevent
               >
