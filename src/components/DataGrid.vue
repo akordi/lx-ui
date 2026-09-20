@@ -321,8 +321,11 @@ const bounding = useElementBounding(container, {
 });
 const containerSize = useElementSize(container);
 const headerSize = useElementSize(header);
-const lxElement = document.querySelector('.lx');
-const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+const lxElement = typeof document !== 'undefined' ? document.querySelector('.lx') : null;
+const rootFontSize =
+  typeof document !== 'undefined'
+    ? Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+    : 16;
 
 let actionVars = null;
 
