@@ -1,0 +1,57 @@
+name: Publish canary
+
+# Publishes an installable prerelease build on every push to main, tagged
+# `canary` (never `latest`) so it can be pulled into a consuming app
+# (`npm install @akordi/lx-ui@canary`) to verify a real, non-file:-linked
+# install before cutting an actual version tag — see publish.yml for that.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write # OIDC token for npm trusted publishing — see docs.npmjs.com/trusted-publishers
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - name: Set up Node (for npm publish)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing (OIDC) needs npm CLI >= 11.5.1; GitHub's runners
+      # don't always ship that yet.
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Test
+        run: bun run test
+
+      - name: Set canary version
+        run: npm version "0.0.0-canary.$(git rev-parse --short HEAD)" --no-git-tag-version --allow-same-version
+
+      - name: Build
+        run: bun run build
+
+      - name: Publish canary
+        run: npm publish --tag canary --access public --provenance
+        env:
+          # Used only if trusted publishing (see publish.yml's comment) isn't
+          # configured for this workflow yet; ignored once it is.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

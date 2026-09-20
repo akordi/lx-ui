@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # OIDC token for npm trusted publishing — see docs.npmjs.com/trusted-publishers
 
 jobs:
   publish:
@@ -32,6 +33,11 @@ jobs:
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing (OIDC) needs npm CLI >= 11.5.1; GitHub's runners
+      # don't always ship that yet.
+      - name: Update npm
+        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -56,6 +62,10 @@ jobs:
         run: bun run build
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --access public --provenance
         env:
+          # Used only if trusted publishing isn't configured for this
+          # workflow yet (see docs.npmjs.com/trusted-publishers) — the npm
+          # CLI prefers the OIDC token above and ignores this once it's set
+          # up; ignored/unnecessary once it is.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
