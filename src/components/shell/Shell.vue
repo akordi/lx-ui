@@ -1087,8 +1087,11 @@ function pickSvgTitle(level) {
 
 const closedAlertsKey = ref(`${getSystemId()}-closed-alerts`);
 
+// Guarding on `window`, not `sessionStorage` directly — Node 22+ ships a
+// real (in-memory, per-process) global `sessionStorage` by default, so
+// checking it alone no longer reliably detects "is this a real browser".
 const closedAlerts = ref(
-  typeof sessionStorage !== 'undefined'
+  typeof window !== 'undefined'
     ? JSON.parse(sessionStorage.getItem(closedAlertsKey.value) || '[]')
     : []
 );
@@ -1097,7 +1100,9 @@ function closeAlert(alert) {
   if (alert && alert.id) {
     if (!closedAlerts.value.includes(alert.id)) {
       closedAlerts.value.push(alert.id);
-      sessionStorage.setItem(closedAlertsKey.value, JSON.stringify(closedAlerts.value));
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(closedAlertsKey.value, JSON.stringify(closedAlerts.value));
+      }
     }
   }
 }
