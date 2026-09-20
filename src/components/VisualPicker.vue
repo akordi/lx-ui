@@ -375,7 +375,7 @@ function removeItem(id, event) {
 }
 
 function handleSelectionChange(selectedValue) {
-  const elem = document.getElementById(props.id);
+  const elem = typeof document !== 'undefined' ? document.getElementById(props.id) : null;
   if (elem) {
     const elements = Array.from(elem.querySelectorAll('.selected-visual'));
     elements.forEach((element) => {

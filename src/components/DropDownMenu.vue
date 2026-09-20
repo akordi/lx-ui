@@ -114,7 +114,9 @@ function openMenu({ source = 'default', focus = 'first' } = {}) {
 }
 
 const popperToClose = ref(false);
-const hasReducedMotion = ref(document.body.classList.contains('lx-no-animations'));
+const hasReducedMotion = ref(
+  typeof document !== 'undefined' && document.body.classList.contains('lx-no-animations')
+);
 const CLOSE_ANIMATION_MS = 300;
 
 function handleClose(hasAnimation = true) {

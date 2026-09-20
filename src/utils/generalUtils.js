@@ -303,8 +303,16 @@ export const isBoolean = (v) => typeof v === 'boolean';
  * @param {number} rem - The value in `rem` units.
  * @returns {number} The value converted to `px` units.
  */
-export const remToPx = (rem) =>
-  rem * Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+const DEFAULT_ROOT_FONT_SIZE_PX = 16;
+
+export const remToPx = (rem) => {
+  const rootFontSize =
+    typeof document !== 'undefined'
+      ? Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+      : DEFAULT_ROOT_FONT_SIZE_PX;
+
+  return rem * rootFontSize;
+};
 
 export function cssLengthToPx(value, element) {
   const normalizedValue = value.trim();

@@ -330,6 +330,10 @@ const footerSize = useElementSize(formFooter);
 const isInsideRegionContainer = ref(false);
 
 const shellLayoutMode = computed(() => {
+  if (typeof document === 'undefined') {
+    return 'default';
+  }
+
   const layoutElement = document.querySelector('.lx-layout');
   if (!layoutElement) {
     return 'default';
@@ -343,7 +347,7 @@ const shellLayoutMode = computed(() => {
   return hasPublicClass ? 'public' : 'default';
 });
 
-const layoutElement = document.querySelector('.lx-layout');
+const layoutElement = typeof document !== 'undefined' ? document.querySelector('.lx-layout') : null;
 
 const headerElement = layoutElement?.querySelector(':scope > header');
 
@@ -930,7 +934,7 @@ watch(height, () => {
 });
 
 useMutationObserver(
-  document.body,
+  typeof document !== 'undefined' ? document.body : null,
   () => {
     isInsideRegionContainer.value = !!form.value?.parentElement?.closest(
       '#modals, .lx-data-block-wrapper, .lx-region, .lx-form-grid, .lx-card, .lx-appendable-list'

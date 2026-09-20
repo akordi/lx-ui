@@ -18,7 +18,7 @@ const vueConfig = defineConfig({
     lib: {
       entry: path.resolve(__dirname, 'src/lib.js'),
       name: 'VueCarbonComponents',
-      fileName: (format) => `dativa-lv-lx-ui.${format}.js`,
+      fileName: (format) => `akordi-lx-ui.${format}.js`,
       formats: ['esm', 'umd'],
     },
     rollupOptions: {
@@ -40,7 +40,7 @@ const vueConfig = defineConfig({
       exclude: ['tests/**', '**/*.test.*', '**/*.spec.*'],
       afterBuild: () => {
         fs.writeFileSync(
-          path.resolve(__dirname, 'dist/dativa-lv-lx-ui.d.ts'),
+          path.resolve(__dirname, 'dist/akordi-lx-ui.d.ts'),
           "export * from './types/lib';\n"
         );
       },

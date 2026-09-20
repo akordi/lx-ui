@@ -44,12 +44,12 @@ Check out our [🌐&nbsp;Demo](https://lx-ui.dev/) and [ℹ️&nbsp;List of Comp
 
 Get using bun:
 ```bash
-bun add '@dativa-lv/lx-ui@latest'
+bun add '@akordi/lx-ui@latest'
 ```
 
 Get using pnpm:
 ```bash
-pnpm i '@dativa-lv/lx-ui@latest'
+pnpm i '@akordi/lx-ui@latest'
 ```
 
 For migration tips refer to [ℹ️&nbsp;Migration Guide](https://github.com/dativa-lv/lx-ui/blob/main/MIGRATION.md)
@@ -60,7 +60,7 @@ Install with pinia store:
 
 ```js
 import { createPinia } from 'pinia';
-import { createLx } from '@dativa-lv/lx-ui';
+import { createLx } from '@akordi/lx-ui';
 import App from '@/App.vue';
 …
 const myApp = createApp(App);
@@ -72,7 +72,7 @@ myApp.use(createLx());
 Make sure to import a proper [CSS bundle](https://github.com/dativa-lv/lx-ui/blob/main/docs/BUNDLES.md) in your main entry file such as `main.js`:
 
 ```js
-import '@dativa-lv/lx-ui/dist/bundles/lx-bt-demo.css';
+import '@akordi/lx-ui/dist/bundles/lx-bt-demo.css';
 ```
 
 LX/UI styles apply only within an element that has the `.lx` class. Usually, this should be the application root element:

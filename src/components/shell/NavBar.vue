@@ -99,7 +99,7 @@ const insideNavBar = ref(true);
 const nestedNavOpen = ref({});
 const dropdownRefs = ref([]);
 
-const { y } = useScroll(globalThis);
+const { y } = useScroll(typeof window !== 'undefined' ? window : undefined);
 
 const navItemsPrimary = computed(() =>
   props.navItems?.filter((item) => !item.type || item.type === 'primary')
