@@ -133,7 +133,9 @@ const handleOpen = () => {
   }
 };
 
-const hasReducedMotion = ref(document.body.classList.contains('lx-no-animations'));
+const hasReducedMotion = ref(
+  typeof document !== 'undefined' && document.body.classList.contains('lx-no-animations')
+);
 const popperToClose = ref(false);
 
 function handleClose(hasAnimation = true) {
