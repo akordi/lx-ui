@@ -30,7 +30,7 @@ function resolveDirection(direction) {
 export function getClosestExceededParent(target, { direction = 'horizontal' } = {}) {
   const resolvedDirection = resolveDirection(direction);
   const element = target?.$el ?? target;
-  if (!(element instanceof HTMLElement)) {
+  if (typeof HTMLElement === 'undefined' || !(element instanceof HTMLElement)) {
     return null;
   }
 
@@ -80,7 +80,7 @@ export function getClosestExceededParent(target, { direction = 'horizontal' } = 
 export function hasInternalOverflow(target, { direction = 'horizontal' } = {}) {
   const resolvedDirection = resolveDirection(direction);
   const element = target?.$el ?? target;
-  if (!(element instanceof HTMLElement)) {
+  if (typeof HTMLElement === 'undefined' || !(element instanceof HTMLElement)) {
     return false;
   }
 
