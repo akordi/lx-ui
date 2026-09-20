@@ -160,7 +160,7 @@ const textsDefault = {
 
 const displayTexts = computed(() => getDisplayTexts(props.texts, textsDefault, 'LxShell'));
 
-const { y } = useScroll(globalThis);
+const { y } = useScroll(typeof window !== 'undefined' ? window : undefined);
 
 const { width } = useWindowSize();
 

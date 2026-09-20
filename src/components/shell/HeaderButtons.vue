@@ -184,7 +184,9 @@ const emits = defineEmits([
 const windowSize = useWindowSize();
 const windowWidth = computed(() => windowSize.width.value);
 
-const lxElement = computed(() => document.querySelector('.lx'));
+const lxElement = computed(() =>
+  typeof document !== 'undefined' ? document.querySelector('.lx') : null
+);
 
 const themeIcon = ref('accessibility');
 const themeMenu = ref(null);
@@ -533,6 +535,10 @@ function handleDefaultModeVisibility(availableWidth) {
 }
 
 function recalculateButtonsVisibility() {
+  if (typeof requestAnimationFrame === 'undefined') {
+    return;
+  }
+
   if (buttonsVisibilityFrame) {
     cancelAnimationFrame(buttonsVisibilityFrame);
   }

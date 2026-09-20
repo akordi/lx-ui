@@ -422,7 +422,9 @@ const selectedLanguageModel = computed({
   },
 });
 
-const lxElement = /** @type {HTMLElement | null} */ (document.querySelector('.lx'));
+const lxElement = /** @type {HTMLElement | null} */ (
+  typeof document !== 'undefined' ? document.querySelector('.lx') : null
+);
 const fontToggle = ref(false);
 
 const deviceFontsStorageKey = ref(`${getSystemId()}-device-fonts`);
@@ -655,7 +657,7 @@ const pageTitle = computed(() => {
   if (props.pageLabel) {
     return props.pageLabel;
   }
-  return document.title;
+  return typeof document !== 'undefined' ? document.title : '';
 });
 
 function triggerShowAllClick() {
@@ -1085,7 +1087,11 @@ function pickSvgTitle(level) {
 
 const closedAlertsKey = ref(`${getSystemId()}-closed-alerts`);
 
-const closedAlerts = ref(JSON.parse(sessionStorage.getItem(closedAlertsKey.value) || '[]'));
+const closedAlerts = ref(
+  typeof sessionStorage !== 'undefined'
+    ? JSON.parse(sessionStorage.getItem(closedAlertsKey.value) || '[]')
+    : []
+);
 
 function closeAlert(alert) {
   if (alert && alert.id) {
