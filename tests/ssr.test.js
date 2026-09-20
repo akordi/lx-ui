@@ -14,6 +14,7 @@ import { createSSRApp, h } from 'vue';
 import { renderToString } from '@vue/server-renderer';
 import { createLx } from '@/lib';
 import * as components from '@/components';
+import { afterEach as routerAfterEach } from '@/utils/flowUtils';
 
 test('this file actually has no window/document (environment override is in effect)', () => {
   expect(typeof window).toBe('undefined');
@@ -39,6 +40,20 @@ const componentEntries = Object.entries(components);
 // shape of '@/components' changed), every test below would vacuously pass.
 test('component export list used by the SSR audit is not empty', () => {
   expect(componentEntries.length).toBeGreaterThan(50);
+});
+
+// A real gap the component-only sweep above can't cover: this fires from a
+// consuming app's router.afterEach guard (see e.g. portal's
+// router/events.js), not from a component's setup() — found via an actual
+// Docker/SSR deploy dry run, not this test suite, which is exactly why it's
+// added here now.
+test('flowUtils.afterEach does not throw when called from a router guard under SSR', async () => {
+  const to = { name: 'home', path: '/', params: {}, query: {} };
+  const from = { name: null, path: '/', params: {}, query: {} };
+  const appStore = { stopNavigating: () => {} };
+  const viewStore = { $reset: () => {} };
+
+  await routerAfterEach(to, from, appStore, viewStore);
 });
 
 test.each(componentEntries)(
