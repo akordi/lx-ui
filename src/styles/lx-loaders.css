@@ -57,6 +57,18 @@
 }
 
 .lx-loader-wrapper svg {
+  /* The <svg viewBox="0 0 100 100"> in Loader.vue carries no width/height
+     attribute, only a viewBox. Per the replaced-element sizing algorithm an
+     SVG root with no intrinsic size and no CSS size falls back to a UA
+     default (300x150 CSS px) when the layout context leaves any ambiguity —
+     Chromium happens to constrain it to the parent .lx-loader box (88px /
+     20px, see --loader-width-l/-s above) in the layouts this renders in, but
+     WebKit/Safari does not, rendering the spinner at up to 300px wide
+     instead of the intended small circle. Filling the parent explicitly
+     removes the ambiguity in every browser. */
+  display: block;
+  width: 100%;
+  height: 100%;
   fill: transparent;
 }
 
