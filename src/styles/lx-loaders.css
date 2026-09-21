@@ -57,6 +57,10 @@
 }
 
 .lx-loader-wrapper svg {
+  /* No width/height on the svg itself renders oversized on Safari. */
+  display: block;
+  width: 100%;
+  height: 100%;
   fill: transparent;
 }
 
