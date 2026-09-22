@@ -213,7 +213,7 @@ function hide() {
 
   const { nodes } = state;
   if (nodes) {
-    nodes.popper.parentNode?.removeChild(nodes.popper);
+    nodes.popper.remove();
     nodes.panel.setAttribute('aria-hidden', 'true');
     nodes.text.textContent = '';
   }

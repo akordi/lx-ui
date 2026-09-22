@@ -251,8 +251,8 @@ export async function extractC2paMetadata(arrayBuffer, fileType) {
     'ChatGPT',
   ];
 
-  let selectProducer = () => {};
-  let c2pa = {};
+  let selectProducer;
+  let c2pa;
 
   try {
     const {

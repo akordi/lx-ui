@@ -60,6 +60,36 @@ function canSelectTimeOnlyHour(rawValue, bounds, selectedTime) {
   return true;
 }
 
+// Below minDate
+function isBeforeMinTime(hour, minute, second, minDateParsed) {
+  if (!minDateParsed) return false;
+
+  const minHour = minDateParsed.getHours();
+  const minMinute = minDateParsed.getMinutes();
+  const minSecond = minDateParsed.getSeconds();
+
+  return (
+    hour < minHour ||
+    (hour === minHour && minute < minMinute) ||
+    (hour === minHour && minute === minMinute && !isNil(second) && second < minSecond)
+  );
+}
+
+// Above maxDate
+function isAfterMaxTime(hour, minute, second, maxDateParsed) {
+  if (!maxDateParsed) return false;
+
+  const maxHour = maxDateParsed.getHours();
+  const maxMinute = maxDateParsed.getMinutes();
+  const maxSecond = maxDateParsed.getSeconds();
+
+  return (
+    hour > maxHour ||
+    (hour === maxHour && minute > maxMinute) ||
+    (hour === maxHour && minute === maxMinute && !isNil(second) && second > maxSecond)
+  );
+}
+
 function canSelectTimeOnlyMinute(rawValue, bounds, selectedTime) {
   const { min: minDateParsed, max: maxDateParsed } = bounds;
   const { hours: selectedHours, seconds: selectedSeconds } = selectedTime;
@@ -68,53 +98,17 @@ function canSelectTimeOnlyMinute(rawValue, bounds, selectedTime) {
 
   const minute = Number(rawValue);
 
-  const minHour = minDateParsed?.getHours();
-  const minMinute = minDateParsed?.getMinutes();
-  const minSecond = minDateParsed?.getSeconds();
-
-  const maxHour = maxDateParsed?.getHours();
-  const maxMinute = maxDateParsed?.getMinutes();
-  const maxSecond = maxDateParsed?.getSeconds();
-
   if (isNil(selectedSeconds)) {
-    if (
-      minDateParsed &&
-      (selectedHours < minHour || (selectedHours === minHour && minute < minMinute))
-    ) {
-      return false;
-    }
-
-    if (
-      maxDateParsed &&
-      (selectedHours > maxHour || (selectedHours === maxHour && minute > maxMinute))
-    ) {
-      return false;
-    }
-
-    return true;
+    return !(
+      isBeforeMinTime(selectedHours, minute, null, minDateParsed) ||
+      isAfterMaxTime(selectedHours, minute, null, maxDateParsed)
+    );
   }
 
-  // Below minDate
-  if (
-    minDateParsed &&
-    (selectedHours < minHour ||
-      (selectedHours === minHour && minute < minMinute) ||
-      (selectedHours === minHour && minute === minMinute && selectedSeconds < minSecond))
-  ) {
-    return false;
-  }
-
-  // Above maxDate
-  if (
-    maxDateParsed &&
-    (selectedHours > maxHour ||
-      (selectedHours === maxHour && minute > maxMinute) ||
-      (selectedHours === maxHour && minute === maxMinute && selectedSeconds > maxSecond))
-  ) {
-    return false;
-  }
-
-  return true;
+  return !(
+    isBeforeMinTime(selectedHours, minute, selectedSeconds, minDateParsed) ||
+    isAfterMaxTime(selectedHours, minute, selectedSeconds, maxDateParsed)
+  );
 }
 
 function canSelectTimeOnlySecond(rawValue, bounds, selectedTime) {
@@ -180,6 +174,45 @@ function canSelectTimeOnly(rawValue, bounds, timeUnit, selectedTime) {
   return true;
 }
 
+function isMinuteWithinSameDayHourBounds(selectedMinutes, minDateParsed, maxDateParsed) {
+  return (
+    selectedMinutes === minDateParsed.getMinutes() ||
+    selectedMinutes === maxDateParsed.getMinutes() ||
+    (selectedMinutes > minDateParsed.getMinutes() && selectedMinutes < maxDateParsed.getMinutes())
+  );
+}
+
+function canSelectHourOnSameBoundaryDay(rawValue, selectedMinutes, minDateParsed, maxDateParsed) {
+  if (!isMinuteWithinSameDayHourBounds(selectedMinutes, minDateParsed, maxDateParsed)) {
+    return false;
+  }
+
+  return rawValue >= minDateParsed.getHours() && rawValue <= maxDateParsed.getHours();
+}
+
+function canSelectHourWithSelectedMinute(
+  rawValue,
+  selectedMinutes,
+  minDateParsed,
+  maxDateParsed,
+  isMinDay,
+  isMaxDay
+) {
+  if (isMinDay && isMaxDay) {
+    return canSelectHourOnSameBoundaryDay(rawValue, selectedMinutes, minDateParsed, maxDateParsed);
+  }
+
+  if (isMinDay && selectedMinutes < minDateParsed.getMinutes()) {
+    return rawValue > minDateParsed.getHours();
+  }
+
+  if (isMaxDay && selectedMinutes > maxDateParsed.getMinutes()) {
+    return rawValue < maxDateParsed.getHours();
+  }
+
+  return null;
+}
+
 function canSelectDateTimeHour(rawValue, bounds, selectedDate, selectedTime) {
   const { min: minDateParsed, max: maxDateParsed } = bounds;
   const { day: selectedDay, month: selectedMonth, year: selectedYear } = selectedDate;
@@ -192,26 +225,17 @@ function canSelectDateTimeHour(rawValue, bounds, selectedDate, selectedTime) {
 
   // Validate when minute is selected
   if (hasMinute && minDateParsed && maxDateParsed) {
-    const sameDay = isMinDay && isMaxDay;
+    const minuteValidation = canSelectHourWithSelectedMinute(
+      rawValue,
+      selectedMinutes,
+      minDateParsed,
+      maxDateParsed,
+      isMinDay,
+      isMaxDay
+    );
 
-    if (sameDay) {
-      if (
-        selectedMinutes === minDateParsed.getMinutes() ||
-        selectedMinutes === maxDateParsed.getMinutes() ||
-        (selectedMinutes > minDateParsed.getMinutes() &&
-          selectedMinutes < maxDateParsed.getMinutes())
-      ) {
-        return rawValue >= minDateParsed.getHours() && rawValue <= maxDateParsed.getHours();
-      }
-      return false;
-    }
-
-    if (isMinDay && !isMaxDay && selectedMinutes < minDateParsed.getMinutes()) {
-      return rawValue > minDateParsed.getHours();
-    }
-
-    if (!isMinDay && isMaxDay && selectedMinutes > maxDateParsed.getMinutes()) {
-      return rawValue < maxDateParsed.getHours();
+    if (minuteValidation !== null) {
+      return minuteValidation;
     }
   }
 

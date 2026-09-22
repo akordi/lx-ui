@@ -236,6 +236,6 @@ export function removeFocus() {
   trap.focus();
 
   requestAnimationFrame(() => {
-    document.body.removeChild(trap);
+    trap.remove();
   });
 }
