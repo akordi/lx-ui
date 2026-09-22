@@ -1143,6 +1143,249 @@ describe('LxDateTimePicker', () => {
     });
   });
 
+  // Regression: the minDate day used to auto-fill the time and emit, while any other day waited
+  // for the full entry.
+  describe('date-time with bounds waits for the full entry', () => {
+    // 11th of next month, so the calendar always opens on the minDate month
+    const today = new Date();
+    const minDate = new Date(today.getFullYear(), today.getMonth() + 1, 11, 17, 0, 0);
+
+    const openCalendar = async (kind) => {
+      wrapper = mount(LxDateTimePicker, {
+        props: { modelValue: null, variant: 'default', kind, minDate },
+        global: {
+          stubs: ['router-link'],
+          directives: { ClickAway: dummyClickAway },
+        },
+      });
+
+      const pickerInput = wrapper.find('.lx-date-time-picker.lx-input-area');
+      await pickerInput.trigger('keyup', { key: 'ArrowDown' });
+
+      const container = document.body.querySelector('.lx-calendar-container');
+      expect(container).toBeTruthy();
+      return container;
+    };
+
+    const clickDayNumber = async (container, dayNumber) => {
+      const day = [
+        ...container.querySelectorAll(
+          '.lx-calendar-day:not(.lx-other-month):not(.lx-disabled-date)'
+        ),
+      ].find(
+        (el) =>
+          Number(el.querySelector('.lx-calendar-day-content').textContent.trim()) === dayNumber
+      );
+      expect(day).toBeTruthy();
+      day.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await wrapper.vm.$nextTick();
+    };
+
+    const clickTime = async (container, column) => {
+      const item = container.querySelector(
+        `.lx-time-list-item[data-column="${column}"]:not(.is-disabled)`
+      );
+      expect(item).toBeTruthy();
+      item.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await wrapper.vm.$nextTick();
+      return Number(item.getAttribute('data-value'));
+    };
+
+    const emittedCount = () => wrapper.emitted('update:modelValue')?.length ?? 0;
+
+    const lastEmittedDate = () => {
+      const emitted = wrapper.emitted('update:modelValue');
+      expect(emitted).toBeTruthy();
+      const last = emitted[emitted.length - 1][0];
+      expect(last).toBeTruthy();
+      return last instanceof Date ? last : new Date(last);
+    };
+
+    describe.each(['date-time', 'date-time-full'])('%s', (kind) => {
+      const isFull = kind === 'date-time-full';
+
+      it('does not emit when the minDate day is picked without a time', async () => {
+        const container = await openCalendar(kind);
+
+        const before = emittedCount();
+        await clickDayNumber(container, minDate.getDate());
+
+        expect(emittedCount()).toBe(before);
+      });
+
+      it('emits the same way for the minDate day and a later day', async () => {
+        const container = await openCalendar(kind);
+
+        const before = emittedCount();
+        await clickDayNumber(container, minDate.getDate() + 1);
+        const afterLaterDay = emittedCount();
+
+        await clickDayNumber(container, minDate.getDate());
+
+        expect(afterLaterDay).toBe(before);
+        expect(emittedCount()).toBe(before);
+      });
+
+      it('emits once the time is entered on the minDate day, respecting the bound', async () => {
+        const container = await openCalendar(kind);
+
+        await clickDayNumber(container, minDate.getDate());
+        const before = emittedCount();
+
+        await clickTime(container, 'hours');
+        const minute = await clickTime(container, 'minutes');
+        if (isFull) await clickTime(container, 'seconds');
+
+        expect(emittedCount()).toBeGreaterThan(before);
+        const value = lastEmittedDate();
+        expect(value.getDate()).toBe(minDate.getDate());
+        expect(value.getHours()).toBeGreaterThanOrEqual(minDate.getHours());
+        expect(value.getMinutes()).toBe(minute);
+      });
+
+      it('still clamps an already entered time when the minDate day is picked', async () => {
+        const container = await openCalendar(kind);
+
+        await clickDayNumber(container, minDate.getDate() + 1);
+        const hour = await clickTime(container, 'hours');
+        const minute = await clickTime(container, 'minutes');
+        if (isFull) await clickTime(container, 'seconds');
+
+        await clickDayNumber(container, minDate.getDate());
+
+        const value = lastEmittedDate();
+        expect(value.getDate()).toBe(minDate.getDate());
+        expect(value.getHours()).toBe(Math.max(hour, minDate.getHours()));
+        expect(value.getMinutes()).toBe(minute);
+      });
+    });
+  });
+
+  // Regression: closing with only the day picked used to commit 00:00, which falls outside a
+  // minDate on that same day and got cleared on the next open.
+  describe('date-time falls back to the bound time on the bound day', () => {
+    const today = new Date();
+
+    const openCalendar = async (kind, { minDate, maxDate }) => {
+      wrapper = mount(LxDateTimePicker, {
+        props: { modelValue: null, variant: 'default', kind, minDate, maxDate },
+        global: {
+          stubs: ['router-link'],
+          directives: { ClickAway: dummyClickAway },
+        },
+      });
+
+      const pickerInput = wrapper.find('.lx-date-time-picker.lx-input-area');
+      await pickerInput.trigger('keyup', { key: 'ArrowDown' });
+
+      const container = document.body.querySelector('.lx-calendar-container');
+      expect(container).toBeTruthy();
+      return container;
+    };
+
+    const clickDayNumber = async (container, dayNumber) => {
+      const day = [
+        ...container.querySelectorAll(
+          '.lx-calendar-day:not(.lx-other-month):not(.lx-disabled-date)'
+        ),
+      ].find(
+        (el) =>
+          Number(el.querySelector('.lx-calendar-day-content').textContent.trim()) === dayNumber
+      );
+      expect(day).toBeTruthy();
+      day.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await wrapper.vm.$nextTick();
+    };
+
+    const clickTime = async (container, column) => {
+      const item = container.querySelector(
+        `.lx-time-list-item[data-column="${column}"]:not(.is-disabled)`
+      );
+      expect(item).toBeTruthy();
+      item.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await wrapper.vm.$nextTick();
+      return Number(item.getAttribute('data-value'));
+    };
+
+    // closing the picker is what commits a half-entered value
+    const closePicker = async () => {
+      await wrapper.find('.lx-date-time-picker.lx-input-area').trigger('keydown', {
+        key: 'Escape',
+      });
+      await wrapper.vm.$nextTick();
+    };
+
+    const lastEmittedDate = () => {
+      const emitted = wrapper.emitted('update:modelValue');
+      expect(emitted).toBeTruthy();
+      const last = emitted[emitted.length - 1][0];
+      expect(last).toBeTruthy();
+      return last instanceof Date ? last : new Date(last);
+    };
+
+    describe.each(['date-time', 'date-time-full'])('%s', (kind) => {
+      const boundSeconds = kind === 'date-time-full' ? 30 : 0;
+      // both bounds are in the future, so the calendar opens on the minDate month
+      const minDate = new Date(today.getFullYear(), today.getMonth() + 1, 11, 17, 45, boundSeconds);
+      const maxDate = new Date(today.getFullYear(), today.getMonth() + 1, 20, 9, 15, boundSeconds);
+      const bounds = { minDate, maxDate };
+
+      it('commits the minDate time when only the minDate day was picked', async () => {
+        const container = await openCalendar(kind, bounds);
+
+        await clickDayNumber(container, minDate.getDate());
+        await closePicker();
+
+        const value = lastEmittedDate();
+        expect(value.getDate()).toBe(minDate.getDate());
+        expect(value.getHours()).toBe(minDate.getHours());
+        expect(value.getMinutes()).toBe(minDate.getMinutes());
+        expect(value.getSeconds()).toBe(boundSeconds);
+        expect(value.getTime()).toBeGreaterThanOrEqual(minDate.getTime());
+      });
+
+      it('commits the maxDate time when only the maxDate day was picked', async () => {
+        const container = await openCalendar(kind, bounds);
+
+        await clickDayNumber(container, maxDate.getDate());
+        await closePicker();
+
+        const value = lastEmittedDate();
+        expect(value.getDate()).toBe(maxDate.getDate());
+        expect(value.getHours()).toBe(maxDate.getHours());
+        expect(value.getMinutes()).toBe(maxDate.getMinutes());
+        expect(value.getSeconds()).toBe(boundSeconds);
+        expect(value.getTime()).toBeLessThanOrEqual(maxDate.getTime());
+      });
+
+      it('pulls a half-entered time on the minDate day up to the bound', async () => {
+        const container = await openCalendar(kind, bounds);
+
+        await clickDayNumber(container, minDate.getDate());
+        const hour = await clickTime(container, 'hours');
+        expect(hour).toBe(minDate.getHours());
+        await closePicker();
+
+        const value = lastEmittedDate();
+        expect(value.getHours()).toBe(minDate.getHours());
+        expect(value.getMinutes()).toBe(minDate.getMinutes());
+      });
+
+      it('still falls back to midnight on a day between the bounds', async () => {
+        const container = await openCalendar(kind, bounds);
+
+        await clickDayNumber(container, minDate.getDate() + 1);
+        await closePicker();
+
+        const value = lastEmittedDate();
+        expect(value.getDate()).toBe(minDate.getDate() + 1);
+        expect(value.getHours()).toBe(0);
+        expect(value.getMinutes()).toBe(0);
+        expect(value.getSeconds()).toBe(0);
+      });
+    });
+  });
+
   it('readOnly', () => {
     expect(LxDateTimePicker).toBeTruthy();
 

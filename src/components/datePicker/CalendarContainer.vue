@@ -1792,7 +1792,8 @@ function applyHourBoundsIfNeeded(date) {
 
   if (
     sameMinDay &&
-    (selectedHour.value == null || selectedHour.value < props.minDateRef.getHours())
+    selectedHour.value != null &&
+    selectedHour.value < props.minDateRef.getHours()
   ) {
     selectedHour.value = props.minDateRef.getHours();
     currentHourIndex.value = getTimeOrderIndex(hours.value, selectedHour.value);
@@ -1801,7 +1802,8 @@ function applyHourBoundsIfNeeded(date) {
 
   if (
     sameMaxDay &&
-    (selectedHour.value == null || selectedHour.value > props.maxDateRef.getHours())
+    selectedHour.value != null &&
+    selectedHour.value > props.maxDateRef.getHours()
   ) {
     selectedHour.value = props.maxDateRef.getHours();
     currentHourIndex.value = getTimeOrderIndex(hours.value, selectedHour.value);
@@ -1817,7 +1819,8 @@ function applyMinuteBoundsIfNeeded(date) {
   const sameMinDay = props.minDateRef && isSameDay(date, props.minDateRef);
   if (
     sameMinDay &&
-    (isNil(selectedMinute.value) || selectedMinute.value < props.minDateRef.getMinutes())
+    !isNil(selectedMinute.value) &&
+    selectedMinute.value < props.minDateRef.getMinutes()
   ) {
     selectedMinute.value = props.minDateRef.getMinutes();
   }
@@ -1825,7 +1828,8 @@ function applyMinuteBoundsIfNeeded(date) {
   const sameMaxDay = props.maxDateRef && isSameDay(date, props.maxDateRef);
   if (
     sameMaxDay &&
-    (isNil(selectedMinute.value) || selectedMinute.value > props.maxDateRef.getMinutes())
+    !isNil(selectedMinute.value) &&
+    selectedMinute.value > props.maxDateRef.getMinutes()
   ) {
     selectedMinute.value = props.maxDateRef.getMinutes();
   }
@@ -1848,7 +1852,8 @@ function applySecondBoundsIfNeeded(date) {
   const sameMinDay = props.minDateRef && isSameDay(date, props.minDateRef);
   if (
     sameMinDay &&
-    (isNil(selectedSecond.value) || selectedSecond.value < props.minDateRef.getSeconds())
+    !isNil(selectedSecond.value) &&
+    selectedSecond.value < props.minDateRef.getSeconds()
   ) {
     selectedSecond.value = props.minDateRef.getSeconds();
   }
@@ -1856,7 +1861,8 @@ function applySecondBoundsIfNeeded(date) {
   const sameMaxDay = props.maxDateRef && isSameDay(date, props.maxDateRef);
   if (
     sameMaxDay &&
-    (isNil(selectedSecond.value) || selectedSecond.value > props.maxDateRef.getSeconds())
+    !isNil(selectedSecond.value) &&
+    selectedSecond.value > props.maxDateRef.getSeconds()
   ) {
     selectedSecond.value = props.maxDateRef.getSeconds();
   }
@@ -2928,6 +2934,28 @@ function isIncompleteDateTimeSelection(mode) {
   );
 }
 
+function applyFallbackTimeBounds(date, withSeconds) {
+  const { minDateRef, maxDateRef } = props;
+
+  const noTimePicked =
+    isNil(selectedHour.value) &&
+    isNil(selectedMinute.value) &&
+    (!withSeconds || isNil(selectedSecond.value));
+
+  let bound = null;
+  if (minDateRef && isSameDay(date, minDateRef) && (noTimePicked || date < minDateRef)) {
+    bound = minDateRef;
+  } else if (maxDateRef && isSameDay(date, maxDateRef) && (noTimePicked || date > maxDateRef)) {
+    bound = maxDateRef;
+  }
+
+  if (bound) {
+    date.setHours(bound.getHours(), bound.getMinutes(), withSeconds ? bound.getSeconds() : 0, 0);
+  }
+
+  return date;
+}
+
 // Missing time parts default to 0; with no day picked the fallback lands on "today"
 function buildFallbackDateTime(hasDay, withSeconds) {
   const dateParts = hasDay
@@ -2943,7 +2971,9 @@ function buildFallbackDateTime(hasDay, withSeconds) {
     timeParts.push(selectedSecond.value === null ? 0 : Number(selectedSecond.value));
   }
 
-  return new Date(...dateParts, ...timeParts);
+  const fallback = new Date(...dateParts, ...timeParts);
+
+  return hasDay ? applyFallbackTimeBounds(fallback, withSeconds) : fallback;
 }
 
 function commitFallbackDateTime(updatedDate) {
