@@ -411,7 +411,7 @@
   opacity: 0.25;
 }
 
-.lx-grid-row.lx-selected .lx-cell svg {
+.lx-grid-row.lx-selected svg:not(.lx-state-icon) {
   fill: var(--color-selected);
   opacity: 1;
 }
