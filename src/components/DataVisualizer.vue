@@ -10,6 +10,7 @@ import LxLoader from '@/components/Loader.vue';
 import { formatDecimal } from '@/utils/format/number';
 import LxInfoWrapper from '@/components/InfoWrapper.vue';
 import LxListItem from '@/components/list/ListItem.vue';
+import LxBadge from '@/components/Badge.vue';
 import { logWarn } from '@/utils/devUtils';
 import useLx from '@/hooks/useLx';
 
@@ -478,6 +479,12 @@ const targetsComputed = computed(() => {
   return res;
 });
 
+function getLegendLabel(item) {
+  if (item?.min && item?.max) return `${formatDecimal(item?.min)} - ${formatDecimal(item?.max)}`;
+  if (!item?.max) return `${displayTexts.value?.from} ${formatDecimal(item?.min)}`;
+  return `${displayTexts.value?.to} ${formatDecimal(item?.max)}`;
+}
+
 const targetsList = computed(() => {
   const res = [];
   props.targets.forEach((item) => {
@@ -889,20 +896,14 @@ watch(
     />
 
     <div class="lx-legend" v-if="showLegend && contentModel === 'default'">
-      <div v-for="item in thresholds" :key="item?.color">
-        <div class="legend-item" :style="`--legend-color: var(--color-${item?.color}-background)`">
-          <div class="legend-indicator" />
-          <p v-if="item?.min && item?.max">
-            {{ `${formatDecimal(item?.min)} - ${formatDecimal(item?.max)}` }}
-          </p>
-          <p v-else-if="!item?.max">
-            {{ `${displayTexts.from || 'no'} ${formatDecimal(item?.min)}` }}
-          </p>
-          <p v-else-if="!item?.min">
-            {{ `${displayTexts.to || 'līdz'} ${formatDecimal(item?.max)}` }}
-          </p>
-        </div>
-      </div>
+      <LxBadge
+        v-for="item in thresholds"
+        :key="item?.color"
+        icon="color-swatch"
+        :value="getLegendLabel(item)"
+        :tooltip="getLegendLabel(item)"
+        :style="`--color-badge-icon: var(--color-${item?.color}-background)`"
+      />
     </div>
     <div
       class="targets-list"

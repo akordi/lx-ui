@@ -167,18 +167,6 @@
   flex-wrap: wrap;
 }
 
-.lx-data-visualizer .legend-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-0250);
-}
-
-.lx-data-visualizer .legend-indicator {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: var(--border-radius-full);
-  background-color: var(--legend-color);
-}
 
 .lx-data-visualizer .lx-latvia-visualizer > svg {
   fill: var(--color-region);
