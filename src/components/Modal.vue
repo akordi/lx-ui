@@ -204,6 +204,8 @@ onUnmounted(() => {
 });
 
 provide('insideModal', insideModal);
+// Reset form context inherited from an ancestor LxForm; a nested LxForm re-provides it as true.
+provide('insideForm', ref(false));
 provide('parentFocusTrap', { pause, unpause });
 
 defineExpose({ open, close });
