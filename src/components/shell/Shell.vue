@@ -7,6 +7,7 @@ import {
   useMutationObserver,
   useMediaQuery,
   useWindowSize,
+  isClient,
 } from '@vueuse/core';
 
 import useLx from '@/hooks/useLx';
@@ -423,7 +424,7 @@ const selectedLanguageModel = computed({
 });
 
 const lxElement = /** @type {HTMLElement | null} */ (
-  typeof document !== 'undefined' ? document.querySelector('.lx') : null
+  isClient ? document.querySelector('.lx') : null
 );
 const fontToggle = ref(false);
 
@@ -657,7 +658,7 @@ const pageTitle = computed(() => {
   if (props.pageLabel) {
     return props.pageLabel;
   }
-  return typeof document !== 'undefined' ? document.title : '';
+  return isClient ? document.title : '';
 });
 
 function triggerShowAllClick() {
@@ -1087,20 +1088,15 @@ function pickSvgTitle(level) {
 
 const closedAlertsKey = ref(`${getSystemId()}-closed-alerts`);
 
-// Guarding on `window`, not `sessionStorage` directly — Node 22+ ships a
-// real (in-memory, per-process) global `sessionStorage` by default, so
-// checking it alone no longer reliably detects "is this a real browser".
 const closedAlerts = ref(
-  typeof window !== 'undefined'
-    ? JSON.parse(sessionStorage.getItem(closedAlertsKey.value) || '[]')
-    : []
+  isClient ? JSON.parse(sessionStorage.getItem(closedAlertsKey.value) || '[]') : []
 );
 
 function closeAlert(alert) {
   if (alert && alert.id) {
     if (!closedAlerts.value.includes(alert.id)) {
       closedAlerts.value.push(alert.id);
-      if (typeof window !== 'undefined') {
+      if (isClient) {
         sessionStorage.setItem(closedAlertsKey.value, JSON.stringify(closedAlerts.value));
       }
     }

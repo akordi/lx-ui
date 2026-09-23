@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch, nextTick, onMounted, provide } from 'vue';
-import { useScroll, useWindowSize } from '@vueuse/core';
+import { useWindowScroll, useWindowSize } from '@vueuse/core';
 
 import LxButton from '@/components/Button.vue';
 import LxIcon from '@/components/Icon.vue';
@@ -160,7 +160,7 @@ const textsDefault = {
 
 const displayTexts = computed(() => getDisplayTexts(props.texts, textsDefault, 'LxShell'));
 
-const { y } = useScroll(typeof window !== 'undefined' ? window : undefined);
+const { y } = useWindowScroll();
 
 const { width } = useWindowSize();
 

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, nextTick, inject, watch, onUnmounted } from 'vue';
-import { onClickOutside, useWindowSize } from '@vueuse/core';
+import { onClickOutside, useWindowSize, isClient } from '@vueuse/core';
 import { useFocusTrap } from '@vueuse/integrations/useFocusTrap';
 import LxPopper from '@/components/Popper.vue';
 import LxButton from '@/components/Button.vue';
@@ -114,9 +114,7 @@ function openMenu({ source = 'default', focus = 'first' } = {}) {
 }
 
 const popperToClose = ref(false);
-const hasReducedMotion = ref(
-  typeof document !== 'undefined' && document.body.classList.contains('lx-no-animations')
-);
+const hasReducedMotion = ref(isClient && document.body.classList.contains('lx-no-animations'));
 const CLOSE_ANIMATION_MS = 300;
 
 function handleClose(hasAnimation = true) {

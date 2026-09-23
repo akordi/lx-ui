@@ -1,3 +1,4 @@
+import { isClient } from '@vueuse/core';
 import { TEXT_MAX_LENGTH } from '@/constants';
 
 import useLx from '@/hooks/useLx';
@@ -297,19 +298,19 @@ export const clampText = (value, max = TEXT_MAX_LENGTH) =>
  */
 export const isBoolean = (v) => typeof v === 'boolean';
 
+const DEFAULT_ROOT_FONT_SIZE_PX = 16;
+
 /**
  * Converts a value from `rem` units to `px` units.
+ * Falls back to the browser default root font size when rendered on the server.
  *
  * @param {number} rem - The value in `rem` units.
  * @returns {number} The value converted to `px` units.
  */
-const DEFAULT_ROOT_FONT_SIZE_PX = 16;
-
 export const remToPx = (rem) => {
-  const rootFontSize =
-    typeof document !== 'undefined'
-      ? Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
-      : DEFAULT_ROOT_FONT_SIZE_PX;
+  const rootFontSize = isClient
+    ? Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+    : DEFAULT_ROOT_FONT_SIZE_PX;
 
   return rem * rootFontSize;
 };

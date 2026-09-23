@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, provide, watch, inject, defineAsyncComponent } from 'vue';
 import { vOnClickOutside } from '@vueuse/components';
-import { useWindowSize, useScroll } from '@vueuse/core';
+import { useWindowSize, useWindowScroll } from '@vueuse/core';
 
 import LxButton from '@/components/Button.vue';
 import LxHeaderButtons from '@/components/shell/HeaderButtons.vue';
@@ -99,7 +99,7 @@ const insideNavBar = ref(true);
 const nestedNavOpen = ref({});
 const dropdownRefs = ref([]);
 
-const { y } = useScroll(typeof window !== 'undefined' ? window : undefined);
+const { y } = useWindowScroll();
 
 const navItemsPrimary = computed(() =>
   props.navItems?.filter((item) => !item.type || item.type === 'primary')

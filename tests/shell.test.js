@@ -7,12 +7,13 @@ import LxShell from '@/components/shell/Shell.vue';
 const mockedScreenWidth = ref(1024);
 
 vi.mock('@vueuse/core', () => ({
+  isClient: true,
   useColorMode: () => ref('light'),
   usePreferredReducedMotion: () => ref('no-preference'),
   usePreferredReducedTransparency: () => ref('no-preference'),
   useMutationObserver: () => ({ stop: vi.fn() }),
   useResizeObserver: () => ({ stop: vi.fn() }),
-  useScroll: () => ({ y: ref(0) }),
+  useWindowScroll: () => ({ y: ref(0) }),
   useDebounceFn: (fn) => fn,
   useMediaQuery: () => ref(false),
   useWindowSize: () => ({ width: mockedScreenWidth }),
