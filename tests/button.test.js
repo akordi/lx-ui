@@ -47,14 +47,15 @@ test('LxButton title', async () => {
       },
     },
   });
-  // `title` is rendered by the v-tooltip directive, not as a native title attribute
+  // `title` is rendered by the v-tooltip directive; the empty attribute is its guard against
+  // the browser inheriting an ancestor's title
   const inputElement = wrapper.find('button');
-  expect(inputElement.attributes('title')).toBeUndefined();
+  expect(inputElement.attributes('title')).toBe('');
   expect(inputElement.attributes('data-lx-tooltip')).toBe('Test title');
 
   await wrapper.setProps({ href: { name: 'test' } });
   const hrefElement = wrapper.find('a');
-  expect(hrefElement.attributes('title')).toBeUndefined();
+  expect(hrefElement.attributes('title')).toBe('');
   expect(hrefElement.attributes('data-lx-tooltip')).toBe('Test title');
 });
 

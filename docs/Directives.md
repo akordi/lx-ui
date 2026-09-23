@@ -55,7 +55,7 @@ Clearing it closes the tooltip immediately.
 | Aspect        | Value                                                                        |
 | ------------- | ---------------------------------------------------------------------------- |
 | Opens after   | 300 ms of pointer dwell; every pointer move restarts the countdown           |
-| Position      | Fixed, 18 px below the pointer position at the moment it opened, clamped to the viewport. It does not follow the pointer |
+| Position      | Fixed, 18 px below the pointer position at the moment it opened, clamped to the layout viewport with 4 px of clearance (`VIEWPORT_MARGIN`). The panel is measured at the viewport origin first, so a pointer near the right edge does not squeeze it. It does not follow the pointer |
 | Closes on     | Pointer moving more than 20 px from where it opened; pointer entering the panel; leaving the trigger (after 100 ms); scroll; resize; tab hide; context menu; `Escape`; trigger blur |
 | Touch devices | Suppressed entirely (`(hover: none)`)                                        |
 | Keyboard      | No focus trigger, matching `LxTooltip`                                       |
@@ -72,10 +72,20 @@ content must be dismissible without moving the pointer), and leaving the browser
   because the layered rules are scoped to `.lx .lx-layout .popper`.
 - Never set both `v-tooltip` and a `title` attribute on the same element — the browser would draw
   its own tooltip on top. The directive logs a warning in dev environments when it finds both.
+- A `title` on an *ancestor* is fine: inputs put their value on the wrapper that also holds their
+  buttons, so the directive gives the trigger an empty `title` — per the HTML spec that means "no
+  advisory information" and stops the browser inheriting the ancestor's. The guard is set once when
+  the trigger registers, not on hover, and is dropped again when the value goes inert or the
+  element unmounts. A real `title` on the trigger is never overwritten.
 - Elements nested inside an `LxTooltip` trigger are skipped, so the two never fire together.
+- A descendant that carries its own non-empty `title` owns the hover: the directive stands down
+  and lets the browser draw that tooltip, mirroring how a nested trigger wins over an outer one.
+  So inner content can use either `v-tooltip` or a plain `title`, and only one tooltip appears.
+  The guard the directive writes is an empty `title`, which never counts as ownership.
 - Elements with a real `disabled` attribute are supported, but through a document-level pointer hit
   test, since browsers do not dispatch mouse events to disabled controls. That listener is installed
-  only while at least one disabled trigger is registered.
+  only while at least one disabled trigger is registered, and it cancels a pending open as well as a
+  visible tooltip once the pointer moves off.
 - `closeTooltip()` dismisses the visible tooltip, e.g. before opening a modal:
 
   ```js

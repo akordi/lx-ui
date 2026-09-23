@@ -13,6 +13,8 @@ export const CLOSE_DELAY = 100;
 export const MOVE_THRESHOLD = 20;
 // Pseudo height of the cursor – the panel is offset this far below the pointer
 export const CURSOR_HEIGHT = 18;
+// Clearance kept between the panel and the viewport edges
+export const VIEWPORT_MARGIN = 4;
 
 const PANEL_ID = 'lx-tooltip-panel';
 const MARKER_ATTR = 'data-lx-tooltip';
@@ -60,10 +62,19 @@ function normalizeValue(value) {
   return { text: text.trim() ? text : '', suppressed };
 }
 
+// A MediaQueryList keeps itself up to date, so the query is built once instead of on every
+// pointer move. It stays unset where matchMedia is missing, so a later call can still try
+let hoverNoneQuery = null;
+
+function isTouchOnly() {
+  if (!hoverNoneQuery) hoverNoneQuery = safeMatchMedia('(hover: none)');
+  return hoverNoneQuery?.matches === true;
+}
+
 function isInert(el, entry) {
   if (!entry?.text || entry.suppressed) return true;
   // Touch devices never get a hover tooltip
-  if (safeMatchMedia('(hover: none)')?.matches === true) return true;
+  if (isTouchOnly()) return true;
   // Already inside an LxTooltip – let the component own the hover
   if (el.closest(NESTED_TOOLTIP_SELECTOR)) return true;
   return false;
@@ -113,13 +124,25 @@ function ensureNodes() {
 
 function positionPanel(x, y) {
   const { popper } = state.nodes;
-  const viewportWidth = globalThis.innerWidth || 0;
-  const viewportHeight = globalThis.innerHeight || 0;
-  const popperWidth = popper.offsetWidth || 0;
-  const popperHeight = popper.offsetHeight || 0;
+  // `innerWidth` counts a classic scrollbar, the layout viewport a fixed element sits in does
+  // not – clamping to the larger number slides the panel under the bar and re-wraps it
+  const doc = hasDocument() ? document.documentElement : null;
+  const viewportWidth = doc?.clientWidth || globalThis.innerWidth || 0;
+  const viewportHeight = doc?.clientHeight || globalThis.innerHeight || 0;
 
-  const left = Math.min(Math.max(x, 0), Math.max(viewportWidth - popperWidth, 0));
-  const top = Math.min(Math.max(y, 0), Math.max(viewportHeight - popperHeight, 0));
+  // Measure at the origin – near the viewport edge the panel is already wrapped, and clamping
+  // to that width would pin it there
+  popper.style.left = '0px';
+  popper.style.top = '0px';
+  const rect = popper.getBoundingClientRect();
+  // Round up – a lost fraction is enough to force another line break
+  const popperWidth = Math.ceil(rect.width);
+  const popperHeight = Math.ceil(rect.height);
+
+  const maxLeft = Math.max(viewportWidth - popperWidth - VIEWPORT_MARGIN, VIEWPORT_MARGIN);
+  const maxTop = Math.max(viewportHeight - popperHeight - VIEWPORT_MARGIN, VIEWPORT_MARGIN);
+  const left = Math.min(Math.max(x, VIEWPORT_MARGIN), maxLeft);
+  const top = Math.min(Math.max(y, VIEWPORT_MARGIN), maxTop);
 
   popper.style.left = `${left}px`;
   popper.style.top = `${top}px`;
@@ -284,9 +307,26 @@ function onPanelClick(event) {
   hide();
 }
 
+function nativeTitleOwner(target, trigger) {
+  let node = target instanceof Element ? target : null;
+  while (node && node !== trigger) {
+    if (node.getAttribute('title')) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
 function onTriggerMove(event) {
   // mousemove bubbles, so the nearest trigger claims the event and ancestors stand down
   if (handledMoves.has(event)) return;
+
+  // Let the browser draw its own tooltip for that descendant rather than stacking ours on top
+  if (nativeTitleOwner(event.target, event.currentTarget)) {
+    handledMoves.add(event);
+    if (state.armedEl === event.currentTarget || state.currentEl === event.currentTarget) hide();
+    return;
+  }
+
   if (handleMove(event.currentTarget, event.clientX, event.clientY)) handledMoves.add(event);
 }
 
@@ -312,9 +352,15 @@ function runHitTest(clientX, clientY) {
     return;
   }
 
-  // Disabled triggers get no mouseleave either, so dismiss from here as well
-  if (state.currentEl && state.currentEl !== el && isElementDisabled(state.currentEl)) {
-    scheduleClose();
+  // Disabled triggers get no mouseleave either, so dismiss from here – the countdown too, or it
+  // opens where the pointer no longer is
+  const engaged = state.currentEl || state.armedEl;
+  if (engaged && engaged !== el && isElementDisabled(engaged)) {
+    if (state.currentEl) {
+      scheduleClose();
+    } else {
+      clearOpenTimer();
+    }
   }
 }
 
@@ -360,12 +406,32 @@ function syncDisabledTracking(el) {
   else unbindHitTest();
 }
 
+// An empty title means "no advisory information" and stops the browser inheriting an ancestor's
+// title, which inputs put on the wrapper that also holds their buttons
+function syncTitleGuard(el, active) {
+  const entry = registry.get(el);
+
+  if (active && !el.hasAttribute('title')) {
+    el.setAttribute('title', '');
+    entry.ownsTitleGuard = true;
+    return;
+  }
+
+  // The trigger went inert, or something wrote a real title over ours
+  if (entry.ownsTitleGuard && (!active || el.getAttribute('title'))) {
+    if (el.getAttribute('title') === '') el.removeAttribute('title');
+    entry.ownsTitleGuard = false;
+  }
+}
+
 function applyEntry(el) {
   const entry = registry.get(el);
   if (!entry) return;
 
-  if (entry.text && !entry.suppressed) el.setAttribute(MARKER_ATTR, entry.text);
+  const active = Boolean(entry.text) && !entry.suppressed;
+  if (active) el.setAttribute(MARKER_ATTR, entry.text);
   else el.removeAttribute(MARKER_ATTR);
+  syncTitleGuard(el, active);
   syncDisabledTracking(el);
 }
 
@@ -378,7 +444,12 @@ function warnOnTitleConflict(el, entry) {
 }
 
 function mounted(el, binding) {
-  const entry = { ...normalizeValue(binding.value), ownsAria: false, tracked: false };
+  const entry = {
+    ...normalizeValue(binding.value),
+    ownsAria: false,
+    ownsTitleGuard: false,
+    tracked: false,
+  };
   registry.set(el, entry);
   applyEntry(el);
 
@@ -424,6 +495,7 @@ function unmounted(el) {
   const entry = registry.get(el);
   if (entry) {
     entry.text = '';
+    syncTitleGuard(el, false);
     syncDisabledTracking(el);
   }
 
