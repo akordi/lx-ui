@@ -74,9 +74,15 @@ function open() {
   }
 }
 
+// Escape must not bypass `disableClosing`, which also hides the close button.
+const escClosingAllowed = computed(() => props.escEnabled && !props.disableClosing);
+
 function close(source = null) {
+  if (source === 'esc' && !escClosingAllowed.value) {
+    return;
+  }
   if (props.kind === 'default') {
-    if ((source === 'esc' && !props.escEnabled) || isOpen.value === false) {
+    if (isOpen.value === false) {
       return;
     }
     isOpen.value = false;
@@ -85,8 +91,9 @@ function close(source = null) {
     if (isOpenModal.value === false) {
       return;
     }
-    nativeModal.value?.close();
+    // Flip state first: dialog.close() dispatches `close`, which re-enters this function.
     isOpenModal.value = false;
+    nativeModal.value?.close();
     emits('close');
   }
   deactivate();
@@ -94,13 +101,16 @@ function close(source = null) {
 
 function handleKeyDown(event) {
   if (event.key === 'Escape') {
-    if (props.escEnabled) {
-      isOpenModal.value = false;
-      deactivate();
-    } else {
-      event.preventDefault();
-    }
+    // Keep the browser from closing the dialog on its own; close() decides and emits `close` once.
+    event.preventDefault();
+    close('esc');
   }
+}
+
+function handleCancel(event) {
+  // Native `cancel` (e.g. Escape via a close watcher) must follow the same rules as keydown.
+  event.preventDefault();
+  close('esc');
 }
 
 function handleActionClick(action) {
@@ -306,7 +316,8 @@ defineExpose({ open, close });
           tabindex="-1"
           :style="`${topOutOfBounds}; ${bottomOutOfBounds}`"
           :aria-labelledby="`${id}-label`"
-          @close="close"
+          @close="close()"
+          @cancel="handleCancel"
           @keydown="handleKeyDown"
         >
           <header ref="modalHeader">
