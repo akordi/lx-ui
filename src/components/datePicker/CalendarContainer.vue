@@ -1093,9 +1093,9 @@ function handleDoNotIndicateStart() {
   const hasEnd = Boolean(selectedEndDate.value);
 
   const nullEnd = Boolean(hasStart && !hasEnd);
-  const setEnd =
-    Boolean(!hasStart && hasEnd && (props.activeInput === 'startInput' || !props.activeInput)) ||
-    (hasEnd && props.activeInput !== 'endInput');
+  const setEnd = Boolean(
+    hasEnd && (hasStart || props.activeInput === 'startInput' || !props.activeInput)
+  );
 
   if (nullEnd || setEnd) {
     selectedStartDate.value = null;

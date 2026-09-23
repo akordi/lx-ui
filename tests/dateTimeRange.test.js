@@ -203,8 +203,9 @@ describe('timeAdjust', () => {
       },
     });
 
+  // The picker sets activeInput in a nextTick, and the child needs a further render
+  // to see the new prop — two hops before a second click is read as an end.
   const flush = async (wrp) => {
-    await wrp.vm.$nextTick();
     await wrp.vm.$nextTick();
     await wrp.vm.$nextTick();
   };
@@ -225,8 +226,7 @@ describe('timeAdjust', () => {
     expect(days.length).toBeGreaterThan(1);
 
     days[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    // The picker hands focus to the end input on a later tick, so let it settle
-    // before the second click, otherwise it restarts the range instead of closing it.
+    // Without the wait the second click restarts the range instead of closing it.
     await flush(wrp);
     days[days.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flush(wrp);
@@ -403,8 +403,9 @@ describe("timeAdjust does not leak into the picker's own comparisons", () => {
     return wrp;
   };
 
+  // The picker sets activeInput in a nextTick, and the child needs a further render
+  // to see the new prop — two hops before a second click is read as an end.
   const flush = async (wrp) => {
-    await wrp.vm.$nextTick();
     await wrp.vm.$nextTick();
     await wrp.vm.$nextTick();
   };
@@ -629,5 +630,61 @@ describe('timeAdjust validation warnings', () => {
     wrapper = mountRange(timeAdjust);
 
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('"Do not indicate start/end" with both dates selected', () => {
+  const mountRange = () =>
+    mount(LxDateTimeRange, {
+      props: { kind: 'date', startDate: '2026-09-10', endDate: '2026-09-12' },
+      global: {
+        stubs: ['router-link'],
+        directives: { ClickAway: dummyClickAway },
+      },
+    });
+
+  // Clicking an input both opens the calendar and marks that input as active.
+  const openFrom = async (wrp, which) => {
+    const inputs = wrp.findAll('input.lx-date-time-picker.lx-input-area');
+    expect(inputs.length).toBe(2);
+    await inputs[which === 'start' ? 0 : 1].trigger('click');
+
+    const container = document.body.querySelector('.lx-calendar-container');
+    expect(container).toBeTruthy();
+    return container;
+  };
+
+  const lastEmitted = (wrp, event) => {
+    const emitted = wrp.emitted(event);
+    expect(emitted).toBeTruthy();
+    return emitted[emitted.length - 1][0];
+  };
+
+  test('clears the start while the end input is active', async () => {
+    wrapper = mountRange();
+    const container = await openFrom(wrapper, 'end');
+
+    const button = container.querySelector('.min-date-button');
+    expect(button.disabled).toBe(false);
+
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await wrapper.vm.$nextTick();
+
+    expect(lastEmitted(wrapper, 'update:startDate')).toBe(null);
+    expect(wrapper.emitted('update:endDate')?.at(-1)?.[0] ?? '2026-09-12').toBe('2026-09-12');
+  });
+
+  test('clears the end while the start input is active', async () => {
+    wrapper = mountRange();
+    const container = await openFrom(wrapper, 'start');
+
+    const button = container.querySelector('.max-date-button');
+    expect(button.disabled).toBe(false);
+
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await wrapper.vm.$nextTick();
+
+    expect(lastEmitted(wrapper, 'update:endDate')).toBe(null);
+    expect(wrapper.emitted('update:startDate')?.at(-1)?.[0] ?? '2026-09-10').toBe('2026-09-10');
   });
 });
