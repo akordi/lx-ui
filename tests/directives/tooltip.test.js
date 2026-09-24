@@ -7,6 +7,7 @@ import {
   CLOSE_DELAY,
   MOVE_THRESHOLD,
   CURSOR_HEIGHT,
+  VIEWPORT_MARGIN,
 } from '@/directives/tooltip';
 
 let wrapper;
@@ -46,6 +47,24 @@ function leave(el, relatedTarget = document.body) {
 function open(el, x = 100, y = 100) {
   move(el, x, y);
   vi.advanceTimersByTime(OPEN_DELAY);
+}
+
+// happy-dom has no layout: a static block fills its container, a fixed box shrinks to fit and
+// wraps into whatever space is left when it sits near the viewport edge
+function stubShrinkToFitLayout({ naturalWidth = 120, height = 20 } = {}) {
+  const original = HTMLElement.prototype.getBoundingClientRect;
+  HTMLElement.prototype.getBoundingClientRect = function getRect() {
+    if (this.style.position !== 'fixed') {
+      return { width: globalThis.innerWidth, height, x: 0, y: 0 };
+    }
+    const left = Number.parseFloat(this.style.left) || 0;
+    const available = Math.max(globalThis.innerWidth - left, 0);
+    const width = Math.min(naturalWidth, available);
+    return { width, height: height * Math.ceil(naturalWidth / Math.max(width, 1)), x: left, y: 0 };
+  };
+  return () => {
+    HTMLElement.prototype.getBoundingClientRect = original;
+  };
 }
 
 beforeEach(() => {
@@ -115,20 +134,12 @@ describe('v-tooltip opening', () => {
     open(trigger(), -50, -50);
 
     const { style } = popper();
-    expect(style.left).toBe('0px');
-    expect(style.top).toBe('0px');
+    expect(style.left).toBe(`${VIEWPORT_MARGIN}px`);
+    expect(style.top).toBe(`${VIEWPORT_MARGIN}px`);
   });
 
   test('is not clamped hard left on the very first hover', async () => {
-    // happy-dom has no layout, so mimic it: a static block fills its container, a fixed box
-    // shrinks to fit
-    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
-    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
-      configurable: true,
-      get() {
-        return this.style.position === 'fixed' ? 120 : globalThis.innerWidth;
-      },
-    });
+    const restore = stubShrinkToFitLayout();
 
     // the panel node is a module singleton, so a fresh module is what makes this the first show
     vi.resetModules();
@@ -141,7 +152,44 @@ describe('v-tooltip opening', () => {
       expect(popper().style.left).toBe('100px');
     } finally {
       fresh.closeTooltip();
-      Object.defineProperty(HTMLElement.prototype, 'offsetWidth', original);
+      restore();
+    }
+  });
+
+  test('keeps its natural width when the pointer is at the right edge', () => {
+    const restore = stubShrinkToFitLayout();
+
+    try {
+      wrapper = mountHost('Tooltip text');
+      // Well past the point where the panel no longer fits to the right of the pointer
+      open(trigger(), globalThis.innerWidth - 10, 100);
+
+      // Clamped by the full 120px, not by the sliver of space left at the cursor
+      expect(popper().style.left).toBe(`${globalThis.innerWidth - 120 - VIEWPORT_MARGIN}px`);
+    } finally {
+      restore();
+    }
+  });
+
+  test('a classic scrollbar does not eat into the panel', () => {
+    const restore = stubShrinkToFitLayout();
+    // Windows and Linux scrollbars take layout space, so the layout viewport is narrower
+    // than `innerWidth` – the panel has to be clamped to the former
+    const gutter = 17;
+    Object.defineProperty(document.documentElement, 'clientWidth', {
+      configurable: true,
+      get: () => globalThis.innerWidth - gutter,
+    });
+
+    try {
+      wrapper = mountHost('Tooltip text');
+      open(trigger(), globalThis.innerWidth - 20, 100);
+
+      const expected = globalThis.innerWidth - gutter - 120 - VIEWPORT_MARGIN;
+      expect(popper().style.left).toBe(`${expected}px`);
+    } finally {
+      delete document.documentElement.clientWidth;
+      restore();
     }
   });
 
@@ -159,10 +207,10 @@ describe('v-tooltip opening', () => {
     expect(popper()).not.toBeNull();
   });
 
-  test('sets the marker attribute and leaves title untouched', () => {
+  test('sets the marker attribute and an empty title guard', () => {
     wrapper = mountHost('Tooltip text');
     expect(trigger().getAttribute('data-lx-tooltip')).toBe('Tooltip text');
-    expect(trigger().hasAttribute('title')).toBe(false);
+    expect(trigger().getAttribute('title')).toBe('');
   });
 });
 
@@ -275,6 +323,76 @@ describe('v-tooltip nesting', () => {
   });
 });
 
+describe('v-tooltip inner native titles', () => {
+  function mountInner(attrs) {
+    return mount(
+      {
+        template: `<button class="trigger" v-tooltip="'Button tooltip'">
+            <span class="inner" ${attrs}>x</span>
+          </button>`,
+        directives: { tooltip: vTooltip },
+      },
+      { attachTo: document.body }
+    );
+  }
+
+  function inner() {
+    return document.querySelector('.inner');
+  }
+
+  test('a descendant with its own title owns the hover', () => {
+    wrapper = mountInner('title="Inner title"');
+
+    open(inner());
+
+    // The browser draws the descendant's title; ours would have stacked on top of it
+    expect(popper()).toBeNull();
+    expect(inner().getAttribute('title')).toBe('Inner title');
+  });
+
+  test('the trigger still opens everywhere else', () => {
+    wrapper = mountInner('title="Inner title"');
+
+    open(trigger());
+
+    expect(tooltipText()).toBe('Button tooltip');
+  });
+
+  test('moving from the trigger onto it dismisses the open tooltip', () => {
+    wrapper = mountInner('title="Inner title"');
+    open(trigger());
+    expect(popper()).not.toBeNull();
+
+    move(inner(), 100, 100);
+
+    expect(popper()).toBeNull();
+  });
+
+  test('an empty title is a guard, not an owner', () => {
+    wrapper = mountInner('title=""');
+
+    open(inner());
+
+    expect(tooltipText()).toBe('Button tooltip');
+  });
+
+  test('a nested v-tooltip still wins over the trigger', () => {
+    wrapper = mount(
+      {
+        template: `<button class="trigger" v-tooltip="'Button tooltip'">
+            <span class="inner" v-tooltip="'Inner tooltip'">x</span>
+          </button>`,
+        directives: { tooltip: vTooltip },
+      },
+      { attachTo: document.body }
+    );
+
+    open(inner());
+
+    expect(tooltipText()).toBe('Inner tooltip');
+  });
+});
+
 describe('v-tooltip inert states', () => {
   test('an empty value registers no marker and never opens', () => {
     wrapper = mountHost('');
@@ -294,7 +412,7 @@ describe('v-tooltip inert states', () => {
     expect(popper()).toBeNull();
   });
 
-  test('touch devices get no tooltip', () => {
+  test('touch devices get no tooltip', async () => {
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = (query) => ({
       matches: /hover:\s*none/.test(query),
@@ -307,11 +425,16 @@ describe('v-tooltip inert states', () => {
       dispatchEvent: () => false,
     });
 
+    // The query is built once and reused, so this needs a module that has not run it yet
+    vi.resetModules();
+    const fresh = await import('@/directives/tooltip');
+
     try {
-      wrapper = mountHost('Tooltip text');
+      wrapper = mountHost('Tooltip text', { directive: fresh.vTooltip });
       open(trigger());
       expect(popper()).toBeNull();
     } finally {
+      fresh.closeTooltip();
       window.matchMedia = originalMatchMedia;
     }
   });
@@ -396,6 +519,115 @@ describe('v-tooltip teardown', () => {
     expect(node).not.toBeNull();
     expect(node.parentElement).toBe(document.body);
     expect(node.style.zIndex).toBe('9000');
+  });
+});
+
+describe('v-tooltip native titles', () => {
+  // Inputs title the wrapper that also holds their buttons; without a guard the browser draws
+  // its own tooltip for the wrapper next to ours
+  function mountWrapped() {
+    return mount(
+      {
+        template: `<div class="wrap" title="Selected value">
+            <button class="trigger" v-tooltip="'Clear selection'">x</button>
+          </div>`,
+        directives: { tooltip: vTooltip },
+      },
+      { attachTo: document.body }
+    );
+  }
+
+  function wrap() {
+    return document.querySelector('.wrap');
+  }
+
+  test('the guard is static and the ancestor title is never touched', () => {
+    wrapper = mountWrapped();
+    const el = trigger();
+    expect(el.getAttribute('title')).toBe('');
+
+    open(el);
+    expect(wrap().getAttribute('title')).toBe('Selected value');
+
+    leave(el);
+    vi.advanceTimersByTime(CLOSE_DELAY);
+    expect(wrap().getAttribute('title')).toBe('Selected value');
+    expect(el.getAttribute('title')).toBe('');
+  });
+
+  test('a real title on the trigger is left alone', () => {
+    wrapper = mountHost('Tooltip text', { attrs: 'title="Own title"' });
+
+    expect(trigger().getAttribute('title')).toBe('Own title');
+  });
+
+  test('the guard is dropped when the value goes inert', async () => {
+    wrapper = mountHost('Tooltip text');
+
+    await wrapper.setProps({ tooltip: '' });
+
+    expect(trigger().hasAttribute('title')).toBe(false);
+  });
+
+  test('the guard is dropped on unmount', () => {
+    wrapper = mountWrapped();
+    const el = trigger();
+
+    wrapper.unmount();
+    wrapper = null;
+
+    expect(el.hasAttribute('title')).toBe(false);
+  });
+});
+
+describe('v-tooltip disabled triggers', () => {
+  // Disabled controls dispatch no mouse events – the directive drives them from a hit test
+  function hover(target, x = 100, y = 100) {
+    document.elementFromPoint = () => target;
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true }));
+    vi.advanceTimersByTime(16);
+  }
+
+  let originalElementFromPoint;
+
+  beforeEach(() => {
+    originalElementFromPoint = document.elementFromPoint;
+  });
+
+  afterEach(() => {
+    document.elementFromPoint = originalElementFromPoint;
+  });
+
+  test('a pending open is cancelled when the pointer moves off', () => {
+    wrapper = mountHost('Tooltip text', { attrs: 'disabled' });
+
+    hover(trigger());
+    hover(document.body, 400, 400);
+    vi.advanceTimersByTime(OPEN_DELAY);
+
+    expect(popper()).toBeNull();
+  });
+
+  test('dwelling on one still opens the tooltip', () => {
+    wrapper = mountHost('Tooltip text', { attrs: 'disabled' });
+
+    hover(trigger());
+    vi.advanceTimersByTime(OPEN_DELAY);
+
+    expect(tooltipText()).toBe('Tooltip text');
+  });
+
+  test('a visible tooltip is dismissed when the pointer moves off', () => {
+    wrapper = mountHost('Tooltip text', { attrs: 'disabled' });
+
+    hover(trigger());
+    vi.advanceTimersByTime(OPEN_DELAY);
+    expect(popper()).not.toBeNull();
+
+    hover(document.body, 400, 400);
+    vi.advanceTimersByTime(CLOSE_DELAY);
+
+    expect(popper()).toBeNull();
   });
 });
 

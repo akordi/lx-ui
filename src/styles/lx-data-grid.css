@@ -411,7 +411,7 @@
   opacity: 0.25;
 }
 
-.lx-grid-row.lx-selected .lx-cell svg {
+.lx-grid-row.lx-selected svg:not(.lx-state-icon) {
   fill: var(--color-selected);
   opacity: 1;
 }
@@ -457,11 +457,15 @@
   color: var(--color-data-grid-foreground-hover);
 }
 
-.lx-data-grid .lx-grid-table .lx-grid-row:hover .lx-cell .lx-grid-column-icon,
 .lx-grid-row:hover .lx-cell .lx-person-icon-display > svg,
 .lx-grid-row:hover .lx-cell .lx-user-icon-display > svg,
 .lx-grid-row:hover .lx-cell .lx-ratings svg {
   fill: var(--color-data-grid-foreground-hover);
+}
+
+/* Sets the fallback slot the category color rules below don't consume, so category colors survive hover. */
+.lx-grid-row:hover .lx-cell .lx-grid-column-icon {
+  --lx-grid-column-icon-category-fill: var(--color-data-grid-foreground-hover);
 }
 
 .lx-data-grid .lx-grid-row:hover .lx-indicator {
@@ -612,6 +616,11 @@
 }
 
 /*** State icon colors ***/
+
+/* Category rules below set fill directly and win the tie by appearing later in the source. */
+.lx-data-grid-wrapper .lx-cell svg.lx-grid-column-icon {
+  fill: var(--lx-grid-column-icon-category-fill, var(--color-data-grid-foreground-secondary));
+}
 
 .lx-data-grid svg.lx-grid-column-icon.new,
 .lx-vertical svg.lx-grid-column-icon.new {
@@ -1072,11 +1081,11 @@
   display: flex;
 }
 
-.lx-data-grid-wrapper .lx-component-toolbar .selection-action-button-toolbar > .selection-action-buttons-small {
+.lx-data-grid-wrapper .lx-component-toolbar .selection-action-buttons-small {
   display: none;
 }
 
-.lx-data-grid-wrapper .lx-component-toolbar .selection-action-button-toolbar > .selection-action-buttons {
+.lx-data-grid-wrapper .lx-component-toolbar .selection-action-buttons {
   display: flex;
   align-items: center;
 }
@@ -1395,12 +1404,13 @@
   }
 
   .lx-data-grid-wrapper:not(:has(.lx-data-grid.lx-loading)) .lx-appendable-list,
-  .lx-data-grid-wrapper .lx-component-toolbar .selection-action-button-toolbar > .selection-action-buttons-small {
+  .lx-data-grid-wrapper .lx-component-toolbar .selection-action-buttons-small {
     display: flex;
   }
 
   .lx-data-grid-wrapper:not(:has(.lx-data-grid.lx-loading)) .lx-grid-header-wrapper,
-  .lx-data-grid-wrapper:not(:has(.lx-data-grid.lx-loading)) .lx-data-grid {
+  .lx-data-grid-wrapper:not(:has(.lx-data-grid.lx-loading)) .lx-data-grid,
+  .lx-data-grid-wrapper .lx-component-toolbar .selection-action-buttons {
     display: none;
   }
 

@@ -1175,6 +1175,11 @@ const placeholderComputed = computed(() => {
 
 const isMobileScreen = computed(() => windowSize.width.value < constants.MOBILE_SCREEN_WIDTH);
 
+const multiMonthVariants = ['full', 'full-rows', 'full-columns'];
+const responsiveVariant = computed(() =>
+  isMobileScreen.value && multiMonthVariants.includes(props.variant) ? 'picker' : props.variant
+);
+
 const computedPlacement = computed(() => {
   if (isMobileScreen.value) return 'bottom';
   return 'bottom-start';
@@ -1529,7 +1534,7 @@ onMounted(async () => {
           :id="id"
           v-model="model"
           :mode="mode"
-          :variant="variant"
+          :variant="responsiveVariant"
           :disabled="disabled"
           :locale="locale"
           :special-dates-attributes="specialDatesAttributes"
@@ -1565,7 +1570,7 @@ onMounted(async () => {
       :id="id"
       v-model="model"
       :mode="mode"
-      :variant="variant"
+      :variant="responsiveVariant"
       :disabled="disabled"
       :locale="locale"
       :special-dates-attributes="specialDatesAttributes"

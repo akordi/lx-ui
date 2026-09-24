@@ -132,11 +132,11 @@ test('LxDataVisualizer legend content', () => {
     },
   });
 
-  const legend = wrapper.findAll('.legend-item');
-  expect(legend.length).toBe(3);
-  expect(legend[0].text()).toBe('līdz 100');
-  expect(legend[1].text()).toBe('101 - 200');
-  expect(legend[2].text()).toBe('no 201');
+  const legendItems = wrapper.find('.lx-legend').findAll('.lx-badge');
+  expect(legendItems.length).toBe(3);
+  expect(legendItems[0].find('.lx-badge-text').text()).toBe('līdz 100');
+  expect(legendItems[1].find('.lx-badge-text').text()).toBe('101 - 200');
+  expect(legendItems[2].find('.lx-badge-text').text()).toBe('no 201');
 });
 
 test('LxDataVisualizer threshold coloring 1', () => {

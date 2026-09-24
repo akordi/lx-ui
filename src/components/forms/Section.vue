@@ -4,7 +4,7 @@ import {
   inject,
   computed,
   onMounted,
-  onUnmounted,
+  onBeforeUnmount,
   ref,
   getCurrentInstance,
   watch,
@@ -18,6 +18,7 @@ import LxDropDownMenu from '@/components/DropDownMenu.vue';
 import { getDisplayTexts } from '@/utils/generalUtils';
 import { registerBuilderInstance } from '@/utils/builderUtils';
 import { builderRegistry } from '@/stores';
+import { objectClone } from '@/utils/format/object';
 
 /**
  * Represents a section component that can be used inside form.
@@ -260,12 +261,18 @@ const sectionActions = inject('sectionActions', null);
 
 watch(
   () => props.actionDefinitions,
-  (value) => {
+  (newVal, oldVal) => {
+    if (newVal === oldVal) return;
     if (sectionActions && props.id) {
+      const clonedActions = objectClone(newVal ?? []);
+      const currentActions = objectClone(sectionActions.value?.[props.id]?.actions ?? []);
+
+      if (JSON.stringify(currentActions) === JSON.stringify(clonedActions)) return;
+
       sectionActions.value = {
         ...sectionActions.value,
         [props.id]: {
-          actions: value,
+          actions: clonedActions,
           onActionClick: handleActionClick,
         },
       };
@@ -396,17 +403,17 @@ function unregisterCurrentInstance() {
 
 watch(
   () => props.builderOptions?.useRegistry,
-  (useRegistry) => {
-    if (useRegistry) {
+  (newValue) => {
+    if (newValue) {
       registerCurrentInstance();
-      return;
+    } else {
+      unregisterCurrentInstance();
     }
-    unregisterCurrentInstance();
   },
   { immediate: true }
 );
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   unregisterCurrentInstance();
 });
 </script>

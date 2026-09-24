@@ -773,6 +773,7 @@ const dataState = computed(() =>
                   :badgeType="action?.badgeType"
                   :badgeIcon="action?.badgeIcon"
                   :badgeTitle="action?.badgeTitle"
+                  :customClass="action?.customClass"
                   variant="icon-only"
                 />
               </LxDropDownMenu>
@@ -913,6 +914,7 @@ const dataState = computed(() =>
                   :badgeType="action?.badgeType"
                   :badgeIcon="action?.badgeIcon"
                   :badgeTitle="action?.badgeTitle"
+                  :customClass="action?.customClass"
                   variant="icon-only"
                 />
               </LxDropDownMenu>

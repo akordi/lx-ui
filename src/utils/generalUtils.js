@@ -352,7 +352,7 @@ export function resolveRemToken(element, propertyValue) {
   let valueStr = propertyValue.trim();
 
   if (valueStr.startsWith('var(')) {
-    const [, varName] = valueStr.match(/var\(\s*([^,\s)]+)/) || [];
+    const varName = /var\(\s*([^,\s)]+)/.exec(valueStr)?.[1];
     if (varName && element) {
       valueStr = getComputedStyle(element).getPropertyValue(varName).trim();
     }
@@ -377,7 +377,7 @@ export function parsePaddingRem(paddingStr, element, target = 'horizontal') {
   let str = paddingStr.trim();
 
   if (str.startsWith('var(') && element) {
-    const [, varName] = str.match(/var\(\s*([^,\s)]+)/) || [];
+    const varName = /var\(\s*([^,\s)]+)/.exec(str)?.[1];
 
     if (varName) {
       str = getComputedStyle(element).getPropertyValue(varName).trim() || str;

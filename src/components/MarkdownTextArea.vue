@@ -168,7 +168,6 @@ const inputLink = ref();
 const inputLinkField = ref();
 const markdownImageModal = ref();
 
-const colorDropDown = ref();
 const placeholderDropDown = ref();
 
 const isNotLink = ref(false);
@@ -847,12 +846,6 @@ function postPlaceholder(content) {
   restoreToolbarActionFocus('placeholder');
 }
 
-function setColor(color) {
-  runToolbarCommand((chain) => chain.setColor(color.var));
-  colorDropDown.value?.closeMenu();
-  restoreToolbarActionFocus('color');
-}
-
 function onError(id, error) {
   emitNotification(error);
 }
@@ -889,11 +882,28 @@ const toolbarActions = computed(() => {
   );
 
   if (props.showColorPicker) {
+    const colorGroupId = 'colorPicker';
+
     actionsDefault.push({
-      id: 'color',
-      kind: 'slot',
+      id: `${props.id}-action-color`,
+      name: displayTexts.value.color,
+      icon: 'color',
       groupId: 'format1',
+      nestedGroupId: colorGroupId,
       area: 'left',
+      disabled: isSelectionEmpty.value,
+      active: editor.value.isActive('textStyle'),
+    });
+
+    colorPickerColors.forEach((color) => {
+      actionsDefault.push({
+        id: `${props.id}-color-${color.name}`,
+        name: displayTexts.value[color.name],
+        icon: 'color-swatch',
+        customClass: `lx-color-item ${color.name}`,
+        groupId: colorGroupId,
+        active: editor.value.isActive('textStyle', { color: color.var }),
+      });
     });
   }
 
@@ -979,6 +989,8 @@ function toolbarActionClick(id, value) {
   const headingAction = headingDefinitions.value.find((action) => action.id === id);
   const listAction = listActionsButtons.value.find((action) => action.name === id);
 
+  const colorAction = colorPickerColors.find((c) => `${props.id}-color-${c.name}` === id);
+
   if (id === 'undo') {
     runToolbarCommand((chain) => chain.undo());
   } else if (id === 'redo') {
@@ -987,6 +999,8 @@ function toolbarActionClick(id, value) {
     runToolbarCommand((chain) => chain[formatAction.command]());
   } else if (headingAction) {
     runToolbarCommand((chain) => chain.unsetLink().toggleHeading({ level: headingAction.level }));
+  } else if (colorAction) {
+    runToolbarCommand((chain) => chain.setColor(colorAction.var));
   } else if (listAction) {
     runToolbarCommand((chain) => chain[listAction.command]());
   } else if (id === 'link') {
@@ -1109,39 +1123,6 @@ defineExpose({ removeImageLoader, removeAllImageLoaders, repleaceImageLoader, ge
           :wrapperRef="markdownWrapper"
           @actionClick="toolbarActionClick"
         >
-          <template #color>
-            <LxDropDownMenu ref="colorDropDown" :disabled="isSelectionEmpty || isDisabled">
-              <LxButton
-                :id="`${props.id}-action-color`"
-                icon="color"
-                kind="ghost"
-                variant="icon-only"
-                tabindex="-1"
-                :label="displayTexts.color"
-                :disabled="isSelectionEmpty || isDisabled"
-                :active="editor.isActive('textStyle')"
-              />
-              <template #panel>
-                <ul class="lx-color-list">
-                  <li
-                    v-for="color in colorPickerColors"
-                    :key="color.name"
-                    :class="[
-                      'lx-color-item',
-                      color.name,
-                      { 'lx-selected': editor.isActive('textStyle', { color: color.var }) },
-                    ]"
-                    :title="displayTexts[color.name]"
-                    tabindex="0"
-                    @click="setColor(color)"
-                    @keydown.enter.prevent="setColor(color)"
-                  >
-                    <div></div>
-                  </li>
-                </ul>
-              </template>
-            </LxDropDownMenu>
-          </template>
           <template #placeholder>
             <LxDropDownMenu
               ref="placeholderDropDown"

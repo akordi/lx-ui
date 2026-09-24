@@ -171,6 +171,7 @@ const hoveredDate = ref(null);
 
 const startYear = ref(findDecadeStartYear(todayDate.value.getFullYear()) - 1);
 const endYear = ref(findDecadeStartYear(todayDate.value.getFullYear()) + 10);
+const focusedYear = ref(null);
 
 const startQuarterYear = ref(findDecadeStartYear(todayDate.value.getFullYear()));
 const endQuarterYear = ref(findDecadeStartYear(todayDate.value.getFullYear()) + 9);
@@ -1093,9 +1094,9 @@ function handleDoNotIndicateStart() {
   const hasEnd = Boolean(selectedEndDate.value);
 
   const nullEnd = Boolean(hasStart && !hasEnd);
-  const setEnd =
-    Boolean(!hasStart && hasEnd && (props.activeInput === 'startInput' || !props.activeInput)) ||
-    (hasEnd && props.activeInput !== 'endInput');
+  const setEnd = Boolean(
+    hasEnd && (hasStart || props.activeInput === 'startInput' || !props.activeInput)
+  );
 
   if (nullEnd || setEnd) {
     selectedStartDate.value = null;
@@ -1397,6 +1398,14 @@ function getYearSelectionDate(year) {
 
 function isYearSelectable(year) {
   return canSelectDate(getYearSelectionDate(year), props.minDateRef, props.maxDateRef, 'year');
+}
+
+function setFocusedYear(year) {
+  focusedYear.value = year;
+}
+
+function clearFocusedYear(year) {
+  if (focusedYear.value === year) focusedYear.value = null;
 }
 
 function focusMonthsLayout() {
@@ -1792,7 +1801,8 @@ function applyHourBoundsIfNeeded(date) {
 
   if (
     sameMinDay &&
-    (selectedHour.value == null || selectedHour.value < props.minDateRef.getHours())
+    selectedHour.value != null &&
+    selectedHour.value < props.minDateRef.getHours()
   ) {
     selectedHour.value = props.minDateRef.getHours();
     currentHourIndex.value = getTimeOrderIndex(hours.value, selectedHour.value);
@@ -1801,7 +1811,8 @@ function applyHourBoundsIfNeeded(date) {
 
   if (
     sameMaxDay &&
-    (selectedHour.value == null || selectedHour.value > props.maxDateRef.getHours())
+    selectedHour.value != null &&
+    selectedHour.value > props.maxDateRef.getHours()
   ) {
     selectedHour.value = props.maxDateRef.getHours();
     currentHourIndex.value = getTimeOrderIndex(hours.value, selectedHour.value);
@@ -1817,7 +1828,8 @@ function applyMinuteBoundsIfNeeded(date) {
   const sameMinDay = props.minDateRef && isSameDay(date, props.minDateRef);
   if (
     sameMinDay &&
-    (isNil(selectedMinute.value) || selectedMinute.value < props.minDateRef.getMinutes())
+    !isNil(selectedMinute.value) &&
+    selectedMinute.value < props.minDateRef.getMinutes()
   ) {
     selectedMinute.value = props.minDateRef.getMinutes();
   }
@@ -1825,7 +1837,8 @@ function applyMinuteBoundsIfNeeded(date) {
   const sameMaxDay = props.maxDateRef && isSameDay(date, props.maxDateRef);
   if (
     sameMaxDay &&
-    (isNil(selectedMinute.value) || selectedMinute.value > props.maxDateRef.getMinutes())
+    !isNil(selectedMinute.value) &&
+    selectedMinute.value > props.maxDateRef.getMinutes()
   ) {
     selectedMinute.value = props.maxDateRef.getMinutes();
   }
@@ -1848,7 +1861,8 @@ function applySecondBoundsIfNeeded(date) {
   const sameMinDay = props.minDateRef && isSameDay(date, props.minDateRef);
   if (
     sameMinDay &&
-    (isNil(selectedSecond.value) || selectedSecond.value < props.minDateRef.getSeconds())
+    !isNil(selectedSecond.value) &&
+    selectedSecond.value < props.minDateRef.getSeconds()
   ) {
     selectedSecond.value = props.minDateRef.getSeconds();
   }
@@ -1856,7 +1870,8 @@ function applySecondBoundsIfNeeded(date) {
   const sameMaxDay = props.maxDateRef && isSameDay(date, props.maxDateRef);
   if (
     sameMaxDay &&
-    (isNil(selectedSecond.value) || selectedSecond.value > props.maxDateRef.getSeconds())
+    !isNil(selectedSecond.value) &&
+    selectedSecond.value > props.maxDateRef.getSeconds()
   ) {
     selectedSecond.value = props.maxDateRef.getSeconds();
   }
@@ -2928,6 +2943,28 @@ function isIncompleteDateTimeSelection(mode) {
   );
 }
 
+function applyFallbackTimeBounds(date, withSeconds) {
+  const { minDateRef, maxDateRef } = props;
+
+  const noTimePicked =
+    isNil(selectedHour.value) &&
+    isNil(selectedMinute.value) &&
+    (!withSeconds || isNil(selectedSecond.value));
+
+  let bound = null;
+  if (minDateRef && isSameDay(date, minDateRef) && (noTimePicked || date < minDateRef)) {
+    bound = minDateRef;
+  } else if (maxDateRef && isSameDay(date, maxDateRef) && (noTimePicked || date > maxDateRef)) {
+    bound = maxDateRef;
+  }
+
+  if (bound) {
+    date.setHours(bound.getHours(), bound.getMinutes(), withSeconds ? bound.getSeconds() : 0, 0);
+  }
+
+  return date;
+}
+
 // Missing time parts default to 0; with no day picked the fallback lands on "today"
 function buildFallbackDateTime(hasDay, withSeconds) {
   const dateParts = hasDay
@@ -2943,7 +2980,9 @@ function buildFallbackDateTime(hasDay, withSeconds) {
     timeParts.push(selectedSecond.value === null ? 0 : Number(selectedSecond.value));
   }
 
-  return new Date(...dateParts, ...timeParts);
+  const fallback = new Date(...dateParts, ...timeParts);
+
+  return hasDay ? applyFallbackTimeBounds(fallback, withSeconds) : fallback;
 }
 
 function commitFallbackDateTime(updatedDate) {
@@ -5283,20 +5322,21 @@ if (typeof globalThis !== 'undefined') {
                           },
                         ]"
                         :aria-hidden="
-                          isStartOrEndYear(year, startYear, endYear) ||
-                          !canSelectDate(
-                            new Date(
-                              year,
-                              selectedMonth !== null && selectedMonth !== undefined
-                                ? selectedMonth
-                                : todayDate.getMonth(),
-                              1
-                            ),
-                            minDateRef,
-                            maxDateRef,
-                            'year'
-                          ) ||
-                          disabled
+                          focusedYear !== year &&
+                          (isStartOrEndYear(year, startYear, endYear) ||
+                            !canSelectDate(
+                              new Date(
+                                year,
+                                selectedMonth !== null && selectedMonth !== undefined
+                                  ? selectedMonth
+                                  : todayDate.getMonth(),
+                                1
+                              ),
+                              minDateRef,
+                              maxDateRef,
+                              'year'
+                            ) ||
+                            disabled)
                         "
                         :aria-label="year"
                         role="cell"
@@ -5355,8 +5395,10 @@ if (typeof globalThis !== 'undefined') {
                                 0
                               )
                             ),
-                            hoverDate(new Date(year, 1, 1, 0, 0, 0))
+                            hoverDate(new Date(year, 1, 1, 0, 0, 0)),
+                            setFocusedYear(year)
                         "
+                        @focusout="clearFocusedYear(year)"
                         @keyup.enter.stop.prevent="
                           handleSelections(
                             year,
@@ -5739,7 +5781,8 @@ if (typeof globalThis !== 'undefined') {
         kind="ghost"
         icon="clear"
         :variant="
-          (mode === 'time' && !isMobileScreen) || (pickerType === 'range' && isMobileScreen)
+          (mode === 'time' && !(variant === 'default' && responsiveView)) ||
+          (pickerType === 'range' && isMobileScreen)
             ? 'icon-only'
             : 'default'
         "

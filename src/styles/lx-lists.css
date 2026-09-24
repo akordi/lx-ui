@@ -972,7 +972,7 @@
   margin-bottom: var(--list-toolbar-gap-bottom);
 }
 
-.lx-list-wrapper .lx-component-toolbar .selection-action-button-toolbar > .selection-action-buttons {
+.lx-list-wrapper .lx-component-toolbar .selection-action-buttons {
   display: flex;
   align-items: center;
 }
@@ -993,9 +993,9 @@
 .lx-component-toolbar .first-row > .left-area > .lx-group:only-child:has(> .lx-group:empty),
 .lx-list-wrapper .lx-component-toolbar:has(> .first-row > .left-area > .lx-group:only-child:empty):has(> .first-row > .right-area > .lx-group:only-child:empty),
 .lx-data-grid-wrapper .lx-component-toolbar:has(> .first-row > .left-area > .lx-group:only-child:empty):has(> .first-row > .right-area > .lx-group:only-child:empty),
-.lx-list-wrapper:not(.is-narrow) .lx-component-toolbar .selection-action-button-toolbar > .selection-action-buttons-small,
-.lx-list-wrapper.is-narrow .lx-component-toolbar .selection-action-button-toolbar > .selection-action-buttons,
-.lx-list-wrapper .lx-load-more-button > .lx-button > .lx-button-content-wrapper svg {
+.lx-list-wrapper .lx-load-more-button > .lx-button > .lx-button-content-wrapper svg,
+.lx-list-wrapper:not(.is-narrow) .lx-component-toolbar .selection-action-buttons-small,
+.lx-list-wrapper.is-narrow .lx-component-toolbar .selection-action-buttons {
   display: none;
 }
 
@@ -1395,7 +1395,7 @@ a.lx-tile:not(.lx-disabled):hover {
 }
 
 .lx-tile.lx-mini > header .lx-primary {
-  margin: var(--nav-tile-mini-text-primary-margin);
+  margin: var(--nav-tile-mini-text-margin);
 }
 
 .lx-tile.lx-mini .lx-description,
