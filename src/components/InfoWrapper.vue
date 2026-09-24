@@ -13,7 +13,7 @@ import { generateUUID } from '@/utils/stringUtils';
 import { getDisplayTexts } from '@/utils/generalUtils';
 import LxIcon from '@/components/Icon.vue';
 import LxButton from '@/components/Button.vue';
-import { useWindowSize } from '@vueuse/core';
+import { useWindowSize, isClient } from '@vueuse/core';
 import LxPopper from '@/components/Popper.vue';
 import { useFocusTrap } from '@vueuse/integrations/useFocusTrap';
 
@@ -133,9 +133,7 @@ const handleOpen = () => {
   }
 };
 
-const hasReducedMotion = ref(
-  typeof document !== 'undefined' && document.body.classList.contains('lx-no-animations')
-);
+const hasReducedMotion = ref(isClient && document.body.classList.contains('lx-no-animations'));
 const popperToClose = ref(false);
 
 function handleClose(hasAnimation = true) {

@@ -17,6 +17,7 @@ import {
   useElementBounding,
   useElementSize,
   useMutationObserver,
+  isClient,
 } from '@vueuse/core';
 
 import { logError } from '@/utils/devUtils';
@@ -321,11 +322,7 @@ const bounding = useElementBounding(container, {
 });
 const containerSize = useElementSize(container);
 const headerSize = useElementSize(header);
-const lxElement = typeof document !== 'undefined' ? document.querySelector('.lx') : null;
-const rootFontSize =
-  typeof document !== 'undefined'
-    ? Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
-    : 16;
+const lxElement = isClient ? document.querySelector('.lx') : null;
 
 let actionVars = null;
 
@@ -1783,11 +1780,10 @@ const fullBleedMargin = computed(() => {
   const isDefaultLayout = !!lxElement.querySelector('.lx-layout-default');
 
   const gapRem = isDefaultLayout ? 1 : 3;
-  const gapPx = gapRem * rootFontSize;
+  const gapPx = remToPx(gapRem);
 
   const navBarWidth = isDefaultLayout
-    ? Number.parseFloat(getComputedStyle(lxElement).getPropertyValue('--aside-size')) *
-        rootFontSize || 0
+    ? remToPx(Number.parseFloat(getComputedStyle(lxElement).getPropertyValue('--aside-size'))) || 0
     : 0;
 
   const baseMargin = -((width.value - bodyColWidth) / 2 - gapPx);

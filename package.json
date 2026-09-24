@@ -109,7 +109,6 @@
     "@testing-library/vue": "^8.0.1",
     "@vitejs/plugin-vue": "6.0.7",
     "@vue/eslint-config-airbnb": "8.0.0",
-    "@vue/server-renderer": "^3.5.43",
     "@zzdats/prettier-config": "^1.0.0",
     "ajv": "^8.5.0",
     "eslint": "^8.57.0",

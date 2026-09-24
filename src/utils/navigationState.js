@@ -1,12 +1,11 @@
+import { isClient } from '@vueuse/core';
+
 let intendedRoute = null;
 
-// Guarding on `window`, not `sessionStorage` directly — Node 22+ ships a
-// real (in-memory, per-process) global `sessionStorage` by default, so
-// checking it alone no longer reliably detects "is this a real browser".
-// These run from router beforeEach/afterEach guards (see flowUtils.js),
-// which fire during SSR too.
+// Called from router guards (see flowUtils.js), which also run during SSR. Guard on `isClient`
+// rather than `typeof sessionStorage`: Node 25+ exposes a process-wide Web Storage global.
 export function trackNavigationState(to) {
-  if (typeof window === 'undefined') return;
+  if (!isClient) return;
   const notifyFlag = sessionStorage.getItem('version_update_notification');
   if (notifyFlag) return;
   intendedRoute = { name: to.name, params: to.params, query: to.query };
@@ -15,7 +14,7 @@ export function trackNavigationState(to) {
 }
 
 export function resetNavigationTracking() {
-  if (typeof window === 'undefined') return;
+  if (!isClient) return;
   // A version reload is in flight - keep intended_route for restoreRouteAndNotify
   if (sessionStorage.getItem('version_reload_pending') === 'true') return;
 

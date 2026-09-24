@@ -16,6 +16,7 @@ import {
   useElementSize,
   useWindowSize,
   useMutationObserver,
+  isClient,
 } from '@vueuse/core';
 import LxButton from '@/components/Button.vue';
 import LxInfoWrapper from '@/components/InfoWrapper.vue';
@@ -330,11 +331,7 @@ const footerSize = useElementSize(formFooter);
 const isInsideRegionContainer = ref(false);
 
 const shellLayoutMode = computed(() => {
-  if (typeof document === 'undefined') {
-    return 'default';
-  }
-
-  const layoutElement = document.querySelector('.lx-layout');
+  const layoutElement = isClient ? document.querySelector('.lx-layout') : null;
   if (!layoutElement) {
     return 'default';
   }
@@ -347,7 +344,7 @@ const shellLayoutMode = computed(() => {
   return hasPublicClass ? 'public' : 'default';
 });
 
-const layoutElement = typeof document !== 'undefined' ? document.querySelector('.lx-layout') : null;
+const layoutElement = isClient ? document.querySelector('.lx-layout') : null;
 
 const headerElement = layoutElement?.querySelector(':scope > header');
 
@@ -934,7 +931,7 @@ watch(height, () => {
 });
 
 useMutationObserver(
-  typeof document !== 'undefined' ? document.body : null,
+  isClient ? document.body : null,
   () => {
     isInsideRegionContainer.value = !!form.value?.parentElement?.closest(
       '#modals, .lx-data-block-wrapper, .lx-region, .lx-form-grid, .lx-card, .lx-appendable-list'

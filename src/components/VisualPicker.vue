@@ -22,7 +22,7 @@ import LxIcon from '@/components/Icon.vue';
 import LxInfoWrapper from '@/components/InfoWrapper.vue';
 import { lxDevUtils } from '@/utils';
 import useLx from '@/hooks/useLx';
-import { useElementSize } from '@vueuse/core';
+import { useElementSize, isClient } from '@vueuse/core';
 import { getTexts } from '@/utils/visualPickerUtils';
 import { clampText, getDisplayTexts, findFocusableElements, isDefined } from '@/utils/generalUtils';
 import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/builderUtils';
@@ -375,7 +375,7 @@ function removeItem(id, event) {
 }
 
 function handleSelectionChange(selectedValue) {
-  const elem = typeof document !== 'undefined' ? document.getElementById(props.id) : null;
+  const elem = isClient ? document.getElementById(props.id) : null;
   if (elem) {
     const elements = Array.from(elem.querySelectorAll('.selected-visual'));
     elements.forEach((element) => {

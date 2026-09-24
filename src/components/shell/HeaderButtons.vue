@@ -19,7 +19,7 @@ import {
   secondsToMinutesAndSeconds,
   remToPx,
 } from '@/utils/generalUtils';
-import { useWindowSize, useElementSize } from '@vueuse/core';
+import { useWindowSize, useElementSize, isClient } from '@vueuse/core';
 
 const LxMegaMenu = defineAsyncComponent(() => import('@/components/shell/MegaMenu.vue'));
 const LxEmptyState = defineAsyncComponent(() => import('@/components/EmptyState.vue'));
@@ -184,9 +184,7 @@ const emits = defineEmits([
 const windowSize = useWindowSize();
 const windowWidth = computed(() => windowSize.width.value);
 
-const lxElement = computed(() =>
-  typeof document !== 'undefined' ? document.querySelector('.lx') : null
-);
+const lxElement = computed(() => (isClient ? document.querySelector('.lx') : null));
 
 const themeIcon = ref('accessibility');
 const themeMenu = ref(null);
@@ -535,7 +533,7 @@ function handleDefaultModeVisibility(availableWidth) {
 }
 
 function recalculateButtonsVisibility() {
-  if (typeof requestAnimationFrame === 'undefined') {
+  if (!isClient) {
     return;
   }
 
