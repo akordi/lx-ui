@@ -6,9 +6,7 @@ import { logError, logWarn } from '@/utils/devUtils';
 import useLx from '@/hooks/useLx';
 import { useLayoutInfo } from '@/hooks/useLayoutInfo';
 import { clampText, getDisplayTexts, isDefined } from '@/utils/generalUtils';
-import LxButton from '@/components/Button.vue';
 import LxToolbar from '@/components/Toolbar.vue';
-import LxDropDownMenu from '@/components/DropDownMenu.vue';
 import LxIcon from '@/components/Icon.vue';
 import LxInfoWrapper from '@/components/InfoWrapper.vue';
 import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/builderUtils';
@@ -324,11 +322,24 @@ const toolbarActions = computed(() => {
   }
 
   if (props.showColorPicker) {
+    const colorGroupId = 'colorPicker';
     actionsDefault.push({
-      id: 'color',
-      kind: 'slot',
+      id: `${props.id}-action-color`,
+      name: displayTexts.value.color,
+      icon: 'color',
       groupId: 'color',
+      nestedGroupId: colorGroupId,
       area: 'left',
+    });
+    colorsList.value.forEach((color) => {
+      actionsDefault.push({
+        id: `${props.id}-color-${color.label}`,
+        name: displayTexts.value[color.label],
+        icon: 'color-swatch',
+        customClass: `lx-color-item ${color.label}`,
+        groupId: colorGroupId,
+        active: selectedColorVariable.value === color.variable,
+      });
     });
   }
 
@@ -357,7 +368,12 @@ function toolbarActionClick(id, value) {
   } else if (id === 'clear') {
     clearCanvas();
   } else {
-    emits('actionClick', id, value);
+    const colorItem = colorsList.value.find((c) => `${props.id}-color-${c.label}` === id);
+    if (colorItem) {
+      updateColor(colorItem.value, colorItem.label, colorItem.variable);
+    } else {
+      emits('actionClick', id, value);
+    }
   }
 }
 
@@ -492,43 +508,8 @@ if (props.builderOptions?.useRegistry) {
         :sticky="stickyToolbar"
         :wrapperRef="wrapperRef"
         @actionClick="toolbarActionClick"
-      >
-        <template #color>
-          <LxDropDownMenu :disabled="props.disabled">
-            <LxButton
-              :id="`${id}-action-color`"
-              icon="color"
-              kind="ghost"
-              variant="icon-only"
-              tabindex="-1"
-              :label="displayTexts.color"
-              :disabled="props.disabled"
-            />
-            <template #panel>
-              <ul class="lx-color-list">
-                <li
-                  v-for="color in colorsList"
-                  :key="color.id"
-                  :id="`${id}-color-${color.label}`"
-                  class="lx-color-item"
-                  :class="[
-                    {
-                      'lx-selected': selectedColorVariable === color.variable,
-                    },
-                    color.label,
-                  ]"
-                  :title="displayTexts[color.label]"
-                  tabindex="0"
-                  @click="updateColor(color.value, color.label, color.variable)"
-                  @keydown.enter.prevent="updateColor(color.value, color.label, color.variable)"
-                >
-                  <div></div>
-                </li>
-              </ul>
-            </template>
-          </LxDropDownMenu>
-        </template>
-      </LxToolbar>
+      />
+
       <div class="lx-input-wrapper" :class="{ 'lx-disabled': disabled }">
         <canvas
           :id="id"
