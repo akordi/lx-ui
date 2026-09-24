@@ -62,7 +62,9 @@ jobs:
         run: bun run build
 
       - name: Publish to npm
-        run: npm publish --access public --provenance
+        # `--tag latest` is required: npm refuses to publish a prerelease (the
+        # `-akordi.N` suffix makes it one) without an explicit dist-tag.
+        run: npm publish --access public --provenance --tag latest
         env:
           # Used only if trusted publishing isn't configured for this
           # workflow yet (see docs.npmjs.com/trusted-publishers) — the npm
