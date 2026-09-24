@@ -171,6 +171,7 @@ const hoveredDate = ref(null);
 
 const startYear = ref(findDecadeStartYear(todayDate.value.getFullYear()) - 1);
 const endYear = ref(findDecadeStartYear(todayDate.value.getFullYear()) + 10);
+const focusedYear = ref(null);
 
 const startQuarterYear = ref(findDecadeStartYear(todayDate.value.getFullYear()));
 const endQuarterYear = ref(findDecadeStartYear(todayDate.value.getFullYear()) + 9);
@@ -1397,6 +1398,14 @@ function getYearSelectionDate(year) {
 
 function isYearSelectable(year) {
   return canSelectDate(getYearSelectionDate(year), props.minDateRef, props.maxDateRef, 'year');
+}
+
+function setFocusedYear(year) {
+  focusedYear.value = year;
+}
+
+function clearFocusedYear(year) {
+  if (focusedYear.value === year) focusedYear.value = null;
 }
 
 function focusMonthsLayout() {
@@ -5313,20 +5322,21 @@ if (typeof globalThis !== 'undefined') {
                           },
                         ]"
                         :aria-hidden="
-                          isStartOrEndYear(year, startYear, endYear) ||
-                          !canSelectDate(
-                            new Date(
-                              year,
-                              selectedMonth !== null && selectedMonth !== undefined
-                                ? selectedMonth
-                                : todayDate.getMonth(),
-                              1
-                            ),
-                            minDateRef,
-                            maxDateRef,
-                            'year'
-                          ) ||
-                          disabled
+                          focusedYear !== year &&
+                          (isStartOrEndYear(year, startYear, endYear) ||
+                            !canSelectDate(
+                              new Date(
+                                year,
+                                selectedMonth !== null && selectedMonth !== undefined
+                                  ? selectedMonth
+                                  : todayDate.getMonth(),
+                                1
+                              ),
+                              minDateRef,
+                              maxDateRef,
+                              'year'
+                            ) ||
+                            disabled)
                         "
                         :aria-label="year"
                         role="cell"
@@ -5385,8 +5395,10 @@ if (typeof globalThis !== 'undefined') {
                                 0
                               )
                             ),
-                            hoverDate(new Date(year, 1, 1, 0, 0, 0))
+                            hoverDate(new Date(year, 1, 1, 0, 0, 0)),
+                            setFocusedYear(year)
                         "
+                        @focusout="clearFocusedYear(year)"
                         @keyup.enter.stop.prevent="
                           handleSelections(
                             year,
@@ -5769,7 +5781,8 @@ if (typeof globalThis !== 'undefined') {
         kind="ghost"
         icon="clear"
         :variant="
-          (mode === 'time' && !isMobileScreen) || (pickerType === 'range' && isMobileScreen)
+          (mode === 'time' && !(variant === 'default' && responsiveView)) ||
+          (pickerType === 'range' && isMobileScreen)
             ? 'icon-only'
             : 'default'
         "
