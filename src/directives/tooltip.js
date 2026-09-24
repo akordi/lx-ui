@@ -4,10 +4,10 @@ import useLx from '@/hooks/useLx';
 import { logWarn } from '@/utils/devUtils';
 import { safeMatchMedia } from '@/utils/accessibilityUtils';
 
-// v-tooltip: LxTooltip-styled hover tooltip that does not wrap its trigger.
+// v-tooltip: hover tooltip that does not wrap its trigger. Single source of the tooltip markup –
+// LxTooltip (src/components/Tooltip.vue) renders through it too.
 // Registered globally by createLx. See docs/Directives.md.
 
-// Timings and distances mirror LxTooltip (src/components/Tooltip.vue)
 export const OPEN_DELAY = 300;
 export const CLOSE_DELAY = 100;
 export const MOVE_THRESHOLD = 20;
@@ -50,6 +50,7 @@ function isElementDisabled(el) {
 function normalizeValue(value) {
   let text = '';
   let suppressed = false;
+  let onToggle = null;
 
   if (typeof value === 'string' || typeof value === 'number') {
     text = String(value);
@@ -57,9 +58,10 @@ function normalizeValue(value) {
     const raw = value.value;
     if (typeof raw === 'string' || typeof raw === 'number') text = String(raw);
     suppressed = Boolean(value.disabled);
+    if (typeof value.onToggle === 'function') onToggle = value.onToggle;
   }
 
-  return { text: text.trim() ? text : '', suppressed };
+  return { text: text.trim() ? text : '', suppressed, onToggle };
 }
 
 // A MediaQueryList keeps itself up to date, so the query is built once instead of on every
@@ -76,7 +78,7 @@ function isInert(el, entry) {
   // Touch devices never get a hover tooltip
   if (isTouchOnly()) return true;
   // Already inside an LxTooltip – let the component own the hover
-  if (el.closest(NESTED_TOOLTIP_SELECTOR)) return true;
+  if (el.parentElement?.closest(NESTED_TOOLTIP_SELECTOR)) return true;
   return false;
 }
 
@@ -108,6 +110,7 @@ function ensureNodes() {
   const text = document.createElement('p');
   text.className = 'lx-tooltip-text';
 
+  // Resulting markup is documented in docs/Directives.md (Styling)
   area.appendChild(text);
   panel.appendChild(area);
   wrapper.appendChild(panel);
@@ -219,6 +222,8 @@ function show(el, cursorX, cursorY) {
 
   // Must run after insertion – the clamp needs the panel's measured size
   positionPanel(cursorX, cursorY + CURSOR_HEIGHT);
+
+  entry.onToggle?.(true);
 }
 
 function hide() {
@@ -226,12 +231,10 @@ function hide() {
   clearCloseTimer();
 
   const el = state.currentEl;
-  if (el) {
-    const entry = registry.get(el);
-    if (entry?.ownsAria) {
-      el.removeAttribute('aria-describedby');
-      entry.ownsAria = false;
-    }
+  const entry = el ? registry.get(el) : null;
+  if (entry?.ownsAria) {
+    el.removeAttribute('aria-describedby');
+    entry.ownsAria = false;
   }
 
   const { nodes } = state;
@@ -246,6 +249,9 @@ function hide() {
   state.savedCursorPos = null;
 
   unbindGlobals();
+
+  // Notify last, so the callback sees the settled state
+  if (el) entry?.onToggle?.(false);
 }
 
 function scheduleClose() {
@@ -471,6 +477,7 @@ function updated(el, binding) {
   const textChanged = next.text !== entry.text;
   entry.text = next.text;
   entry.suppressed = next.suppressed;
+  entry.onToggle = next.onToggle;
   applyEntry(el);
 
   if (state.currentEl !== el) return;
@@ -508,12 +515,32 @@ function unmounted(el) {
   if (!state.armedEl && !state.currentEl) unbindGlobals();
 }
 
-/** Dismisses the currently visible tooltip, if any. */
-export function closeTooltip() {
+/**
+ * Opens the tooltip of a `v-tooltip` trigger without a hover, just below the element.
+ * @param {HTMLElement} el
+ */
+export function openTooltip(el) {
+  const entry = registry.get(el);
+  if (!entry?.text || entry.suppressed || el.parentElement?.closest(NESTED_TOOLTIP_SELECTOR))
+    return;
+  if (state.currentEl === el && state.isOpen) return;
+
+  hide();
+  bindGlobals();
+  const rect = el.getBoundingClientRect();
+  show(el, rect.left, rect.bottom - CURSOR_HEIGHT);
+}
+
+/**
+ * Dismisses the currently visible tooltip, if any.
+ * @param {HTMLElement} [el] only close it when it belongs to this trigger
+ */
+export function closeTooltip(el) {
+  if (el && state.currentEl !== el && state.armedEl !== el) return;
   hide();
 }
 
-/** @type {import('vue').ObjectDirective<HTMLElement, string | number | { value?: string, disabled?: boolean }>} */
+/** @type {import('vue').ObjectDirective<HTMLElement, string | number | { value?: string, disabled?: boolean, onToggle?: (open: boolean) => void }>} */
 export const vTooltip = {
   mounted,
   updated,

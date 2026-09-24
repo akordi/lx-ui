@@ -1,1 +1,1 @@
-export { vTooltip, closeTooltip } from '@/directives/tooltip';
+export { vTooltip, openTooltip, closeTooltip } from '@/directives/tooltip';
