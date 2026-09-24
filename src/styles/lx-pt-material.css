@@ -95,6 +95,7 @@
     --badge-border-s: var(--badge-border-width-s) solid var(--color-chrome);
     --badge-border-radius-s: var(--border-radius-0250);
     --badge-gap-s: var(--space-0375);
+    --badge-padding-s: calc(var(--space-0125) + var(--badge-border-width-s)) var(--space-0375);
 
     --color-badge-icon: var(--color-brand);
 

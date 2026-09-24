@@ -1081,11 +1081,11 @@
   display: flex;
 }
 
-.lx-data-grid-wrapper .lx-component-toolbar .selection-action-button-toolbar > .selection-action-buttons-small {
+.lx-data-grid-wrapper .lx-component-toolbar .selection-action-buttons-small {
   display: none;
 }
 
-.lx-data-grid-wrapper .lx-component-toolbar .selection-action-button-toolbar > .selection-action-buttons {
+.lx-data-grid-wrapper .lx-component-toolbar .selection-action-buttons {
   display: flex;
   align-items: center;
 }
@@ -1404,12 +1404,13 @@
   }
 
   .lx-data-grid-wrapper:not(:has(.lx-data-grid.lx-loading)) .lx-appendable-list,
-  .lx-data-grid-wrapper .lx-component-toolbar .selection-action-button-toolbar > .selection-action-buttons-small {
+  .lx-data-grid-wrapper .lx-component-toolbar .selection-action-buttons-small {
     display: flex;
   }
 
   .lx-data-grid-wrapper:not(:has(.lx-data-grid.lx-loading)) .lx-grid-header-wrapper,
-  .lx-data-grid-wrapper:not(:has(.lx-data-grid.lx-loading)) .lx-data-grid {
+  .lx-data-grid-wrapper:not(:has(.lx-data-grid.lx-loading)) .lx-data-grid,
+  .lx-data-grid-wrapper .lx-component-toolbar .selection-action-buttons {
     display: none;
   }
 
