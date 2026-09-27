@@ -130,11 +130,14 @@ describe('LxNumberInput', () => {
     });
 
     test('should generate a unique id per instance when none is given', () => {
-      wrapper = mount(LxNumberInput);
-      const other = mount(LxNumberInput);
+      wrapper = mount({
+        components: { LxNumberInput },
+        template: '<div><LxNumberInput /><LxNumberInput /></div>',
+      });
+      const [first, second] = wrapper.findAllComponents(LxNumberInput);
 
-      expect(wrapper.props().id).not.toBe(other.props().id);
-      other.unmount();
+      expect(first.props().id).toBeTruthy();
+      expect(first.props().id).not.toBe(second.props().id);
     });
 
     describe('kind', () => {

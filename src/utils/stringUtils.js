@@ -1,9 +1,12 @@
+import { getCurrentInstance, useId } from 'vue';
 import CyrillicToTranslit from 'cyrillic-to-translit-js';
 
 // lazily created on first foldToAscii() call to keep this module side-effect-free
 let cyrillicToTranslit;
 
 export function generateUUID() {
+  // Inside a component the id must match between server render and hydration
+  if (getCurrentInstance()) return useId();
   let uuid = 'LX';
   const hexDigits = '0123456789abcdef';
   const cryptoObj = globalThis.crypto || globalThis.msCrypto;
