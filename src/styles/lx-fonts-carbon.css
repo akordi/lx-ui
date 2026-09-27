@@ -51,9 +51,7 @@
   font-family: 'IBMPlexSansLX';
   font-style: normal;
   font-weight: 100 700;
-  src:
-    url('/lx-fonts/IBMPlexSansVar.woff2') format('woff2-variations'),
-    url('/lx-fonts/IBMPlexSansVar.ttf') format('truetype-variations');
+  src: url('/lx-fonts/IBMPlexSansVar.woff2') format('woff2-variations');
 }
 
 @font-face {
@@ -61,7 +59,5 @@
   font-family: 'IBMPlexSansLX';
   font-style: italic;
   font-weight: 100 700;
-  src:
-    url('/lx-fonts/IBMPlexSansVar-Italic.woff2') format('woff2-variations'),
-    url('/lx-fonts/IBMPlexSansVar-Italic.ttf') format('truetype-variations');
+  src: url('/lx-fonts/IBMPlexSansVar-Italic.woff2') format('woff2-variations');
 }
