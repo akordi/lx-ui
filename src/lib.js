@@ -51,7 +51,7 @@ function install(Vue, options) {
   setGlobalProperties(options);
 
   // Keep generated ids on the LX prefix (see generateUUID)
-  if (Vue.config.idPrefix === 'v') Vue.config.idPrefix = 'LX';
+  if (Vue.config.idPrefix === 'v') Object.assign(Vue.config, { idPrefix: 'LX' });
 
   if (options.texts) {
     setComponentTexts(options.texts);
