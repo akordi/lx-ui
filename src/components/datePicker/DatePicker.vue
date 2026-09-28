@@ -1175,9 +1175,9 @@ const placeholderComputed = computed(() => {
 
 const isMobileScreen = computed(() => windowSize.width.value < constants.MOBILE_SCREEN_WIDTH);
 
-const multiMonthVariants = ['full', 'full-rows', 'full-columns'];
+const multiMonthVariants = new Set(['full', 'full-rows', 'full-columns']);
 const responsiveVariant = computed(() =>
-  isMobileScreen.value && multiMonthVariants.includes(props.variant) ? 'picker' : props.variant
+  isMobileScreen.value && multiMonthVariants.has(props.variant) ? 'picker' : props.variant
 );
 
 const computedPlacement = computed(() => {

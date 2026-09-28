@@ -868,15 +868,12 @@
   font-size: var(--font-size-small);
 }
 
-.lx .lx-layout  .lx-calendar-special-dates-wrapper .lx-list {
-  gap: var(--space-0);
-}
-
 .lx .lx-layout .lx-calendar-special-dates-wrapper .lx-list {
+  gap: var(--space-0);
   font-weight: var(--font-weight-extra-bold);
 }
 
-.lx .lx-layout  .lx-calendar-special-dates-wrapper .lx-list li {
+.lx .lx-layout .lx-calendar-special-dates-wrapper .lx-list li {
   display: flex;
   align-items: flex-start;
 }
