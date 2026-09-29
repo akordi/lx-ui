@@ -65,6 +65,12 @@
   display: flex;
 }
 
+.lx.lx-theme-contrast .lx-datepicker-default > .lx-calendar-container {
+  border-width: var(--popover-border-width);
+  border-style: var(--popover-border-style);
+  border-color: var(--color-popover-border);
+}
+
 .lx-date-time-picker-wrapper[data-invalid] .lx-datepicker-default > .lx-calendar-container {
   border: var(--border-width-2) solid var(--color-bad);
 }
