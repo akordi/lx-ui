@@ -21,7 +21,10 @@ import {
 
 import { logError } from '@/utils/devUtils';
 import useLx from '@/hooks/useLx';
-import useScrollVirtualizer from '@/hooks/useScrollVirtualizer';
+import useScrollVirtualizer, {
+  extractVirtualRangeWithPinned,
+  resolveVirtualizerScrollParent,
+} from '@/hooks/useScrollVirtualizer';
 import { useGridKeyboardNavigation } from '@/hooks/useGridKeyboardNavigation';
 import { useLoadingAnnouncer } from '@/hooks/useLoadingAnnouncer';
 import { formatValueArray } from '@/utils/format/value';
@@ -288,18 +291,6 @@ function dropDownMenuRefFor(rowKey) {
 const VIRTUALIZED_ESTIMATED_ROW_HEIGHT = 72;
 const VIRTUALIZED_OVERSCAN = 6;
 
-// Default range plus `pinnedIndex`, so the roving tab-stop stays mounted when scrolled out of view.
-function extractVirtualRangeWithPinned(range, pinnedIndex) {
-  const start = Math.max(range.startIndex - range.overscan, 0);
-  const end = Math.min(range.endIndex + range.overscan, range.count - 1);
-  const indexes = [];
-  for (let i = start; i <= end; i += 1) indexes.push(i);
-  if (pinnedIndex != null && (pinnedIndex < start || pinnedIndex > end)) {
-    indexes.push(pinnedIndex);
-    indexes.sort((a, b) => a - b); // keep DOM order = index order for Tab order
-  }
-  return indexes;
-}
 const isDataGridLayoutVisible = ref(false);
 
 const focusedHeaderColumnId = ref(null);
@@ -748,42 +739,7 @@ function selectFirstPage() {
 }
 
 function resolveDataGridScrollParent(el) {
-  if (!el) return null;
-
-  const isScrollableOverflow = (overflowY) =>
-    overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
-
-  const isConstrainedScrollableElement = (element, style) => {
-    if (!element || !style) return false;
-    if (element.scrollHeight > element.clientHeight + 1) return true;
-
-    const hasConstrainedHeight = style.height !== 'auto' && style.height !== '';
-    const hasConstrainedMaxHeight = style.maxHeight && style.maxHeight !== 'none';
-
-    return hasConstrainedHeight || hasConstrainedMaxHeight;
-  };
-
-  const modalElement = el.closest('.lx-modal');
-  const modalMain = modalElement?.querySelector(':scope > .lx-main');
-  if (modalMain) {
-    const modalMainStyle = globalThis.getComputedStyle(modalMain);
-    if (isScrollableOverflow(modalMainStyle?.overflowY)) {
-      return modalMain;
-    }
-  }
-
-  let parent = el.parentElement;
-  while (parent && parent !== document.body && parent !== document.documentElement) {
-    const style = globalThis.getComputedStyle(parent);
-
-    if (isScrollableOverflow(style?.overflowY) && isConstrainedScrollableElement(parent, style)) {
-      return parent;
-    }
-
-    parent = parent.parentElement;
-  }
-
-  return null;
+  return resolveVirtualizerScrollParent(el);
 }
 
 // Body and header mirror each other, but each ignores the echo of its own sync so the write-back can't fight Safari's momentum (the jiggle)
@@ -1337,12 +1293,14 @@ const rowsWithVirtualKey = computed(() => {
   });
 });
 
+// Off in responsive layout, where hidden zero-height rows would mount every row.
 const wantsDataGridVirtualization = computed(
   () =>
     props.hasVirtualization &&
     !props.loading &&
     rows.value.length > 0 &&
-    isDataGridLayoutVisible.value
+    isDataGridLayoutVisible.value &&
+    !isResponsiveLayout.value
 );
 
 // Virtualizer-space index of the active roving tab-stop to pin (keeps the focused item mounted; null for header/out-of-range).
@@ -3151,6 +3109,7 @@ defineExpose({ cancelSelection, selectRows, sortBy });
       <LxAppendableList
         v-if="isResponsiveLayout"
         :modelValue="rows"
+        :hasVirtualization="hasVirtualization"
         :expandable="true"
         :nameAttribute="primaryColumnDisplayAttribute()"
         kind="compact"

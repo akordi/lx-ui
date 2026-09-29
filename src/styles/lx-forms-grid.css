@@ -986,6 +986,17 @@ svg .lx-shade {
   gap: var(--space-0500);
 }
 
+.lx-appendable-list-wrapper {
+  overflow-anchor: none;
+}
+
+.lx-appendable-list-virtualized > .lx-appendable-list-item {
+  position: absolute;
+  top: var(--space-0);
+  left: var(--space-0);
+  width: 100%;
+}
+
 .appendable-list-remove {
   position: absolute;
   top: var(--space-0);

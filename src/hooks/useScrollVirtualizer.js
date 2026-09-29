@@ -29,6 +29,61 @@ function isElementRenderable(element) {
   return computedStyle ? computedStyle.display !== 'none' : true;
 }
 
+function isScrollableOverflow(overflowY) {
+  return overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+}
+
+function isConstrainedScrollableElement(element, style) {
+  if (!element || !style) return false;
+  if (element.scrollHeight > element.clientHeight + 1) return true;
+
+  const hasConstrainedHeight = style.height !== 'auto' && style.height !== '';
+  const hasConstrainedMaxHeight = style.maxHeight && style.maxHeight !== 'none';
+  return hasConstrainedHeight || hasConstrainedMaxHeight;
+}
+
+// Nearest scrollable ancestor (a modal's `.lx-main` first), or null for the window.
+export function resolveVirtualizerScrollParent(el, { allowUnconstrainedFallback = false } = {}) {
+  if (!el) return null;
+
+  const modalElement = el.closest('.lx-modal');
+  const modalMain = modalElement?.querySelector(':scope > .lx-main');
+  if (modalMain) {
+    const modalMainStyle = globalThis.getComputedStyle(modalMain);
+    if (isScrollableOverflow(modalMainStyle?.overflowY)) {
+      return modalMain;
+    }
+  }
+
+  let parent = el.parentElement;
+  let fallback = null;
+  while (parent && parent !== document.body && parent !== document.documentElement) {
+    const style = globalThis.getComputedStyle(parent);
+
+    if (isScrollableOverflow(style?.overflowY)) {
+      if (isConstrainedScrollableElement(parent, style)) return parent;
+      if (allowUnconstrainedFallback && !fallback) fallback = parent;
+    }
+
+    parent = parent.parentElement;
+  }
+
+  return fallback;
+}
+
+// tanstack rangeExtractor: the default range plus `pinnedIndex`, so a pinned item stays mounted out of view.
+export function extractVirtualRangeWithPinned(range, pinnedIndex) {
+  const start = Math.max(range.startIndex - range.overscan, 0);
+  const end = Math.min(range.endIndex + range.overscan, range.count - 1);
+  const indexes = [];
+  for (let i = start; i <= end; i += 1) indexes.push(i);
+  if (pinnedIndex != null && (pinnedIndex < start || pinnedIndex > end)) {
+    indexes.push(pinnedIndex);
+    indexes.sort((a, b) => a - b); // keep DOM order = index order for Tab order
+  }
+  return indexes;
+}
+
 function normalizeScrollMargin(value) {
   if (!Number.isFinite(value)) return 0;
   return Math.round(value);
@@ -100,6 +155,131 @@ export default function useScrollVirtualizer({
     virtualizer.value?.value.measure();
   }
 
+  // Instant write; `scroll-behavior: smooth` would otherwise animate and restart it.
+  function scrollToOffsetInstantly(value) {
+    const target = scrollParent.value || globalThis;
+    target.scrollTo?.({ top: value, behavior: 'instant' });
+  }
+
+  const SCROLL_TO_INDEX_MIN_MS = 400;
+  const SCROLL_TO_INDEX_MAX_MS = 1200;
+  const SCROLL_TO_INDEX_MS_PER_VIEWPORT = 80;
+  const SCROLL_TO_INDEX_TIMEOUT_MS = 3000;
+  // Farther targets jump to this many screens short, so long lists don't mount every screen on the way.
+  const SCROLL_TO_INDEX_MAX_ANIMATED_VIEWPORTS = 20;
+  const SCROLL_TO_INDEX_STABLE_FRAMES = 3;
+  let scrollToIndexRaf = null;
+  let finishScrollToIndex = null;
+  let isScrollingToIndex = false;
+
+  const easeInOutSine = (progress) => 0.5 - Math.cos(Math.PI * progress) / 2;
+
+  function isItemInView(instance, index) {
+    const item = instance.getMeasurements()[index];
+    if (!item) return false;
+    const current = getScrollOffset();
+    return item.start >= current && item.end <= current + instance.getSize();
+  }
+
+  // Centres the item, like a native focus scroll; taller items align to the top.
+  function getOffsetToCenter(instance, index) {
+    const item = instance.getMeasurements()[index];
+    if (!item) return null;
+    const size = instance.getSize();
+    const target = item.size > size ? item.start : item.start - (size - item.size) / 2;
+    return Math.max(0, Math.min(target, instance.getMaxScrollOffset()));
+  }
+
+  function cancelScrollToIndex() {
+    if (scrollToIndexRaf !== null) {
+      globalThis.cancelAnimationFrame(scrollToIndexRaf);
+      scrollToIndexRaf = null;
+    }
+    globalThis.removeEventListener?.('wheel', cancelScrollToIndex);
+    globalThis.removeEventListener?.('touchstart', cancelScrollToIndex);
+    isScrollingToIndex = false;
+    const resolve = finishScrollToIndex;
+    finishScrollToIndex = null;
+    resolve?.();
+  }
+
+  // Eases to the item like a native smooth scroll, retargeting each frame as items get measured.
+  function scrollToIndex(index) {
+    cancelScrollToIndex();
+    const instance = virtualizer.value?.value;
+    if (!instance || isItemInView(instance, index)) return Promise.resolve();
+
+    const reduceMotion = !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let startOffset = getScrollOffset();
+    let startedAt = null;
+    let lastTimestamp = null;
+    let progress = 0;
+    let lastTarget = null;
+    let stableFrames = 0;
+    isScrollingToIndex = true;
+    // The user scrolling takes over.
+    globalThis.addEventListener?.('wheel', cancelScrollToIndex, { passive: true });
+    globalThis.addEventListener?.('touchstart', cancelScrollToIndex, { passive: true });
+
+    return new Promise((resolve) => {
+      finishScrollToIndex = resolve;
+      const step = (timestamp) => {
+        scrollToIndexRaf = null;
+        const target = getOffsetToCenter(instance, index);
+        if (target === null) {
+          cancelScrollToIndex();
+          return;
+        }
+        if (startedAt === null) {
+          startedAt = timestamp;
+          const maxAnimated = SCROLL_TO_INDEX_MAX_ANIMATED_VIEWPORTS * instance.getSize();
+          if (!reduceMotion && Math.abs(target - startOffset) > maxAnimated) {
+            startOffset = target - Math.sign(target - startOffset) * maxAnimated;
+            scrollToOffsetInstantly(startOffset);
+          }
+        }
+        const elapsed = timestamp - startedAt;
+        // Duration follows the current distance, so a growing target slows the rest down.
+        const viewports = Math.abs(target - startOffset) / instance.getSize();
+        const duration = Math.min(
+          SCROLL_TO_INDEX_MAX_MS,
+          Math.max(SCROLL_TO_INDEX_MIN_MS, viewports * SCROLL_TO_INDEX_MS_PER_VIEWPORT)
+        );
+        progress = reduceMotion
+          ? 1
+          : Math.min(1, progress + (timestamp - (lastTimestamp ?? timestamp)) / duration);
+        lastTimestamp = timestamp;
+        const current = getScrollOffset();
+        const isMounted = instance.getVirtualItems().some((item) => item.index === index);
+        const isSettled =
+          Math.abs(target - current) < 1 &&
+          lastTarget !== null &&
+          Math.abs(target - lastTarget) < 1;
+        stableFrames = isSettled && isMounted ? stableFrames + 1 : 0;
+        lastTarget = target;
+
+        if (elapsed > SCROLL_TO_INDEX_TIMEOUT_MS) {
+          scrollToOffsetInstantly(target);
+          cancelScrollToIndex();
+          return;
+        }
+        if (stableFrames >= SCROLL_TO_INDEX_STABLE_FRAMES) {
+          cancelScrollToIndex();
+          return;
+        }
+
+        const move = startOffset + (target - startOffset) * easeInOutSine(progress) - current;
+        // At most a viewport per frame, so every stretch gets rendered and measured.
+        const capped = reduceMotion
+          ? move
+          : Math.sign(move) * Math.min(Math.abs(move), instance.getSize());
+        if (capped !== 0) scrollToOffsetInstantly(current + capped);
+        scrollToIndexRaf = globalThis.requestAnimationFrame(step);
+      };
+      scrollToIndexRaf = globalThis.requestAnimationFrame(step);
+    });
+  }
+
   // The scroll margin is invariant under scrolling, so it must NOT be recomputed
   // mid-scroll: a ResizeObserver fire then reads anchor/offset a beat apart and
   // produces a wrong margin that flips every row's transform. Track scroll
@@ -122,6 +302,8 @@ export default function useScrollVirtualizer({
   // default — keeps the list from wobbling as rows enter); never during a
   // layout-viewport resize, where the mass re-measure would accumulate a jump.
   function shouldAdjustScrollPositionOnItemSizeChange(item, _delta, instance) {
+    // scrollToIndex retargets from measurements itself; correcting too would double count.
+    if (isScrollingToIndex) return false;
     if (resizeSuppressFrames > 0) return false;
     if (!isScrolling) return false;
     const offset = typeof instance?.getScrollOffset === 'function' ? instance.getScrollOffset() : 0;
@@ -286,6 +468,7 @@ export default function useScrollVirtualizer({
   }
 
   function clearVirtualizer() {
+    cancelScrollToIndex();
     if (layoutUpdateRaf !== null) {
       globalThis.cancelAnimationFrame(layoutUpdateRaf);
       layoutUpdateRaf = null;
@@ -464,6 +647,7 @@ export default function useScrollVirtualizer({
     syncVirtualizationContext,
     measureElement,
     measureElements,
+    scrollToIndex,
     cleanup,
   };
 }
