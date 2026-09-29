@@ -601,8 +601,15 @@ const dataState = computed(() =>
       :sticky="stickyToolbar"
       :wrapperRef="wrapperRef"
       @actionClick="handleToolbarActionClick"
-    />
+    >
+      <template #leftArea>
+        <slot name="leftToolbar" />
+      </template>
 
+      <template #rightArea>
+        <slot name="toolbar" />
+      </template>
+    </LxToolbar>
     <div
       ref="listRef"
       class="lx-appendable-list"
