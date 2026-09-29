@@ -108,6 +108,7 @@ const textsDefault = {
   imageModalAltDescription: 'Attēla alternatīvais nosaukums',
   imageModalTitleDescription: 'Attēla virsraksts',
   invalidImageLink: 'Ievadītais URL nav derīgs',
+  invalidImageFile: 'Ievadītā datne nav derīga',
   chooseFile: 'Izvēlēties attēlu',
   imageModalFileDescription: 'Pievienot attēla datni',
   inputTypeUrl: 'Saite',
@@ -162,6 +163,7 @@ const inputTitle = ref();
 const inputImageField = ref();
 
 const imageLink = ref();
+const invalidImageFile = ref(false);
 
 const editUrlModal = ref();
 const inputLink = ref();
@@ -541,6 +543,8 @@ function clearModalVariables() {
   inputAlt.value = null;
   inputTitle.value = null;
   uploadedImage.value = null;
+  isNotImage.value = false;
+  invalidImageFile.value = false;
 }
 
 function closeImageModal() {
@@ -579,10 +583,12 @@ function getImageSource() {
   if (imageLink.value) {
     src = imageLink.value;
   } else if (uploadedImage.value) {
-    src = uploadedImage.value[0].content;
-    alt = uploadedImage.value[0].name;
-    title = uploadedImage.value[0].name;
-    isBase64 = true;
+    if (Array.isArray(uploadedImage.value) && uploadedImage.value.length > 0) {
+      src = uploadedImage.value[0].content;
+      alt = uploadedImage.value[0].name;
+      title = uploadedImage.value[0].name;
+      isBase64 = true;
+    }
   }
 
   return { src, alt, title, width, height, isBase64 };
@@ -666,6 +672,9 @@ function determineLoaderClass(width, height, containerElementSize) {
 }
 
 function setImage() {
+  isNotImage.value = false;
+  invalidImageFile.value = false;
+
   const { src, alt, title, width, height, isBase64 } = getImageSource();
   const containerElementSize = useElementSize(markdownWrapper);
   const aspect = calculateAspectRatio(width, height);
@@ -676,6 +685,12 @@ function setImage() {
   } = determineLoaderClass(width, height, containerElementSize);
 
   if (!src) {
+    if (imageModalInputType.value === 'fileUploader') {
+      invalidImageFile.value = true;
+    } else {
+      isNotImage.value = true;
+    }
+
     emitNotification('noImageGiven');
     return;
   }
@@ -700,6 +715,7 @@ function setImage() {
 
   const formattedUrl = formatImageUrl(src);
   if (!formattedUrl) {
+    isNotImage.value = true;
     emitNotification('invalidAdress');
     return;
   }
@@ -1224,6 +1240,8 @@ defineExpose({ removeImageLoader, removeAllImageLoaders, repleaceImageLoader, ge
                 :draggable="true"
                 :allowedFileExtensions="allowedFileExtensions"
                 :maxFileSize="imageMaxSize"
+                :invalid="invalidImageFile"
+                :invalidationMessage="displayTexts.invalidImageFile"
                 @onError="onError"
               />
             </LxRow>
