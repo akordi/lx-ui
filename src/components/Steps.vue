@@ -69,7 +69,7 @@ const color = ref('--color-brand');
         :id="`${id}-step-${item[idAttribute]}`"
       >
         <LxIcon
-          v-show="(busy && item[stateAttribute] !== 'current') || !busy"
+          v-if="(busy && item[stateAttribute] !== 'current') || !busy"
           customClass="lx-steps-icon"
           :style="{
             fill:
@@ -126,7 +126,7 @@ const color = ref('--color-brand');
             :class="{ 'lx-aligned-row lx-aligned-row-4': kind === 'compact' }"
           >
             <LxIcon
-              v-show="(busy && item[stateAttribute] !== 'current') || !busy"
+              v-if="(busy && item[stateAttribute] !== 'current') || !busy"
               customClass="lx-steps-icon"
               :style="{
                 fill:
@@ -169,7 +169,7 @@ const color = ref('--color-brand');
           <template #panel>
             <div v-for="item in items" :key="item[idAttribute]">
               <LxIcon
-                v-show="(busy && item[stateAttribute] !== 'current') || !busy"
+                v-if="(busy && item[stateAttribute] !== 'current') || !busy"
                 customClass="lx-steps-icon"
                 :value="
                   (() => {
