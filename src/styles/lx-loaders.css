@@ -153,7 +153,7 @@
 }
 
 .lx-loader-progress .state-success .lx-loader-bar-track::after {
-  --color-loader-bar-stop-indicator: var(--color-good);
+  --color-loader-bar-stop-indicator: var(--color-success);
 }
 
 .lx-loader-progress .state-error .lx-loader-bar-track::after {
@@ -175,7 +175,7 @@
 }
 
 .lx-loader-wrapper .lx-success-icon {
-  fill: var(--color-good);
+  fill: var(--color-success);
 }
 
 .lx-loader-bar-state {

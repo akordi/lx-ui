@@ -80,7 +80,8 @@
 
 | Variable name        | Light mode       | Dark mode        |
 |----------------------|------------------|------------------|
-| `--color-good`       | #198038          | #198038          |
+| `--color-good`       | `--color-green`  | `--color-green`  |
+| `--color-success`    | `--color-green`  | `--color-green`  |
 | `--color-bad`        | `--color-red`    | `--color-red`    |
 | `--color-new`        | `--color-blue`   | `--color-blue`   |
 | `--color-draft`      | `--color-blue`   | `--color-blue`   |
@@ -88,7 +89,7 @@
 | `--color-ongoing`    | `--color-orange` | `--color-orange` |
 | `--color-incomplete` | `--color-blue`   | `--color-blue`   |
 | `--color-waiting`    | `--color-grey`   | `--color-grey`   |
-| `--color-disabled`   | #888             | #888             |
+| `--color-disabled`   | #888           | #888           |
 | `--color-inactive`   | `--color-grey`   | `--color-grey`   |
 | `--color-finished`   | `--color-green`  | `--color-green`  |
 | `--color-signed`     | `--color-purple` | `--color-purple` |
@@ -98,23 +99,23 @@
 
 ### Other colors
 
-Each base color has a `-light` variant, meant for the backgrounds of statuses, notifications, info boxes and similar components.
+Each base color has a `-subtle` variant, meant for the backgrounds of statuses, notifications, info boxes and similar components.
 
-| Variable name          | Light mode | Dark mode |
-|------------------------|------------|-----------|
-| `--color-red`          | #cb0f19    | #ff603a   |
-| `--color-red-light`    | #fcf0f1    | #32060a   |
-| `--color-orange`       | #c04e00    | #ffab00   |
-| `--color-orange-light` | #fcf7e6    | #302512   |
-| `--color-yellow`       | #f1c21b    | #e1c21b   |
-| `--color-yellow-light` | #fcf7e6    | #2e2516   |
-| `--color-green`        | #198038    | #3da958   |
-| `--color-green-light`  | #f0fff4    | #112217   |
-| `--color-teal`         | #036e81    | #00b8d9   |
-| `--color-teal-light`   | #f0fcff    | #092b2f   |
-| `--color-blue`         | #0062eb    | #4c9aff   |
-| `--color-blue-light`   | #f0f5fc    | #0d233e   |
-| `--color-purple`       | #6554c0    | #9d92d6   |
-| `--color-purple-light` | #f2f0ff    | #160f3c   |
-| `--color-grey`         | #6c6c6c    | #979797   |
-| `--color-grey-light`   | #f7f7f7    | #0d0d0d   |
+| Variable name           | Light mode | Dark mode |
+|-------------------------|------------|-----------|
+| `--color-red`           | #cb0f19    | #ff603a   |
+| `--color-red-subtle`    | #fcf0f1    | #32060a   |
+| `--color-orange`        | #c04e00    | #ffab00   |
+| `--color-orange-subtle` | #fcf7e6    | #302512   |
+| `--color-yellow`        | #f1c21b    | #e1c21b   |
+| `--color-yellow-subtle` | #fcf7e6    | #2e2516   |
+| `--color-green`         | #198038    | #3da958   |
+| `--color-green-subtle`  | #f0fff4    | #112217   |
+| `--color-teal`          | #036e81    | #00b8d9   |
+| `--color-teal-subtle`   | #f0fcff    | #092b2f   |
+| `--color-blue`          | #0062eb    | #4c9aff   |
+| `--color-blue-subtle`   | #f0f5fc    | #0d233e   |
+| `--color-purple`        | #6554c0    | #9d92d6   |
+| `--color-purple-subtle` | #f2f0ff    | #160f3c   |
+| `--color-grey`          | #6c6c6c    | #979797   |
+| `--color-grey-subtle`   | #f7f7f7    | #0d0d0d   |

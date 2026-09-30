@@ -39,20 +39,18 @@
 
 .lx.lx-theme-contrast.lx-no-transparency .lx-info-wrapper .popper,
 .lx.lx-theme-contrast.lx-no-transparency .lx-dropdown-default-content,
-.lx.lx-theme-contrast.lx-no-transparency .lx-notifications-list .lx-notification .lx-main,
 .lx.lx-theme-contrast.lx-no-transparency .popper .lx-dropdown-panel {
-    --shadow-dropdown: 0px transparent;
+  --shadow-dropdown: 0px transparent;
 }
 
 .lx.lx-no-transparency .lx-info-wrapper .popper,
 .lx.lx-no-transparency .lx-dropdown-default-content,
-.lx.lx-no-transparency .lx-notifications-list .lx-notification .lx-main,
 .lx.lx-no-transparency .popper .lx-dropdown-panel {
-    --shadow-dropdown: inset 0 0 0 1px var(--color-chrome);
+  --shadow-dropdown: inset 0 0 0 1px var(--color-chrome);
 }
 
-.lx.lx-no-transparency .lx-dropdown-default-content {
-    --region-border: var(--region-border-transparent);
+.lx.lx-no-transparency .lx-notification-list .lx-notification-wrapper {
+  --shadow-dropdown: 0 0 0 2px var(--color-chrome);
 }
 
 .lx.lx-no-transparency dialog.lx-modal::backdrop {
@@ -68,12 +66,6 @@
 .lx.lx-no-transparency.lx-theme-dark ::backdrop,
 .lx.lx-no-transparency.lx-theme-contrast ::backdrop {
   --color-cover-background: transparent;
-}
-
-.lx.lx-theme-contrast.lx-no-transparency .lx-dropdown-default-content,
-.lx.lx-theme-contrast.lx-no-transparency .lx-notifications-list .lx-notification,
-.lx.lx-theme-contrast.lx-no-transparency .popper .lx-dropdown-panel {
-    --region-border-transparent: 2px solid var(--color-chrome);
 }
 
 .lx.lx-no-transparency .lx-layout-default.lx-collapsed .lx-nav-panel:hover,

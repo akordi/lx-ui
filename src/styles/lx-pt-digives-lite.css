@@ -27,6 +27,8 @@
 
   --color-nav-item-background-selected: #fae5d7;
   --color-state-display-background: var(--color-region);
+
+  --notification-text-primary-font-weight: var(--font-weight-data);
 }
 .lx.lx-theme-dark {
 	--color-brand: #cb728c;

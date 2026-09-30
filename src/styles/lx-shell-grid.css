@@ -364,10 +364,6 @@
   transition: opacity 0.1s ease-out;
 }
 
-.lx:not(.lx-theme-contrast) .lx-layout .lx-notifications-list .lx-notification {
-  --region-border-transparent: 1px solid var(--color-chrome);
-}
-
 .lx .lx-layout .lx-dropdown-panel .lx-group {
   padding-bottom: var(--space-0500);
   margin-bottom: var(--space-0500);

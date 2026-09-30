@@ -34,7 +34,7 @@ LxBadge) and uses `--state-display-padding-icon-only` instead of `--state-displa
 ## Color
 
 Every state resolves its own foreground and background from the base palette. Foregrounds colour
-both the label and the status icon; backgrounds use the `-light` variant of the same base color.
+both the label and the status icon; backgrounds use the `-subtle` variant of the same base color.
 
 Three states deliberately split the two: `disabling` / `disabled` keep the lighter `--color-disabled`
 icon but use `--color-grey` for the label, and `yellow` / `black` keep their coloured icon while the
@@ -64,27 +64,27 @@ adjusted for legibility.
 | `--color-state-orange-foreground`       | `--color-orange`              |
 | `--color-state-yellow-foreground`       | `--color-yellow`              |
 | `--color-state-teal-foreground`         | `--color-teal`                |
-| `--color-state-default-background`      | `--color-grey-light`          |
-| `--color-state-draft-background`        | `--color-blue-light`          |
-| `--color-state-new-background`          | `--color-blue-light`          |
-| `--color-state-edited-background`       | `--color-orange-light`        |
-| `--color-state-error-background`        | `--color-red-light`           |
-| `--color-state-disabled-background`     | `--color-grey-light`          |
-| `--color-state-inactive-background`     | `--color-grey-light`          |
-| `--color-state-incomplete-background`   | `--color-blue-light`          |
-| `--color-state-finished-background`     | `--color-green-light`         |
-| `--color-state-deleted-background`      | `--color-grey-light`          |
-| `--color-state-ongoing-background`      | `--color-orange-light`        |
-| `--color-state-signed-background`       | `--color-purple-light`        |
-| `--color-state-waiting-background`      | `--color-grey-light`          |
-| `--color-state-black-background`        | `--color-grey-light`          |
-| `--color-state-red-background`          | `--color-red-light`           |
-| `--color-state-green-background`        | `--color-green-light`         |
-| `--color-state-blue-background`         | `--color-blue-light`          |
-| `--color-state-purple-background`       | `--color-purple-light`        |
-| `--color-state-orange-background`       | `--color-orange-light`        |
-| `--color-state-yellow-background`       | `--color-yellow-light`        |
-| `--color-state-teal-background`         | `--color-teal-light`          |
+| `--color-state-default-background`      | `--color-grey-subtle`          |
+| `--color-state-draft-background`        | `--color-blue-subtle`          |
+| `--color-state-new-background`          | `--color-blue-subtle`          |
+| `--color-state-edited-background`       | `--color-orange-subtle`        |
+| `--color-state-error-background`        | `--color-red-subtle`           |
+| `--color-state-disabled-background`     | `--color-grey-subtle`          |
+| `--color-state-inactive-background`     | `--color-grey-subtle`          |
+| `--color-state-incomplete-background`   | `--color-blue-subtle`          |
+| `--color-state-finished-background`     | `--color-green-subtle`         |
+| `--color-state-deleted-background`      | `--color-grey-subtle`          |
+| `--color-state-ongoing-background`      | `--color-orange-subtle`        |
+| `--color-state-signed-background`       | `--color-purple-subtle`        |
+| `--color-state-waiting-background`      | `--color-grey-subtle`          |
+| `--color-state-black-background`        | `--color-grey-subtle`          |
+| `--color-state-red-background`          | `--color-red-subtle`           |
+| `--color-state-green-background`        | `--color-green-subtle`         |
+| `--color-state-blue-background`         | `--color-blue-subtle`          |
+| `--color-state-purple-background`       | `--color-purple-subtle`        |
+| `--color-state-orange-background`       | `--color-orange-subtle`        |
+| `--color-state-yellow-background`       | `--color-yellow-subtle`        |
+| `--color-state-teal-background`         | `--color-teal-subtle`          |
 
 ### Overriding every state at once
 

@@ -112,7 +112,7 @@ const colorMap = {
   info: 'var(--color-data)',
   warning: 'var(--color-warning)',
   error: 'var(--color-error)',
-  success: 'var(--color-good)',
+  success: 'var(--color-success)',
   custom: 'var(--color-data)',
 };
 

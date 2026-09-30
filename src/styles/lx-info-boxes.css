@@ -16,7 +16,9 @@
   padding: var(--info-box-padding);
   width: 100%;
   box-sizing: border-box;
-  border: var(--info-box-border-width) solid var(--color-info-box-border);
+  border-width: var(--info-box-border-width);
+  border-style: var(--info-box-border-style);
+  border-color: var(--color-info-box-border);
   border-radius: var(--info-box-border-radius);
   background-color: var(--color-info-box-background);
 }
@@ -28,10 +30,12 @@
 .lx-info-box-button .lx-alert-header {
   font-weight: var(--info-box-text-primary-font-weight);
   color: var(--color-info-box-text-primary);
+  font-size: var(--info-box-text-primary-font-size);
   line-height: var(--info-box-text-primary-line-height);
 }
 
 .lx-info-box-button .lx-alert-description {
+  font-weight: var(--info-box-text-secondary-font-weight);
   color: var(--color-info-box-text-secondary);
   font-size: var(--info-box-text-secondary-font-size);
   line-height: var(--info-box-text-secondary-line-height);

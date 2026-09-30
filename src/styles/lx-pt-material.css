@@ -45,10 +45,13 @@
     --color-modal-button-secondary-background-hover: var(--color-button-ghost-background-hover);
     --color-modal-button-secondary-border-hover: var(--color-button-ghost-border-hover);
 
+    /* LxNotification */
+    --notification-border-radius: var(--border-radius-0250);
+    --notification-border-width: var(--border-width-1);
+    
     /* LxInfoBox */
-    --info-box-border-radius: var(--border-radius-0250);
-    --info-box-border-width: var(--border-width-1);
     --info-box-button-border-radius: var(--border-radius-0250);
+    --info-box-border-width: var(--border-width-1);
 
     /* LxLoader */
     --loader-active-cap: round;

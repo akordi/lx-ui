@@ -76,20 +76,30 @@
   --color-yellow-foreground: var(--color-region);
 
   --color-green: var(--contrast-foreground);
-  --color-green-light: var(--contrast-background);
   --color-red: var(--contrast-foreground);
-  --color-red-light: var(--contrast-background);
   --color-orange: var(--contrast-foreground);
-  --color-orange-light: var(--contrast-background);
   --color-purple: var(--contrast-foreground);
-  --color-purple-light: var(--contrast-background);
   --color-blue: var(--contrast-foreground);
-  --color-blue-light: var(--contrast-background);
   --color-teal: var(--contrast-foreground);
-  --color-teal-light: var(--contrast-background);
   --color-yellow: var(--contrast-foreground);
-  --color-yellow-light: var(--contrast-background);
   --color-grey: var(--contrast-foreground);
+
+  --color-green-subtle: var(--contrast-background);
+  --color-red-subtle: var(--contrast-background);
+  --color-orange-subtle: var(--contrast-background);
+  --color-purple-subtle: var(--contrast-background);
+  --color-blue-subtle: var(--contrast-background);
+  --color-teal-subtle: var(--contrast-background);
+  --color-yellow-subtle: var(--contrast-background);
+  --color-grey-subtle: var(--contrast-background);
+
+  --color-green-light: var(--contrast-background);
+  --color-red-light: var(--contrast-background);
+  --color-orange-light: var(--contrast-background);
+  --color-purple-light: var(--contrast-background);
+  --color-blue-light: var(--contrast-background);
+  --color-teal-light: var(--contrast-background);
+  --color-yellow-light: var(--contrast-background);
   --color-grey-light: var(--contrast-background);
 
   --color-good: var(--contrast-foreground);
@@ -111,7 +121,6 @@
   --color-placeholder-disabled: var(--contrast-background);
 
   --region-border: var(--border-width-2) solid var(--color-chrome);
-  --region-border-transparent: var(--region-border);
 
   --card-border: var(--border-width-2) solid var(--color-foreground);
 

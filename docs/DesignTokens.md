@@ -23,6 +23,7 @@ LX uses some custom properties (variables) to promote and improve consistency, a
 - [LxBadge](tokens/BadgeTokens.md)
 - [LxStateDisplay](tokens/StateDisplayTokens.md)
 - [LxInfoBox](tokens/InfoBoxTokens.md)
+- [LxNotification](tokens/NotificationTokens.md)
 - [LxInfoWrapper](tokens/InfoWrapperTokens.md)
 - [LxTooltip](tokens/TooltipTokens.md)
 - [LxToggle](tokens/ToggleTokens.md)

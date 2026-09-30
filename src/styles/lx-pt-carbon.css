@@ -77,7 +77,6 @@
   --row-dynamic: var(--row-size);
   --nav-row-size: 3rem;
   --public-nav-header-size: calc(var(--nav-row-size) + var(--row-size));
-  --notification-size: 28rem;
   --body-column-size: 1300px;
   --form-column-size: 30rem;
   --aside-size: 16rem;
@@ -162,11 +161,8 @@
 
   --aside-border: var(--border-width-0) solid var(--color-chrome);
   --region-border: var(--border-width-0);
-  --region-border-transparent: var(--border-width-2) solid transparent;
 
   --tab-border: var(--border-width-4) solid transparent;
-
-  --notification-border: var(--border-width-0) var(--border-width-0) var(--border-width-0) var(--border-width-4);
 
   --padding-form: var(--space-3000) var(--space-2000);
   --padding-default: var(--space-1000);
@@ -993,20 +989,23 @@
   --state-display-text-font-weight: var(--badge-text-font-weight);
   --state-display-text-line-height: var(--badge-text-line-height);
 
-  --info-box-grid-areas: 'icon content button';
-  --info-box-grid-template-columns: auto 1fr auto;
-  --info-box-grid-template-rows: 1fr;
-  --info-box-padding: var(--space-0500);
+  --info-box-grid-areas: var(--notification-grid-areas);
+  --info-box-grid-template-columns: var(--notification-grid-template-columns);
+  --info-box-grid-template-rows: var(--notification-grid-template-rows);
+  --info-box-padding: var(--notification-padding);
   --info-box-border-width: var(--border-width-2);
-  --info-box-border-radius: var(--border-radius-0);
-  --info-box-icon-size: var(--icon-size-m);
-  --info-box-gap: var(--space-0500);
-  --info-box-row-gap: var(--space-0250);
-  --info-box-content-padding: var(--space-0125) var(--space-0) var(--space-0) var(--space-0);
-  --info-box-text-primary-font-weight: var(--font-weight-bold);
-  --info-box-text-primary-line-height: 1.25;
-  --info-box-text-secondary-font-size: var(--font-size-small);
-  --info-box-text-secondary-line-height: 1.1em;
+  --info-box-border-style: var(--notification-border-style);
+  --info-box-border-radius: var(--notification-border-radius);
+  --info-box-icon-size: var(--notification-icon-size);
+  --info-box-gap: var(--notification-gap);
+  --info-box-row-gap: var(--notification-row-gap);
+  --info-box-content-padding: var(--notification-content-padding);
+  --info-box-text-primary-font-size: var(--notification-text-primary-font-size);
+  --info-box-text-primary-font-weight: var(--notification-text-primary-font-weight);
+  --info-box-text-primary-line-height: var(--notification-text-primary-line-height);
+  --info-box-text-secondary-font-size: var(--notification-text-secondary-font-size);
+  --info-box-text-secondary-font-weight: var(--notification-text-secondary-font-weight);
+  --info-box-text-secondary-line-height: var(--notification-text-secondary-line-height);
   --info-box-outline-offset: var(--space-0);
   --info-box-button-height: var(--button-ghost-icon-only-height);
   --info-box-button-width: var(--button-ghost-icon-only-width);
@@ -1014,6 +1013,27 @@
   --info-box-button-border-radius: var(--border-radius-0);
   --info-box-button-outline-offset: var(--button-ghost-outline-offset);
   --info-box-button-icon-size: var(--button-ghost-icon-size);
+
+  --notification-width: 28rem;
+  --notification-item-gap: var(--space-0500);
+  --notification-grid-areas: 'icon content button';
+  --notification-grid-template-columns: auto 1fr auto;
+  --notification-grid-template-rows: 1fr;
+  --notification-gap: var(--space-0500);
+  --notification-padding: var(--space-0500);
+  --notification-border-width: var(--border-width-0) var(--border-width-0) var(--border-width-0) var(--border-width-4);
+  --notification-border-style: solid;
+  --notification-border-radius: var(--border-radius-0);
+  --notification-row-gap: var(--space-0250);
+  --notification-content-padding: var(--space-0125) var(--space-0) var(--space-0) var(--space-0);
+  --notification-text-primary-font-size: var(--font-size);
+  --notification-text-primary-font-weight: var(--font-weight-bold);
+  --notification-text-primary-line-height: 1.25;
+  --notification-text-secondary-font-size: var(--font-size-small);
+  --notification-text-secondary-font-weight: var(--font-weight);
+  --notification-text-secondary-line-height: 1.25;
+  --notification-icon-size: var(--icon-size-m);
+  --notification-icon-close-size: var(--icon-size-xs);
 
   --info-wrapper-content-border-radius: var(--border-radius-0);
   --info-wrapper-padding: var(--space-0500);

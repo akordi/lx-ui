@@ -64,27 +64,31 @@ watch(
 </script>
 
 <template>
-  <ul class="lx-notifications-list">
+  <ul class="lx-notification-list">
     <transition-group name="slide-left">
       <li
         :role="getRole(notification.type)"
         :id="`notification-${notification.uid}`"
         v-for="notification in model"
         :key="notification.uid"
-        class="lx-notification"
-        :class="[
-          { 'lx-notification-info': notification.type === 'info' },
-          { 'lx-notification-success': notification.type === 'success' },
-          { 'lx-notification-warning': notification.type === 'warning' },
-          { 'lx-notification-error': notification.type === 'error' },
-        ]"
+        class="lx-notification-wrapper"
         @click="deleteNotification(notification.uid)"
       >
-        <div class="lx-main">
-          <LxIcon :value="getIcon(notification.type)" />
+        <div
+          class="lx-notification"
+          :class="[
+            { 'lx-notification-info': notification.type === 'info' },
+            { 'lx-notification-success': notification.type === 'success' },
+            { 'lx-notification-warning': notification.type === 'warning' },
+            { 'lx-notification-error': notification.type === 'error' },
+          ]"
+        >
+          <div class="lx-notification-icon">
+            <LxIcon :value="getIcon(notification.type)" />
+          </div>
           <div class="lx-text-wrapper">
-            <p class="lx-title">{{ notification.title }}</p>
-            <p class="lx-subtitle" v-if="notification.subtitle">{{ notification.subtitle }}</p>
+            <div class="lx-title">{{ notification.title }}</div>
+            <div class="lx-subtitle" v-if="notification.subtitle">{{ notification.subtitle }}</div>
           </div>
           <LxIcon class="lx-close-icon" value="close" />
         </div>
