@@ -155,15 +155,23 @@ const showForm = computed(() => Boolean(props.message.schema) && Boolean(builder
 const formModel = ref({});
 const formBuilderRef = ref(null);
 
-const formActions = computed(() => [
-  {
-    id: 'submit',
-    name: props.texts.answerSubmit,
-    icon: 'accept',
-    kind: 'secondary',
-    disabled: chatDisabled.value,
-  },
-]);
+function getFormActionDefinitions(message) {
+  if (!message.actionDefinitions || !Array.isArray(message.actionDefinitions)) {
+    return [
+      {
+        id: 'lx_submit_default',
+        name: props.texts.answerSubmit,
+        icon: 'accept',
+        kind: 'secondary',
+        disabled: chatDisabled.value,
+      },
+    ];
+  }
+
+  return message.actionDefinitions.map((action) =>
+    action.kind === 'primary' ? { ...action, kind: 'secondary' } : action
+  );
+}
 
 function sanitizeForm(value) {
   if (typeof value === 'string') {
@@ -183,19 +191,17 @@ function sanitizeForm(value) {
   return value;
 }
 
-function submitForm() {
+function submitForm(actionName) {
   const errors = formBuilderRef.value?.validateModel?.();
   if (Array.isArray(errors) && errors.length > 0) {
     return;
   }
   const sanitizedModel = sanitizeForm(formModel.value);
-  submitClarifyingQuestions?.(props.message, sanitizedModel);
+  submitClarifyingQuestions?.(props.message, sanitizedModel, actionName);
 }
 
 function onFormAction(actionName) {
-  if (actionName === 'submit') {
-    submitForm();
-  }
+  submitForm(actionName);
 }
 
 function onActionClick(actionId) {
@@ -254,7 +260,7 @@ defineExpose({ focus });
                 kind="compact"
                 :showHeader="false"
                 :stickyFooter="false"
-                :actionDefinitions="formActions"
+                :actionDefinitions="getFormActionDefinitions(message)"
                 @actionClick="onFormAction"
               >
                 <component

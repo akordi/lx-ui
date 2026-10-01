@@ -150,8 +150,8 @@ provide('lxChatMessageActionClick', (id, message) =>
 
 // Expose the optional form builder (as a getter, to stay reactive) and a submit callback.
 provide('lxChatClarifyingQuestionsBuilder', () => props.clarifyingQuestionsBuilder);
-provide('lxChatSubmitClarifyingQuestions', (message, values) =>
-  emits('clarifying-questions-submit', { message, values })
+provide('lxChatSubmitClarifyingQuestions', (message, values, actionName) =>
+  emits('clarifying-questions-submit', { message, values, actionName })
 );
 
 // Actions rendered alongside the (message-independent) typing indicator.

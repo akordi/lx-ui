@@ -5,6 +5,7 @@
   min-height: 0;
   position: relative;
   --lx-chat-fade-color: var(--color-background);
+  container: lx-chat-wrapper / inline-size;
 }
 
 .lx-region .lx-chat-wrapper,
@@ -73,7 +74,7 @@
 }
 
 .lx-chat-l .lx-chat-bubble-wrapper {
-  max-width: min(80%, 43.5rem);
+  max-width: min(80%, 46.5rem);
 }
 
 .lx-chat-m .lx-chat-bubble-wrapper {
@@ -85,7 +86,7 @@
 }
 
 .lx-chat-comments .lx-chat-bubble-wrapper {
-  max-width: min(100%, 43.5rem);
+  max-width: min(100%, 46.5rem);
 }
 
 .lx-chat-wrapper .lx-chat-bubble .lx-list-item-actions.lx-list-actions-hidden {
@@ -240,6 +241,24 @@
 .lx-chat-wrapper .lx-chat-bubble .lx-form-grid > footer {
   padding-left: var(--space-0);
   padding-right: var(--space-0);
+}
+
+.lx-chat-wrapper .lx-chat-bubble .lx-form-grid > footer .responsive-overflow,
+.lx-chat-wrapper .lx-chat-bubble .lx-form-grid > footer > .lx-group:empty {
+  display: none;
+}
+
+.lx-chat-wrapper .lx-chat-bubble .lx-form-grid > footer .responsive-button {
+  display: flex;
+}
+
+@container lx-chat-wrapper (max-width: 950px) {
+  .lx-chat-wrapper .lx-chat-bubble .lx-form-grid > footer,
+  .lx-chat-wrapper .lx-chat-bubble .lx-form-grid > footer > .lx-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--form-footer-button-set-gap);
+  }
 }
 
 .lx-chat-wrapper .lx-chat-typing span {
