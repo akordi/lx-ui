@@ -1974,7 +1974,13 @@ function handleMenuClick(rowIndex, rowKey) {
     false
   );
 
-  dropDownMenus.get(rowKey)?.openMenu();
+  const menu = dropDownMenus.get(rowKey);
+
+  if (menu?.menuOpen) {
+    menu.closeMenu();
+  } else {
+    menu?.openMenu();
+  }
 }
 
 function handleStickyHeaderFocusIn(event) {
