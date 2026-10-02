@@ -45,6 +45,8 @@ const props = defineProps({
   hasSearch: { type: Boolean, default: false, group: 'main', sequence: 5 },
   disabled: { type: Boolean, default: false, group: 'mode', sequence: 1 },
   required: { type: Boolean, default: null },
+  invalid: { type: Boolean, default: false, sequence: 1 },
+  invalidationMessage: { type: String, default: null, sequence: 2 },
   loading: { type: Boolean, default: false, group: 'mode', sequence: 4 },
   busy: { type: Boolean, default: false, group: 'mode', sequence: 3 },
   readOnly: { type: Boolean, default: false, group: 'mode', sequence: 1 },
@@ -178,6 +180,11 @@ const hasHelperText = computed(() => isDefined(props.helperText) && props.helper
 const helperTextClamped = computed(() => clampText(props.helperText));
 const showInlineHelper = computed(() => hasHelperText.value && props.helperTextKind === 'label');
 const showInfoHelper = computed(() => hasHelperText.value && props.helperTextKind === 'icon');
+
+const invalidationMessageClamped = computed(() => clampText(props.invalidationMessage));
+const showInvalidationMessage = computed(
+  () => props.invalid && props.invalidationMessage && !props.readOnly
+);
 
 // states:
 // id - id of the file
@@ -748,6 +755,7 @@ if (props.builderOptions?.useRegistry) {
       { default: mode === 'default' },
       { compact: mode === 'compact' },
       { 'lx-disabled': disabled },
+      { 'lx-invalid': invalid },
     ]"
     :aria-labelledBy="labelledBy"
     :aria-describedby="showInlineHelper || showInfoHelper ? `${id}-helper` : null"
@@ -773,7 +781,7 @@ if (props.builderOptions?.useRegistry) {
           :id="`${id}-action-file-upload`"
           :label="displayTexts.buttonLabel"
           kind="tertiary"
-          icon="upload"
+          :icon="invalid ? 'invalid' : 'upload'"
           :disabled="disabled || isAtMaxLength"
           :loading="loading"
           :busy="busy"
@@ -792,14 +800,15 @@ if (props.builderOptions?.useRegistry) {
           @click="cameraModal.open()"
         />
       </div>
-
       <div class="lx-draggable-wrapper" v-if="draggable && advancedFilesData.length < 1">
+        <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
         <div
           :id="`${id}-action-file-upload`"
           class="lx-draggable-upload-wrapper"
           :class="[
             { 'lx-dragging': isDragging },
             { 'lx-disabled': disabled || loading || busy || isAtMaxLength },
+            { 'lx-invalid': invalid },
           ]"
           @dragover.prevent="handleDragOver"
           @dragleave="handleDragLeave"
@@ -815,6 +824,7 @@ if (props.builderOptions?.useRegistry) {
           <p>{{ displayTexts.draggablePlaceholder }}</p>
 
           <LxLoader :loading="true" size="s" v-if="busy" />
+          <LxIcon customClass="lx-invalidation-icon" value="invalid" v-else-if="invalid" />
           <LxIcon value="upload" v-else />
         </div>
 
@@ -852,7 +862,7 @@ if (props.builderOptions?.useRegistry) {
           :id="`${id}-action-file-upload`"
           :label="displayTexts.buttonLabel"
           kind="tertiary"
-          icon="upload"
+          :icon="invalid ? 'invalid' : 'upload'"
           :disabled="disabled || isAtMaxLength"
           :loading="loading"
           :busy="busy"
@@ -872,12 +882,14 @@ if (props.builderOptions?.useRegistry) {
       </div>
 
       <div class="lx-draggable-wrapper" v-else>
+        <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
         <div
           :id="`${id}-action-file-upload`"
           class="lx-draggable-upload-wrapper"
           :class="[
             { 'lx-dragging': isDragging },
             { 'lx-disabled': disabled || loading || busy || isAtMaxLength },
+            { 'lx-invalid': invalid },
           ]"
           @dragover.prevent="handleDragOver"
           @dragleave="handleDragLeave"
@@ -893,6 +905,7 @@ if (props.builderOptions?.useRegistry) {
           <p>{{ displayTexts.draggablePlaceholder }}</p>
 
           <LxLoader :loading="true" size="s" v-if="busy" />
+          <LxIcon customClass="lx-invalidation-icon" value="invalid" v-else-if="invalid" />
           <LxIcon value="upload" v-else />
         </div>
 
@@ -970,6 +983,13 @@ if (props.builderOptions?.useRegistry) {
           />
         </template>
       </LxList>
+    </div>
+    <div
+      class="lx-invalidation-message"
+      v-if="showInvalidationMessage"
+      :id="`${id}-invalidation-message`"
+    >
+      {{ invalidationMessageClamped }}
     </div>
   </div>
 

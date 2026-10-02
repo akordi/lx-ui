@@ -114,23 +114,34 @@
   --color-yellow-foreground: var(--color-region);
 
   --color-green: #3da958;
-  --color-green-light: #112217;
   --color-red: #ff603a;
-  --color-red-light: #32060a;
   --color-orange: #ffab00;
-  --color-orange-light: #302512;
   --color-purple: #9d92d6;
-  --color-purple-light: #160f3c;
   --color-blue: #4c9aff;
-  --color-blue-light: #0d233e;
   --color-teal: #00b8d9;
-  --color-teal-light: #092b2f;
   --color-yellow: #e1c21b;
-  --color-yellow-light: #2e2516;
   --color-grey: #979797;
+
+  --color-green-subtle: #112217;
+  --color-red-subtle: #32060a;
+  --color-orange-subtle: #302512;
+  --color-purple-subtle: #160f3c;
+  --color-blue-subtle: #0d233e;
+  --color-teal-subtle: #092b2f;
+  --color-yellow-subtle: #2e2516;
+  --color-grey-subtle: #0d0d0d;
+
+  --color-green-light: #112217;
+  --color-red-light: #32060a;
+  --color-orange-light: #302512;
+  --color-purple-light: #160f3c;
+  --color-blue-light: #0d233e;
+  --color-teal-light: #092b2f;
+  --color-yellow-light: #2e2516;
   --color-grey-light: #0d0d0d;
 
-  --color-good: #198038;
+  --color-good: var(--color-green);
+  --color-success: var(--color-green);
   --color-bad: var(--color-red);
   --color-new: var(--color-blue);
   --color-warning: var(--color-orange);
@@ -147,12 +158,56 @@
   --color-deleted: var(--color-grey);
   --color-error: var(--color-red);
 
-  --color-notification-success-foreground: #198038;
-  --color-notification-success-background: #040a06;
-  --color-notification-warning-foreground: #f1c21b;
-  --color-notification-warning-background: #241b0c;
-  --color-notification-error-foreground: #e85961;
-  --color-notification-error-background: #2d0004;
+  --color-state-default-foreground: var(--color-data);
+  --color-state-draft-foreground: var(--color-draft);
+  --color-state-new-foreground: var(--color-new);
+  --color-state-edited-foreground: var(--color-edited);
+  --color-state-error-foreground: var(--color-error);
+  --color-state-disabled-foreground: var(--color-disabled);
+  --color-state-inactive-foreground: var(--color-inactive);
+  --color-state-incomplete-foreground: var(--color-incomplete);
+  --color-state-finished-foreground: var(--color-finished);
+  --color-state-deleted-foreground: var(--color-deleted);
+  --color-state-ongoing-foreground: var(--color-ongoing);
+  --color-state-signed-foreground: var(--color-signed);
+  --color-state-waiting-foreground: var(--color-waiting);
+  --color-state-black-foreground: var(--color-data);
+  --color-state-red-foreground: var(--color-red);
+  --color-state-green-foreground: var(--color-green);
+  --color-state-blue-foreground: var(--color-blue);
+  --color-state-purple-foreground: var(--color-purple);
+  --color-state-orange-foreground: var(--color-orange);
+  --color-state-yellow-foreground: var(--color-yellow);
+  --color-state-teal-foreground: var(--color-teal);
+
+  --color-state-default-background: var(--color-grey-subtle);
+  --color-state-draft-background: var(--color-blue-subtle);
+  --color-state-new-background: var(--color-blue-subtle);
+  --color-state-edited-background: var(--color-orange-subtle);
+  --color-state-error-background: var(--color-red-subtle);
+  --color-state-disabled-background: var(--color-grey-subtle);
+  --color-state-inactive-background: var(--color-grey-subtle);
+  --color-state-incomplete-background: var(--color-blue-subtle);
+  --color-state-finished-background: var(--color-green-subtle);
+  --color-state-deleted-background: var(--color-grey-subtle);
+  --color-state-ongoing-background: var(--color-orange-subtle);
+  --color-state-signed-background: var(--color-purple-subtle);
+  --color-state-waiting-background: var(--color-grey-subtle);
+  --color-state-black-background: var(--color-grey-subtle);
+  --color-state-red-background: var(--color-red-subtle);
+  --color-state-green-background: var(--color-green-subtle);
+  --color-state-blue-background: var(--color-blue-subtle);
+  --color-state-purple-background: var(--color-purple-subtle);
+  --color-state-orange-background: var(--color-orange-subtle);
+  --color-state-yellow-background: var(--color-yellow-subtle);
+  --color-state-teal-background: var(--color-teal-subtle);
+
+  --color-notification-success-foreground: var(--color-success);
+  --color-notification-success-background: var(--color-green-subtle);
+  --color-notification-warning-foreground: var(--color-warning);
+  --color-notification-warning-background: var(--color-orange-subtle);
+  --color-notification-error-foreground: var(--color-error);
+  --color-notification-error-background: var(--color-red-subtle);
 
   --color-shadow: rgb(0 0 0 / 20%);
 
@@ -703,11 +758,11 @@
   --color-badge-text: var(--color-data);
   --color-badge-icon: var(--color-data);
 
-  --color-info-box-background: var(--color-region);
-  --color-info-box-border: var(--color-chrome);
-  --color-info-box-text-primary: var(--color-data);
-  --color-info-box-text-secondary: var(--color-data);
-  --color-info-box-icon: var(--color-data);
+  --color-info-box-background: var(--color-notification-background);
+  --color-info-box-border: var(--color-notification-border);
+  --color-info-box-text-primary: var(--color-notification-text-primary);
+  --color-info-box-text-secondary: var(--color-notification-text-secondary);
+  --color-info-box-icon: var(--color-notification-icon);
   --color-info-box-border-hover: var(--color-interactive-hover-background);
   --color-info-box-button-border-focus: var(--color-button-ghost-border-focus);
   --color-info-box-button-border-hover: var(--color-button-ghost-border-hover);
@@ -723,6 +778,13 @@
   --color-info-box-button-icon-hover: var(--color-button-ghost-icon-hover);
   --color-info-box-button-icon-active: var(--color-button-ghost-icon-active);
   --color-info-box-button-icon-disabled: var(--color-button-ghost-icon-disabled);
+
+  --color-notification-border: var(--color-chrome);
+  --color-notification-background: var(--color-region);
+  --color-notification-text-secondary: var(--color-data);
+  --color-notification-text-primary: var(--color-data);
+  --color-notification-icon: var(--color-data);
+  --color-notification-icon-close: var(--color-data);
 
   --color-info-wrapper-background: var(--color-tooltip-background);
   --color-info-wrapper-border: transparent;

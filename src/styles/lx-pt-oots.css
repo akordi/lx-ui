@@ -21,7 +21,6 @@
     --color-nav-hover-background: #bf4e2c;
     --color-nav-chrome: transparent;
     --region-border: var(--border-width-1) solid var(--color-chrome);
-    --region-border-transparent: var(--region-border);
     --list-item-border-width: var(--border-width-1);
     --list-item-border-style: solid;
     --color-list-item-border: var(--color-chrome);

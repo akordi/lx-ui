@@ -883,7 +883,7 @@ describe('LxChat', () => {
 
       expect(wrapper.find('.stub-builder').exists()).toBe(true);
       // Submit is the LxForm footer's primary action.
-      await wrapper.find('[id$="-action-submit"]').trigger('click');
+      await wrapper.find('[id$="-action-lx_submit_default"]').trigger('click');
 
       const emitted = wrapper.emitted()['clarifying-questions-submit'];
       expect(emitted).toBeTruthy();
@@ -905,7 +905,7 @@ describe('LxChat', () => {
         ...mountOptions,
       });
 
-      expect(wrapper.find('[id$="-action-submit"]').element.disabled).toBe(true);
+      expect(wrapper.find('[id$="-action-lx_submit_default"]').element.disabled).toBe(true);
     });
 
     test('renders the message text as a prompt above the form', () => {
@@ -952,6 +952,104 @@ describe('LxChat', () => {
       expect(wrapper.find('.stub-builder').exists()).toBe(false);
       // falls back to the rich-text renderer (schema ignored)
       expect(wrapper.findComponent(LxRichTextDisplay).exists()).toBe(true);
+    });
+
+    test('renders custom form buttons instead of the default submit action when actionDefinitions are provided for a message', () => {
+      wrapper = mount(LxChat, {
+        props: {
+          userDefinitions: [
+            { id: 'user-me', isMe: true },
+            { id: 'user-ai', isAi: true },
+          ],
+          clarifyingQuestionsBuilder: StubBuilder,
+          items: [
+            {
+              id: 'm1',
+              userId: 'user-ai',
+              userName: 'AI',
+              text: 'Pick one',
+              schema,
+              actionDefinitions: [
+                { id: 'approve', name: 'Approve', icon: 'accept', kind: 'secondary' },
+                { id: 'decline', name: 'Decline', icon: 'deny', kind: 'tertiary' },
+              ],
+              createdAt: day,
+            },
+          ],
+        },
+        ...mountOptions,
+      });
+
+      expect(wrapper.find('[id$="-action-approve"]').exists()).toBe(true);
+      expect(wrapper.find('[id$="-action-decline"]').exists()).toBe(true);
+      expect(wrapper.find('[id$="-action-lx_submit_default"]').exists()).toBe(false);
+    });
+
+    test('if a primary custom form action is provided, it is converted to secondary', () => {
+      wrapper = mount(LxChat, {
+        props: {
+          userDefinitions: [
+            { id: 'user-me', isMe: true },
+            { id: 'user-ai', isAi: true },
+          ],
+          clarifyingQuestionsBuilder: StubBuilder,
+          items: [
+            {
+              id: 'm1',
+              userId: 'user-ai',
+              userName: 'AI',
+              text: 'Pick one',
+              schema,
+              actionDefinitions: [
+                { id: 'approve', name: 'Approve', icon: 'accept', kind: 'primary' },
+              ],
+              createdAt: day,
+            },
+          ],
+        },
+        ...mountOptions,
+      });
+
+      const button = wrapper.find('[id$="-action-approve"]');
+      expect(button.exists()).toBe(true);
+      expect(button.classes()).toContain('lx-button-secondary');
+      expect(wrapper.find('[id$="-action-lx_submit_default"]').exists()).toBe(false);
+    });
+
+    test('clicking a custom form action emits the chosen action name with the form values', async () => {
+      wrapper = mount(LxChat, {
+        props: {
+          userDefinitions: [
+            { id: 'user-me', isMe: true },
+            { id: 'user-ai', isAi: true },
+          ],
+          clarifyingQuestionsBuilder: StubBuilder,
+          items: [
+            {
+              id: 'm1',
+              userId: 'user-ai',
+              userName: 'AI',
+              text: 'Pick one',
+              schema,
+              actionDefinitions: [
+                { id: 'approve', name: 'Approve', icon: 'accept', kind: 'secondary' },
+              ],
+              createdAt: day,
+            },
+          ],
+        },
+        ...mountOptions,
+      });
+
+      await wrapper.find('[id$="-action-approve"]').trigger('click');
+
+      const emitted = wrapper.emitted()['clarifying-questions-submit'];
+      expect(emitted).toBeTruthy();
+      expect(emitted[0][0]).toMatchObject({
+        message: expect.objectContaining({ id: 'm1' }),
+        actionName: 'approve',
+        values: {},
+      });
     });
   });
 });

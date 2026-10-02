@@ -65,6 +65,12 @@
   display: flex;
 }
 
+.lx.lx-theme-contrast .lx-datepicker-default > .lx-calendar-container {
+  border-width: var(--popover-border-width);
+  border-style: var(--popover-border-style);
+  border-color: var(--color-popover-border);
+}
+
 .lx-date-time-picker-wrapper[data-invalid] .lx-datepicker-default > .lx-calendar-container {
   border: var(--border-width-2) solid var(--color-bad);
 }
@@ -868,15 +874,12 @@
   font-size: var(--font-size-small);
 }
 
-.lx .lx-layout  .lx-calendar-special-dates-wrapper .lx-list {
-  gap: var(--space-0);
-}
-
 .lx .lx-layout .lx-calendar-special-dates-wrapper .lx-list {
+  gap: var(--space-0);
   font-weight: var(--font-weight-extra-bold);
 }
 
-.lx .lx-layout  .lx-calendar-special-dates-wrapper .lx-list li {
+.lx .lx-layout .lx-calendar-special-dates-wrapper .lx-list li {
   display: flex;
   align-items: flex-start;
 }

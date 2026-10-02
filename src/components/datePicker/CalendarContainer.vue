@@ -1325,7 +1325,7 @@ function getFirstFocusableVisibleDay() {
       .map((month) =>
         findFocusableDayInWeeks(getDaysInMonthGrid(month, props.firstDayOfTheWeek), month)
       )
-      .find((date) => date) ?? null
+      .find(Boolean) ?? null
   );
 }
 

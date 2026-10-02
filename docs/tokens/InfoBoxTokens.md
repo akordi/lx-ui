@@ -6,20 +6,23 @@
 
 | Variable name                           | Default value                                             |
 |-----------------------------------------|-----------------------------------------------------------|
-| `--info-box-grid-areas`                 | 'icon content button'                                     |
-| `--info-box-grid-template-columns`      | auto 1fr auto                                             |
-| `--info-box-grid-template-rows`         | 1fr                                                       |
-| `--info-box-padding`                    | `--space-0500`                                            |
+| `--info-box-grid-areas`                 | `--notification-grid-areas`                               |
+| `--info-box-grid-template-columns`      | `--notification-grid-template-columns`                    |
+| `--info-box-grid-template-rows`         | `--notification-grid-template-rows`                       |
+| `--info-box-padding`                    | `--notification-padding`                                  |
 | `--info-box-border-width`               | `--border-width-2`                                        |
-| `--info-box-border-radius`              | `--border-radius-0`                                       |
-| `--info-box-icon-size`                  | `--icon-size-m`                                           |
-| `--info-box-gap`                        | `--space-0500`                                            |
-| `--info-box-row-gap`                    | `--space-0250`                                            |
-| `--info-box-content-padding`            | `--space-0125` `--space-0` `--space-0` `--space-0`        |
-| `--info-box-text-primary-font-weight`   | `--font-weight-bold`                                      |
-| `--info-box-text-primary-line-height`   | 1.25                                                      |
-| `--info-box-text-secondary-font-size`   | `--font-size-small`                                       |
-| `--info-box-text-secondary-line-height` | 1.1em                                                     |
+| `--info-box-border-style`               | `--notification-border-style`                             |
+| `--info-box-border-radius`              | `--notification-border-radius`                            |
+| `--info-box-icon-size`                  | `--notification-icon-size`                                |
+| `--info-box-gap`                        | `--notification-gap`                                      |
+| `--info-box-row-gap`                    | `--notification-row-gap`                                  |
+| `--info-box-content-padding`            | `--notification-content-padding`                          |
+| `--info-box-text-primary-font-size`     | `--notification-text-primary-font-size`                   |
+| `--info-box-text-primary-font-weight`   | `--notification-text-primary-font-weight`                 |
+| `--info-box-text-primary-line-height`   | `--notification-text-primary-line-height`                 |
+| `--info-box-text-secondary-font-size`   | `--notification-text-secondary-font-size`                 |
+| `--info-box-text-secondary-font-weight` | `--notification-text-secondary-font-weight`               |
+| `--info-box-text-secondary-line-height` | `--notification-text-secondary-line-height`               |
 | `--info-box-outline-offset`             | `--space-0`                                               |
 | `--info-box-button-height`              | `--button-ghost-icon-only-height`                         |
 | `--info-box-button-width`               | `--button-ghost-icon-only-width`                          |
@@ -32,11 +35,11 @@
 
 | Variable name                                 | Default value                              |
 |-----------------------------------------------|--------------------------------------------|
-| `--color-info-box-background`                 | `--color-region`                           |
-| `--color-info-box-border`                     | `--color-chrome`                           |
-| `--color-info-box-text-primary`               | `--color-data`                             |
-| `--color-info-box-text-secondary`             | `--color-data`                             |
-| `--color-info-box-icon`                       | `--color-data`                             |
+| `--color-info-box-background`                 | `--color-notification-background`          |
+| `--color-info-box-border`                     | `--color-notification-border`              |
+| `--color-info-box-text-primary`               | `--color-notification-text-primary`        |
+| `--color-info-box-text-secondary`             | `--color-notification-text-secondary`      |
+| `--color-info-box-icon`                       | `--color-notification-icon`                |
 | `--color-info-box-border-hover`               | `--color-interactive-hover-background`     |
 | `--color-info-box-button-border-focus`        | `--color-button-ghost-border-focus`        |
 | `--color-info-box-button-border-hover`        | `--color-button-ghost-border-hover`        |

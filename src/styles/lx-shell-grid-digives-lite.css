@@ -1,7 +1,4 @@
-.lx .lx-notifications-list .lx-notification p.lx-title {
-  font-weight: var(--font-weight-data) !important;
-}
-.lx .lx-notifications-list {
+.lx-notification-list {
   top: calc(var(--space-3000) * 3 + var(--space-0500)) !important;
 }
 .lx-button .lx-loader.lx-small,
@@ -690,7 +687,7 @@
   background-color: var(--color-notification-error-background);
 }
 
-.lx .lx-layout-digives-lite+ul.lx-notifications-list {
+.lx .lx-layout-digives-lite+ul.lx-notification-list {
     top: calc(var(--row-size) + var(--space-2500)) !important;
 }
 

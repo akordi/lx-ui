@@ -30,7 +30,7 @@ import { generateUUID, foldToAscii, stringifyItemsByIdAttribute } from '@/utils/
 import { lxDevUtils } from '@/utils';
 import { focusNextFocusableElement, getDisplayTexts } from '@/utils/generalUtils';
 import { loadLibrary } from '@/utils/libLoader';
-import useScrollVirtualizer from '@/hooks/useScrollVirtualizer';
+import useScrollVirtualizer, { resolveVirtualizerScrollParent } from '@/hooks/useScrollVirtualizer';
 import { useLoadingAnnouncer } from '@/hooks/useLoadingAnnouncer';
 import { useWindowSize } from '@vueuse/core';
 import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/builderUtils';
@@ -333,47 +333,8 @@ const wantsDefaultListVirtualization = computed(
 );
 
 function resolveScrollParent(el) {
-  if (!el) return null;
-
-  const isScrollableOverflow = (overflowY) =>
-    overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
-
-  const isConstrainedScrollableElement = (element, style) => {
-    if (!element || !style) return false;
-    if (element.scrollHeight > element.clientHeight + 1) return true;
-
-    const hasConstrainedHeight = style.height !== 'auto' && style.height !== '';
-    const hasConstrainedMaxHeight = style.maxHeight && style.maxHeight !== 'none';
-    return hasConstrainedHeight || hasConstrainedMaxHeight;
-  };
-
-  const modalElement = el.closest('.lx-modal');
-  const modalMain = modalElement?.querySelector(':scope > .lx-main');
-  if (modalMain) {
-    const modalMainStyle = globalThis.getComputedStyle(modalMain);
-    if (isScrollableOverflow(modalMainStyle?.overflowY)) {
-      return modalMain;
-    }
-  }
-
-  let parent = el.parentElement;
-  let fallback = null;
-  while (parent && parent !== document.body && parent !== document.documentElement) {
-    const style = globalThis.getComputedStyle(parent);
-    const overflowY = style?.overflowY;
-
-    if (isScrollableOverflow(overflowY)) {
-      if (isConstrainedScrollableElement(parent, style)) {
-        return parent;
-      }
-
-      if (!fallback) fallback = parent;
-    }
-
-    parent = parent.parentElement;
-  }
-
-  return fallback;
+  // Fall back to a scrollable ancestor that isn't height-constrained yet.
+  return resolveVirtualizerScrollParent(el, { allowUnconstrainedFallback: true });
 }
 
 // Bespoke per-list virtualization is delegated to the shared

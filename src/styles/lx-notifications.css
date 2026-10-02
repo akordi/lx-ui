@@ -1,8 +1,7 @@
-.lx .lx-notifications-list {
+.lx-notification-list {
   position: fixed;
   right: var(--space-0);
   top: var(--nav-row-size);
-  top: calc(var(--nav-row-size) + var(--space-0500));
   z-index: 9000;
   list-style: none;
   display: flex;
@@ -11,130 +10,114 @@
   margin-block-end: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  max-height: 100vh;
-  gap: var(--space-0500);
-  padding-bottom: var(--space-1000);
+  max-height: calc(100dvh - var(--nav-row-size) - var(--space-1000));
+  row-gap: var(--notification-item-gap);
   padding-inline-start: 0;
+  margin-bottom: calc(var(--nav-row-size) + var(--space-0500)); /* top + padding-bottom so overflow items are visible */
+  margin-top: var(--space-0500);
+  padding: var(--space-0250) var(--space-0);
 }
 
-.lx .lx-notifications-list .lx-notification {
-  border: var(--region-border-transparent);
+.lx-notification-wrapper {
   margin: var(--space-0) var(--space-1000);
-}
-
-.lx.lx-theme-contrast .lx-notifications-list .lx-notification:hover {
-  border-color: var(--color-interactive-hover-background);
-}
-
-.lx.lx-theme-contrast .lx-notifications-list .lx-notification:active {
-  border-color: var(--color-interactive-active-background);
-}
-
-.lx .lx-notifications-list .lx-notification .lx-main {
-  width: var(--notification-size);
-  min-height: var(--row-size);
-  padding: var(--space-0500);
   box-shadow: var(--shadow-dropdown);
-  background-color: var(--color-region);
-  border-style: solid;
-  border-color: var(--color-chrome);
-  border-width: var(--notification-border);
-  display: flex;
+  border-radius: var(--notification-border-radius);
   cursor: pointer;
+}
+
+.lx-notification {
+  display: grid;
+  grid-template-areas: var(--notification-grid-areas);
+  grid-template-columns: var(--notification-grid-template-columns);
+  grid-template-rows: var(--notification-grid-template-rows);
+  align-items: start;
+  gap: var(--notification-gap);
+  padding: var(--notification-padding);
+  border-width: var(--notification-border-width);
+  border-style: var(--notification-border-style);
+  border-color: var(--color-notification-border);
+  border-radius: var(--notification-border-radius);
+  background: var(--color-notification-background);
+  width: var(--notification-width);
+}
+
+.lx-notification .lx-notification-icon {
+  width: var(--notification-icon-size);
+  height: var(--notification-icon-size);
+  grid-area: icon;
+}
+
+.lx-notification .lx-notification-icon svg {
+  fill: var(--color-notification-icon);
+}
+
+.lx-notification.lx-notification-success {
+  --color-notification-border: var(--color-notification-success-foreground);
+  --color-notification-background: var(--color-notification-success-background);
+  --color-notification-icon: var(--color-notification-success-foreground);
+  --color-notification-text-primary: var(--color-notification-success-foreground);
+}
+
+.lx-notification.lx-notification-warning {
+  --color-notification-border: var(--color-notification-warning-foreground);
+  --color-notification-background: var(--color-notification-warning-background);
+  --color-notification-icon: var(--color-notification-warning-foreground);
+  --color-notification-text-primary: var(--color-data);
+}
+
+.lx-notification.lx-notification-error {
+  --color-notification-border: var(--color-notification-error-foreground);
+  --color-notification-background: var(--color-notification-error-background);
+  --color-notification-icon: var(--color-notification-error-foreground);
+  --color-notification-text-primary: var(--color-notification-error-foreground);
+}
+
+.lx-notification .lx-text-wrapper {
+  row-gap: var(--notification-row-gap);
+  padding: var(--notification-content-padding);
+  flex-direction: column;
+  grid-area: content;
+  display: flex;
   overflow: hidden;
-  flex-shrink: 0;
 }
 
-.lx .lx-notifications-list .lx-notification svg {
-  height: var(--icon-size-m);
-  width: var(--icon-size-m);
-  margin-right: var(--space-0500);
-  flex-shrink: 0;
-  margin-top: var(--space-0250);
-}
-
-.lx .lx-notifications-list .lx-notification.lx-notification-success .lx-main {
-  border-color: var(--color-notification-success-foreground);
-  background-color: var(--color-notification-success-background);
-}
-
-.lx .lx-notifications-list .lx-notification.lx-notification-success svg {
-  fill: var(--color-notification-success-foreground);
-}
-
-.lx .lx-notifications-list .lx-notification.lx-notification-success .lx-title {
-  color: var(--color-notification-success-foreground);
-}
-
-.lx .lx-notifications-list .lx-notification.lx-notification-warning .lx-main {
-  border-color: var(--color-notification-warning-foreground);
-  background-color: var(--color-notification-warning-background);
-}
-
-.lx .lx-notifications-list .lx-notification.lx-notification-warning svg {
-  fill: var(--color-notification-warning-foreground);
-}
-
-.lx .lx-notifications-list .lx-notification.lx-notification-warning .lx-title {
-  color: var(--color-data);
-}
-
-.lx .lx-notifications-list .lx-notification.lx-notification-error .lx-main {
-  border-color: var(--color-notification-error-foreground);
-  background-color: var(--color-notification-error-background);
-}
-
-.lx .lx-notifications-list .lx-notification.lx-notification-error svg {
-  fill: var(--color-notification-error-foreground);
-}
-
-.lx .lx-notifications-list .lx-notification.lx-notification-error .lx-title {
-  color: var(--color-notification-error-foreground);
-}
-
-.lx .lx-notifications-list .lx-notification .lx-text-wrapper {
-  overflow: hidden;
-  margin-right: var(--space-0500);
-}
-
-.lx .lx-notifications-list .lx-notification p.lx-title,
-p.lx-subtitle {
-  line-height: 1.25rem;
-  padding-bottom: var(--space-0500);
+.lx-notification .lx-title,
+.lx-notification .lx-subtitle {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.lx .lx-notifications-list .lx-notification p.lx-title {
-  font-weight: var(--font-weight-bold);
-  padding-top: var(--space-0500);
+.lx-notification .lx-title {
+  font-weight: var(--notification-text-primary-font-weight);
+  color: var(--color-notification-text-primary);
+  font-size: var(--notification-text-primary-font-size);
+  line-height: var(--notification-text-primary-line-height);
 }
 
-.lx .lx-notifications-list .lx-notification .lx-close-icon {
-  margin-left: auto;
-  margin-right: var(--space-0);
-  width: var(--icon-size-xs);
-  height: var(--icon-size-xs);
+.lx-notification .lx-subtitle {
+  font-weight: var(--notification-text-secondary-font-weight);
+  color: var(--color-notification-text-secondary);
+  font-size: var(--notification-text-secondary-font-size);
+  line-height: var(--notification-text-secondary-line-height);
 }
 
-.lx .lx-notifications-list .lx-notification svg.lx-close-icon {
-  fill: var(--color-data);
+.lx-notification .lx-close-icon {
+  grid-area: button;
+  width: var(--notification-icon-close-size);
+  height: var(--notification-icon-close-size);
 }
 
-.lx .lx-notifications-list:empty {
+.lx-notification .lx-close-icon {
+  fill: var(--color-notification-icon-close);
+}
+
+.lx-notification-list:empty {
   display: none;
 }
 
 @media (max-width: 800px) {
-  .lx .lx-notifications-list {
-    width: 100%;
-    left: var(--space-0);
-    padding-inline-start: 0;
-    margin-top: var(--space-0500);
-    gap: var(--space-0125);
-  }
-
-  .lx .lx-notifications-list .lx-notification .lx-main {
+  .lx-notification,
+  .lx-notification-list {
     width: 100%;
   }
 }

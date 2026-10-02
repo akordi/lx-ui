@@ -1175,9 +1175,13 @@ const placeholderComputed = computed(() => {
 
 const isMobileScreen = computed(() => windowSize.width.value < constants.MOBILE_SCREEN_WIDTH);
 
-const multiMonthVariants = ['full', 'full-rows', 'full-columns'];
+const multiMonthVariants = new Set(['full', 'full-rows', 'full-columns']);
+const multiMonthModes = new Set(['date', 'birth-date']);
 const responsiveVariant = computed(() =>
-  isMobileScreen.value && multiMonthVariants.includes(props.variant) ? 'picker' : props.variant
+  multiMonthVariants.has(props.variant) &&
+  (isMobileScreen.value || !multiMonthModes.has(props.mode))
+    ? 'picker'
+    : props.variant
 );
 
 const computedPlacement = computed(() => {

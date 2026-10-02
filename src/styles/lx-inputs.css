@@ -2326,6 +2326,45 @@ h2.lx-section-header + p.lx-invalidation-message,
   text-decoration: none;
 }
 
+.lx-file-upload-wrapper .lx-invalidation-message {
+  display: block;
+  color: var(--color-bad);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight);
+  letter-spacing: var(--letter-spacing-1);
+  margin-top: var(--space-0125);
+}
+
+.lx-draggable-upload-wrapper.lx-invalid:not(.lx-disabled) {
+  border: var(--border-width-2) dashed var(--color-bad);
+}
+
+.lx-draggable-upload-wrapper:hover.lx-invalid:not(.lx-disabled),
+.lx-draggable-upload-wrapper:focus.lx-invalid:not(.lx-disabled) {
+  border: var(--border-width-2) solid var(--color-bad);
+}
+
+.lx-draggable-upload-wrapper.lx-invalid:not(.lx-disabled) > p {
+  color: var(--color-bad);
+}
+
+.lx-file-upload-wrapper .lx-draggable-upload-wrapper > svg.lx-invalidation-icon {
+  fill: var(--color-bad);
+}
+
+.lx-file-upload-wrapper.lx-invalid:not(.lx-disabled) .lx-draggable-wrapper .lx-button.lx-button-tertiary {
+  border-color: var(--color-bad);
+  color: var(--color-bad);
+}
+
+.lx-file-upload-wrapper:hover.lx-invalid:not(.lx-disabled) .lx-draggable-wrapper .lx-button.lx-button-tertiary {
+  background: none;
+}
+
+.lx-file-upload-wrapper.lx-invalid:not(.lx-disabled) .lx-button.lx-button-tertiary .lx-button-icon {
+  fill: var(--color-bad);
+}
+
 .lx-archive-content .tree-list header {
   flex-direction: row;
   justify-content: left;

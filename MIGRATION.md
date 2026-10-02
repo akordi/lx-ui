@@ -4,6 +4,31 @@ As LX/UI evolves, some features are refined, simplified, or replaced by better a
 
 Our goal is to make upgrading predictable, transparent, and worth the effort.
 
+## 2.3.5 → 2.3.6
+
+### New state color tokens
+
+New `-subtle` tokens have been added (e.g. `--color-blue-subtle`), matching the same values as their `-light` counterparts (e.g. `--color-blue-light`). It is heavily advised to use the `-subtle` tokens instead of `-light`, as the `-light` tokens will eventually be deprecated.
+
+### Breaking changes
+
+#### LxNotification & more
+
+**Token renames**
+
+- `--notification-size` → `--notification-width`
+- `--notification-border` → `--notification-border-width`
+
+**Token removals**
+
+The `--region-border-transparent` token has been removed. It's previous default value was
+`2px solid transparent` and it became visible using `--color-chrome` only when transparency was disabled.
+It was used by floating elements such as dropdowns and notifications to improve contrast and
+visibility in no-transparency mode.
+
+The token is no longer needed because the new component-specific border tokens handle these states
+directly. Remove any overrides or usages of this token.
+
 ## 2.3.2 → 2.3.3
 
 ### Breaking changes
