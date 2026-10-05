@@ -1,3 +1,5 @@
+import { defineAsyncComponent } from 'vue';
+
 export const shellModeLoaders = {
   cover: () => import('@/components/shell/modes/ShellCover.vue'),
   'cover-digives-lite': () => import('@/components/shell/modes/ShellCover.vue'),
@@ -11,3 +13,7 @@ export const shellModeLoaders = {
   custom: () => import('@/components/shell/modes/ShellCustom.vue'),
   default: () => import('@/components/shell/modes/ShellDefault.vue'),
 };
+
+export const shellModeComponents = Object.fromEntries(
+  Object.entries(shellModeLoaders).map(([mode, loader]) => [mode, defineAsyncComponent(loader)])
+);
