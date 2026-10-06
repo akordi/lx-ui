@@ -16,7 +16,7 @@ import { lxDevUtils } from '@/utils';
 import { getDisplayTexts, focusFirstElementInContainer } from '@/utils/generalUtils';
 import { generateUUID } from '@/utils/stringUtils';
 import { shellContextKey } from '@/components/shell/shellContext';
-import { shellModeLoaders } from '@/components/shell/shellModeLoaders';
+import { shellModeComponents } from '@/components/shell/shellModeLoaders';
 
 function getGlobals() {
   return /** @type {any} */ (useLx().getGlobals());
@@ -33,17 +33,6 @@ function getItemId(item) {
 function getSpotlightElementId(item) {
   return /** @type {any} */ (item)?.elementId;
 }
-
-const LxShellModeCover = defineAsyncComponent(shellModeLoaders.cover);
-const LxShellModePublic = defineAsyncComponent(shellModeLoaders.public);
-const LxShellModeLatvijaLv = defineAsyncComponent(shellModeLoaders.latvijalv);
-const LxShellModeDigives = defineAsyncComponent(shellModeLoaders.digives);
-const LxShellModeDigivesLite = defineAsyncComponent(shellModeLoaders['digives-lite']);
-const LxShellModeDigimaks = defineAsyncComponent(shellModeLoaders.digimaks);
-const LxShellModeDigimaksLite = defineAsyncComponent(shellModeLoaders['digimaks-lite']);
-const LxShellModeFullScreen = defineAsyncComponent(shellModeLoaders['full-screen']);
-const LxShellModeCustom = defineAsyncComponent(shellModeLoaders.custom);
-const LxShellModeDefault = defineAsyncComponent(shellModeLoaders.default);
 
 const LxSpotlight = defineAsyncComponent(() => import('@/components/Spotlight.vue'));
 const LxDialog = defineAsyncComponent(() => import('@/components/Dialog.vue'));
@@ -211,20 +200,6 @@ const props = defineProps({
 
   texts: { type: Object, default: () => ({}) },
 });
-
-const shellModeComponents = {
-  cover: LxShellModeCover,
-  'cover-digives-lite': LxShellModeCover,
-  public: LxShellModePublic,
-  latvijalv: LxShellModeLatvijaLv,
-  digives: LxShellModeDigives,
-  'digives-lite': LxShellModeDigivesLite,
-  digimaks: LxShellModeDigimaks,
-  'digimaks-lite': LxShellModeDigimaksLite,
-  'full-screen': LxShellModeFullScreen,
-  custom: LxShellModeCustom,
-  default: LxShellModeDefault,
-};
 
 const resolvedMode = computed(() => (shellModeComponents[props.mode] ? props.mode : 'default'));
 const currentModeComponent = computed(() => shellModeComponents[resolvedMode.value]);

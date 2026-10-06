@@ -2,8 +2,10 @@
 import useLx from '@/hooks/useLx';
 import { logWarn } from '@/utils/devUtils';
 import { setGlobalProperties, setComponentTexts } from '@/utils/global';
-import { shellModeLoaders } from '@/components/shell/shellModeLoaders';
+import { shellModeComponents } from '@/components/shell/shellModeLoaders';
 import { vTooltip } from '@/directives/tooltip';
+
+let preloaded = Promise.resolve();
 
 /**
  * Install function for Vue plugin (called by Vue.use() or app.use())
@@ -86,8 +88,8 @@ function install(Vue, options) {
 
   if (preloadConfig.shellModes?.length) {
     preloadConfig.shellModes.forEach((mode) => {
-      if (shellModeLoaders[mode]) {
-        loaders.push(shellModeLoaders[mode]);
+      if (shellModeComponents[mode]) {
+        loaders.push(shellModeComponents[mode].__asyncLoader);
       } else {
         logWarn(`Unknown shell mode for preload: "${mode}"`, globalEnvironment);
       }
@@ -96,12 +98,11 @@ function install(Vue, options) {
 
   if (loaders.length === 0) return;
 
-  const doPreload = () => {
-    loaders.forEach((loader) => loader().catch(() => {}));
-  };
-
-  doPreload();
+  preloaded = Promise.all(loaders.map((loader) => loader().catch(() => {})));
 }
+
+/** Resolves once the async components requested through createLx's `preload` option are loaded. */
+export const lxPreloaded = () => preloaded;
 
 const plugin = { install };
 
