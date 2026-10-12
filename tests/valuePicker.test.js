@@ -5,7 +5,6 @@ import LxValuePickerDefault from '@/components/valuePickers/Default.vue';
 import { h } from 'vue';
 import LxForm from '@/components/forms/Form.vue';
 import LxRow from '@/components/forms/Row.vue';
-import 'regenerator-runtime/runtime';
 
 config.global.stubs = { ...config.global.stubs, 'router-link': true };
 

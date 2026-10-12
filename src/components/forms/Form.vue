@@ -1,5 +1,5 @@
 <!-- eslint-disable no-param-reassign -->
-<script setup lang="ts">
+<script setup>
 import {
   computed,
   useSlots,
@@ -106,7 +106,6 @@ const emits = defineEmits(['actionClick', 'update:index']);
 const props = defineProps({
   /**
    * The unique identifier for the form.
-   * @type {String}
    * @default generateUUID()
    * @since 0.1.63
    */
@@ -116,7 +115,6 @@ const props = defineProps({
   },
   /**
    * The number of columns to display in the form.
-   * @type {Number}
    * @default 1
    * @since 0.1.63
    */
@@ -127,7 +125,6 @@ const props = defineProps({
   },
   /**
    * Determines whether to show the header of the form.
-   * @type {Boolean}
    * @default true
    * @since 0.1.63
    */
@@ -138,7 +135,6 @@ const props = defineProps({
   },
   /**
    * Determines whether the header should be sticky or not.
-   * @type {Boolean}
    * @default true
    * @since 0.1.63
    */
@@ -150,7 +146,6 @@ const props = defineProps({
   },
   /**
    * Determines whether to show the footer of the form.
-   * @type {Boolean}
    * @default true
    * @since 0.1.63
    */
@@ -162,7 +157,6 @@ const props = defineProps({
   },
   /**
    * Determines whether the footer should be sticky or not.
-   * @type {Boolean}
    * @default true
    * @since 0.1.63
    */
@@ -174,7 +168,6 @@ const props = defineProps({
   },
   /**
    * Determines whether to show preHeader information slot.
-   * @type {Boolean}
    * @default true
    * @since 0.1.63
    */
@@ -186,7 +179,6 @@ const props = defineProps({
   },
   /**
    * Determines whether to show postHeader information slot.
-   * @type {Boolean}
    * @default true
    * @since 0.1.63
    */
@@ -198,7 +190,6 @@ const props = defineProps({
   },
   /**
    * The array of sections in the form.
-   * @type {Array}
    * @default []
    * @since 0.1.63
    */
@@ -210,7 +201,6 @@ const props = defineProps({
   },
   /**
    * The type of index for the form.
-   * @type {String}
    * @default 'default'
    * @since 0.3.0
    */
@@ -223,7 +213,6 @@ const props = defineProps({
   },
   /**
    * An array of buttons for the form.
-   * @type {Array}
    * @default []
    * @since 0.1.63
    */
@@ -235,7 +224,6 @@ const props = defineProps({
   },
   /**
    * The required mode for the form.
-   * @type {String}
    * @default 'optional'
    * @since 0.3.11
    */
@@ -248,7 +236,6 @@ const props = defineProps({
   }, // none || required || required-asterisk || optional
   /**
    * Determines spacings between, before, after rows and sections in form.
-   * @type {String}
    * @default 'default'
    * @since 0.3.11
    */
@@ -261,7 +248,6 @@ const props = defineProps({
   }, // default || compact || stripped
   /**
    * The orientation of the forms rows
-   * @type {String}
    * @default null
    * @since 1.7.0-beta.13
    */
@@ -272,7 +258,6 @@ const props = defineProps({
   }, // vertical || horizontal
   /**
    * Show skip link to skip form
-   * @type {Boolean}
    * @default false
    * @since 1.8.0-beta.10
    */
@@ -284,7 +269,6 @@ const props = defineProps({
   },
   /**
    * The object containing text translations for the form.
-   * @type {Object}
    * @since 0.3.5
    */
   texts: { type: Object, default: () => ({}), group: 'additional', sequence: 100 },

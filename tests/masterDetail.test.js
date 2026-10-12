@@ -2,7 +2,6 @@
 import { test, expect, describe, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import LxMasterDetail from '@/components/MasterDetail.vue';
-import 'regenerator-runtime/runtime';
 
 let wrapper;
 

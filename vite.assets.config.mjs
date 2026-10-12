@@ -9,7 +9,7 @@ import { commonStyles, bundles, bundlesWithoutCommonStyles } from './bundles.con
 
 function generateStylesRollupInput() {
   const input = {};
-  const stylesDir = path.resolve(__dirname, 'src/styles');
+  const stylesDir = path.resolve(import.meta.dirname, 'src/styles');
   const files = fs.readdirSync(stylesDir);
 
   // Dynamically generate excluded files list from bundles config
@@ -63,7 +63,7 @@ function splitBundleEntries(allBundles, chunkIndex = 0, chunkCount = 1) {
 
 function createBundlePlugin(bundlesMap) {
   const withoutCommonStyles = new Set(bundlesWithoutCommonStyles || []);
-  const stylesDir = path.resolve(__dirname, 'src/styles');
+  const stylesDir = path.resolve(import.meta.dirname, 'src/styles');
 
   return {
     name: 'lx-css-bundles',
@@ -100,7 +100,7 @@ function createCssBundlesConfig(bundlesMap, emptyOutDir = true) {
     base: './',
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, 'src'),
+        '@': path.resolve(import.meta.dirname, 'src'),
       },
     },
     plugins: [createBundlePlugin(bundlesMap)],
@@ -109,7 +109,6 @@ function createCssBundlesConfig(bundlesMap, emptyOutDir = true) {
       rollupOptions: {
         input: generateBundlesRollupInput(bundlesMap),
         output: {
-          inlineDynamicImports: false,
           assetFileNames: '[name][extname]',
         },
       },
@@ -161,7 +160,7 @@ export const cssConfig = defineConfig({
   base: './',
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      '@': path.resolve(import.meta.dirname, 'src'),
     },
   },
   build: {
@@ -169,7 +168,6 @@ export const cssConfig = defineConfig({
     rollupOptions: {
       input: generateStylesRollupInput(),
       output: {
-        inlineDynamicImports: false,
         assetFileNames: '[name][extname]',
         format: 'commonjs',
       },
@@ -188,15 +186,14 @@ export const fontsConfig = defineConfig({
   base: './',
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      '@': path.resolve(import.meta.dirname, 'src'),
     },
   },
   build: {
     outDir: 'dist/lx-fonts',
     rollupOptions: {
-      input: generateFontsRollupInput(path.resolve(__dirname, 'src/lx-fonts')),
+      input: generateFontsRollupInput(path.resolve(import.meta.dirname, 'src/lx-fonts')),
       output: {
-        inlineDynamicImports: false,
         assetFileNames: '[name][extname]',
       },
     },

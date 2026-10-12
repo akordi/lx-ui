@@ -70,6 +70,7 @@ export const SHAPES = {
     60: '<path d="M16 0l3.856 9.321 10-1.321-6.144 8 6.145 8-10.001-1.321L16 32l-3.856-9.321-10 1.321 6.144-8-6.144-8 10 1.321L16 0z"  />', // [0,0]
   },
 };
+
 export const BACKGROUND_COLORS = [
   'F7F9FC',
   'EEEDFD',
@@ -92,6 +93,7 @@ export const BACKGROUND_COLORS = [
   'D8E8F3',
   'ECE1FE',
 ];
+
 export const SHAPE_COLORS = [
   '060A23',
   '5E36F5',

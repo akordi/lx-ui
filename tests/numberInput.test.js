@@ -4,7 +4,6 @@ import { describe, test, expect, afterEach, vi } from 'vitest';
 import { ref } from 'vue';
 import LxNumberInput from '@/components/NumberInput.vue';
 import { ARIA_LIVE_ANNOUNCEMENT_CONSTANTS } from '@/constants';
-import 'regenerator-runtime/runtime';
 
 config.global.stubs = { ...config.global.stubs, 'router-link': true };
 

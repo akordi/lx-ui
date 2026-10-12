@@ -5,7 +5,6 @@ import LxAutoComplete from '@/components/AutoComplete.vue';
 import LxValuePicker from '@/components/ValuePicker.vue';
 import useAutoCompleteSearch from '@/hooks/useAutoCompleteSearch';
 import { textSearch } from '@/utils/stringUtils';
-import 'regenerator-runtime/runtime';
 
 config.global.stubs = { ...config.global.stubs, 'router-link': true };
 

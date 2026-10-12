@@ -43,7 +43,6 @@ import { objectClone } from '@/utils/format/object';
 const props = defineProps({
   /**
    * The number of columns to display in the section.
-   * @type {Number}
    * @default 1
    * @since 0.1.63
    */
@@ -56,7 +55,6 @@ const props = defineProps({
   },
   /**
    * The label of the section.
-   * @type {String}
    * @default null
    * @since 0.1.63
    */
@@ -68,7 +66,6 @@ const props = defineProps({
   },
   /**
    * The description of the section.
-   * @type {String}
    * @default null
    * @since 0.1.63
    */
@@ -80,7 +77,6 @@ const props = defineProps({
   },
   /**
    * The unique identifier of the section.
-   * @type {String}
    * @default generateUUID()
    * @since 0.1.63
    */
@@ -90,7 +86,6 @@ const props = defineProps({
   },
   /**
    * The required mode of the section.
-   * @type {String}
    * @default 'optional'
    * @since 0.3.11
    */
@@ -103,14 +98,12 @@ const props = defineProps({
   }, // none || required || required-asterisk || optional
   /**
    * The icon at start of section header.
-   * @type {String}
    * @default null
    * @since 1.6.0-beta.5
    */
   icon: { type: String, default: null, group: 'main', sequence: 5 },
   /**
    * The icon set for icon at start of section header.
-   * @type {String}
    * @default
    * @since 1.6.0-beta.5
    */
@@ -123,7 +116,6 @@ const props = defineProps({
   },
   /**
    * The custom css class for expander.
-   * @type {String}
    * @default 'default'
    * @since 1.6.0-beta.5
    */
@@ -135,21 +127,18 @@ const props = defineProps({
   },
   /**
    * The badge for header section.
-   * @type {String}
    * @default
    * @since 1.6.0-beta.5
    */
   badge: { type: String, default: '', group: 'main', sequence: 7 },
   /**
    * The badge icon for header section.
-   * @type {String}
    * @default
    * @since 1.9.0-beta.8
    */
   badgeIcon: { type: String, default: null },
   /**
    * The badge type for header section.
-   * @type {String}
    * @default
    * @since 1.9.0-beta.8
    */
@@ -160,7 +149,6 @@ const props = defineProps({
   }, // default, info, success, warning, error
   /**
    * The badge title for header section if badge is provided.
-   * @type {String}
    * @default
    * @since 1.9.0-beta.8
    */
@@ -182,7 +170,6 @@ const props = defineProps({
   /**
    * Defines the action definitions for the section.
    *
-   * @type {Array}
    * @default []
    * @since 1.7.0-beta.8
    */
@@ -194,7 +181,6 @@ const props = defineProps({
   },
   /**
    * The orientation of the sections rows
-   * @type {String}
    * @default null
    * @since 1.7.0-beta.13
    */
@@ -207,13 +193,11 @@ const props = defineProps({
   }, // vertical || horizontal
   /**
    * The rendering mode for expander.
-   * @type {String}
    * @since 1.9.0
    */
   expanderRenderMode: { type: String, default: 'default', options: ['default', 'dynamic'] }, // 'default' or 'dynamic'
   /**
    * The object containing text translations for the section.
-   * @type {Object}
    * @since 1.2.3
    */
   texts: {
