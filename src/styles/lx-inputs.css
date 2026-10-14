@@ -718,6 +718,11 @@
   cursor: pointer !important;
 }
 
+/* Color picker sets an inline color on a span inside the link, override it on hover for contrast */
+.lx-markdown-text-area a:hover span {
+  color: var(--color-interactive-hover-foreground) !important;
+}
+
 .lx-markdown-text-area .ProseMirror p {
   padding-right: var(--space-0);
   margin-bottom: var(--space-1000);
