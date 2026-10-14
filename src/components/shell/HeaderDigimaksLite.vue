@@ -681,8 +681,11 @@ provide('insideHeader', insideHeader);
           </ul>
         </div>
         <transition name="slide">
-          <div class="lx-settings-menu lx-region" v-if="settings">
+          <div class="lx-settings-menu lx-region-component" v-if="settings">
             <div class="lx-settings-header">
+              <div class="lx-blur-container" aria-hidden="true">
+                <div v-for="n in 6" :key="n" class="lx-blur-layer" />
+              </div>
               <p>{{ displayTexts.settings }}</p>
               <LxButton
                 icon="close"
