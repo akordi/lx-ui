@@ -120,6 +120,30 @@ is missing from `items` is now shown as the id instead of an empty field.
 - Don't add new usages of `preloadedItems` or function `items`.
 - Update `customItem` templates to the `{ item, context }` slot props when switching to `mode="new"`.
 
+## 2.3.7 → 2.3.8
+
+### Breaking changes
+
+#### LxFileUploader
+
+Uploaded file items now reuse the LxListItem structure and the LxList tokens (layout, text, icons,
+action buttons, hover and disabled colors) instead of their own styles. Both modes (default and compact)
+share one template.
+
+**Class changes**
+
+If you override the file item styles, update the selectors:
+
+| Removed                                     | Use instead                                                   |
+|---------------------------------------------|---------------------------------------------------------------|
+| `.compact-wrapper`                          | `.lx-file-upload-wrapper.compact .lx-file-wrapper`            |
+| `.lx-file-name-main-data-wrapper`           | `.lx-file-main-part > .lx-list-item > header`                 |
+| `.lx-file-name`                             | `.lx-file-name-wrapper > .lx-primary`                         |
+| `.lx-file-main-additional-info`             | `.lx-file-main-part > .lx-list-item > header > .lx-secondary` |
+| `.lx-download-icon`                         | `.lx-file-main-part .lx-list-icon-wrapper`                    |
+| `.lx-upload-buttons`                        | `.lx-file-main-part > .lx-list-item-actions`                  |
+| `.lx-file-indicators .lx-invalidation-icon` | `.lx-file-main-part .lx-invalidation-icon-wrapper`            |
+
 ## 2.3.6 → 2.3.7
 
 ### Breaking changes

@@ -228,8 +228,7 @@
 }
 
 .lx:not(.lx-no-animations) .lx-button svg,
-.lx-layout-latvijalv .lx-latvijalv-alert-list .lx-alert-clickable svg,
-.lx:not(.lx-no-animations) .lx-file-wrapper.lx-disabled .lx-list-item .lx-download-icon svg {
+.lx-layout-latvijalv .lx-latvijalv-alert-list .lx-alert-clickable svg {
   transition: fill 0.1s ease-in;
 }
 
