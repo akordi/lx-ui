@@ -103,7 +103,7 @@
 .lx-dropdown-default-content .lx-value-picker-item .lx-radio-button-wrapper {
   width: 100%;
   overflow: hidden;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .lx-dropdown-default-content .lx-value-picker-item > div,
@@ -658,4 +658,51 @@
 
 .lx-dropdown-default-content .lx-value-picker-item > .lx-autocomplete-custom-item > * {
   min-width: 0;
+}
+
+/* The "Search for" row is an action, coloured like "Select all" */
+.lx-dropdown-default-content .lx-dropdown-panel .lx-value-picker-item.lx-autocomplete-search-for {
+  color: var(--color-brand);
+}
+
+.lx-dropdown-panel .lx-value-picker-item.lx-autocomplete-search-for .lx-autocomplete-item-content > svg {
+  fill: var(--color-brand);
+}
+
+.lx-theme-contrast .lx-dropdown-default-content .lx-value-picker-item.lx-autocomplete-search-for:hover {
+  color: var(--contrast-background);
+}
+
+.lx-theme-contrast .lx-value-picker-item.lx-autocomplete-search-for:hover .lx-autocomplete-item-content > svg {
+  fill: var(--contrast-background);
+}
+
+.lx-theme-contrast .lx-dropdown-default-content .lx-value-picker-item.lx-autocomplete-search-for:focus {
+  color: var(--contrast-foreground);
+}
+
+.lx-theme-contrast .lx-value-picker-item.lx-autocomplete-search-for:focus .lx-autocomplete-item-content > svg {
+  fill: var(--contrast-foreground);
+}
+
+/* Divider above the "Search for" row, like the one below "Select all" */
+.lx-dropdown-default-content > .lx-dropdown-panel > .lx-autocomplete-search-for-wrapper.lx-separated {
+  position: relative;
+  padding-top: var(--popover-item-set-gap);
+}
+
+.lx-dropdown-default-content .lx-autocomplete-search-for-wrapper.lx-separated::before {
+  display: block;
+  content: "";
+  position: absolute;
+  background: var(--color-popover-divider);
+  width: stretch;
+  width: -webkit-fill-available;
+  margin: var(--popover-divider-margin);
+  height: var(--popover-divider-height);
+  top: var(--space-0);
+}
+
+.lx-dropdown-default-content .lx-autocomplete-search-for-wrapper.lx-separated > .lx-value-picker-item {
+  margin-top: var(--popover-item-set-gap);
 }

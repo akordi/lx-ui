@@ -38,27 +38,38 @@ What changes in `mode="new"`:
 - **`preloadedItems` is gone.** Pass the items to show before typing through `items`.
 - **`items` must be an array.** Functions are not accepted; for async search, use
   `useLxAutoCompleteSearch` (see below).
-- **Predefined items or your own search, decided by `@search`.** Without a `@search` listener, `items`
-  are filtered by the query. With one, you do the searching: `items` are shown as given (your results)
-  and `search` is emitted while typing (debounced by `queryDebounce`) so you can load them. As in
-  legacy, `queryMinLength` applies only when you search; predefined items are always listed. Listening
-  to `@search` only to log it also stops the local filtering.
+- **Predefined items or your own search, decided by `@search` (kind `default`).** Without a `@search`
+  listener, `items` are filtered by the query. With one, you do the searching: `items` are shown as
+  given (your results) and `search` is emitted while typing (debounced by `queryDebounce`) so you can
+  load them. As in legacy, `queryMinLength` applies only when you search; predefined items are always
+  listed. Before a search (no text, or shorter than `queryMinLength`) the list also shows the selected
+  values first, so they can be seen and deselected when the list is reopened. Listening to `@search`
+  only to log it also stops the local filtering.
 - **One `customItem` template renders both the selected value and the list items.** Its slot props
   are `{ item, context, selected, searchString }`, where `context` is `'value'` or `'item'`. Legacy
   templates received the item fields spread (`#customItem="{ name }"`); in the new mode use
   `#customItem="{ item }"` and `item.name`.
-- **New `iconAttribute` prop** (default `'icon'`) shows an icon next to the item name, in the list and
-  in the selected value, styled with the popover item icon tokens. Pass `null` to turn it off.
+- **New `kind` prop.** `default` picks a value from `items`. `search` is a search field that also
+  accepts typed text (see below).
+- **New `iconAttribute` prop** (default `'icon'`) shows an icon next to the item name: in the list
+  with the popover item icon tokens, and in the selected value with `--color-data`, like its text. Pass
+  `null` to turn it off.
 - **New `valueSeparator` prop** chooses the separator between the selected names with
   `selectionKind="multiple"`: `comma` (default, `a, b`), `slash` (`a / b`), `arrow` (`a › b`),
   `dash` (`a - b`), `dot` (`a · b`) or `pipe` (`a | b`). Other values fall back to `comma`.
-- While `loading` is true the list is hidden and the value cannot change: `Enter` does nothing.
+- While `loading` is true the list is hidden and the value cannot change: `Enter` does nothing and, in
+  kind `search` with `searchTrigger="input"`, typed text is committed only once loading ends.
+- **The clear button uses the `clear` icon** (legacy used `close`). **With `hasDetails`, the details
+  button stays when a value is selected**, and the clear button appears to its left (legacy replaced
+  the details button with the clear button). For this `--input-grid-areas` and
+  `--input-grid-template-columns` get an extra `button-details` area, which other inputs leave empty.
 - `idAttribute`, `nameAttribute` and all other props keep working. `hasSelectAll` is ignored with
   a `@search` listener.
 - `v-model:searchString` still sets and reports the typed text: `update:searchString` is emitted on
   every change (also when the text is cleared), with or without `@search`. `search` is only for loading
-  results: debounced, and skipped for queries shorter than `queryMinLength`. With a `@search`
-  listener, an initial `searchString` is searched for right away, as legacy did with function `items`.
+  results: debounced, and skipped for queries shorter than `queryMinLength`. With a `@search` listener
+  (in kind `search` only with `searchTrigger="input"`), an initial `searchString` is searched for right
+  away, as legacy did with function `items`.
 
 **Usage**
 
@@ -100,6 +111,33 @@ and searched for, and a ref follows what the user types. The helper returns it a
 The helper is optional: any `items` array works together with `@search`. It also returns `bindings`, an
 optional shortcut for the props and listeners above, including `v-model:searchString`
 (`v-bind="gameSearch.bindings"`, where `gameSearch` is the helper's return value).
+
+**Search kind**
+
+`kind="search"` is a search field that also accepts text that is not in `items`. It is single
+selection only (`selectionKind="multiple"` is ignored), and the input gets `enterkeyhint="search"`
+(override it with the new `enterKeyHint` prop).
+
+- The value is shown as text in the input. With `customItem` or an item icon, the value is shown like
+  in kind `default` until the field is focused. Typed text that is not in `items` becomes a new item
+  `{ [idAttribute]: text, [nameAttribute]: text }` (a plain string when `items` are strings); text
+  that matches an item's name becomes that item.
+- `search` runs the search: `items` are suggestions and are always filtered locally by the typed text.
+- `searchTrigger` (kind `search` only) chooses how it works:
+  - `confirm` (default): typing filters the suggestions in the list, which ends with a
+    `Search for "…"` row (`texts.searchFor`), styled like "Select all" (with a divider when other items
+    are listed). `Enter`, picking an item or that row sets `v-model`, emits `search` (with the item's
+    name when an item is picked) and closes the list. Typing does not change `v-model`, and `Enter` on
+    an empty field only opens or closes the list.
+  - `input`: a plain search field without a list. While typing, after `queryDebounce`, `v-model` is set
+    to the text and `search` is emitted; `Enter` does both right away. Deleting the text sets `null`.
+- Once a value is selected, the clear button replaces the search icon. Clearing empties the text and,
+  if something was searched, emits `search` with an empty query.
+- The search icon uses `--color-input-icon`, and the field has the `lx-autocomplete-search` class.
+
+```vue
+<LxAutoComplete mode="new" kind="search" v-model="query" :items="suggestions" @search="runSearch" />
+```
 
 **Builders**
 

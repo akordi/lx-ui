@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, nextTick, watch, inject } from 'vue';
+import { ref, computed, nextTick, watch, inject, onUnmounted, useSlots } from 'vue';
 import { onClickOutside, useDebounceFn, useWindowSize } from '@vueuse/core';
 import { generateUUID, textSearch } from '@/utils/stringUtils';
 import { clampText, getDisplayTexts, isDefined, isNil } from '@/utils/generalUtils';
@@ -45,6 +45,9 @@ const props = defineProps({
   detailMode: { type: String, default: 'simple' }, // 'simple' || 'detailed'
   // Declared as a prop only to know whether @search is listened to; emit('search') still calls it
   onSearch: { type: Function, default: null },
+  kind: { type: String, default: 'default' }, // 'default' || 'search'
+  searchTrigger: { type: String, default: 'confirm' }, // 'confirm' || 'input'
+  enterKeyHint: { type: String, default: null },
   labelId: { type: String, default: null },
   hasSelectAll: { type: Boolean, default: false },
   texts: { type: Object, default: () => ({}) },
@@ -56,6 +59,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'openDetails', 'update:searchString', 'search']);
 
 const SELECT_ALL_KEY = '__lx-select-all__';
+const SEARCH_FOR_KEY = '__lx-search-for__';
 
 const textsDefault = {
   emptyValue: 'Nav norādīts',
@@ -74,6 +78,7 @@ const textsDefault = {
   loadingState: 'Notiek ielāde',
   additionalText: 'Mēģiniet meklēt, izmantojot citu vārdu vai frāzi',
   helperTextLabel: 'Papildinformācija',
+  searchFor: 'Meklēt "{0}"',
 };
 
 const displayTexts = computed(() => getDisplayTexts(props.texts, textsDefault, 'LxAutoComplete'));
@@ -100,9 +105,17 @@ const isTouchSensitive = inject('isTouchMode', ref(false));
 const windowSize = useWindowSize();
 const responsiveView = computed(() => windowSize.width.value <= 500);
 
-const isMultiple = computed(() => props.selectionKind === 'multiple');
-// With @search the parent searches and items are its results; without it, items are filtered here
+const isSearchKind = computed(() => props.kind === 'search');
+const isMultiple = computed(() => props.selectionKind === 'multiple' && !isSearchKind.value);
+// With @search the parent searches and items are its results; without it, items are filtered here.
+// In kind 'search' items are suggestions, always filtered here, and @search runs the search
 const isServerSide = computed(() => !!props.onSearch);
+const filtersLocally = computed(() => isSearchKind.value || !isServerSide.value);
+const isPlainSearch = computed(() => isSearchKind.value && props.searchTrigger === 'input');
+const searchesWhileTyping = computed(
+  () => isServerSide.value && (!isSearchKind.value || isPlainSearch.value)
+);
+const enterKeyHint = computed(() => props.enterKeyHint ?? (isSearchKind.value ? 'search' : null));
 
 // Entry: { key: stringified id, raw: value as given, data: object used for display }
 function isObjectValue(value) {
@@ -158,7 +171,10 @@ const selectedKeys = computed(() => new Set(modelEntries.value.map((entry) => en
 const selectedEntry = computed(() => (isMultiple.value ? null : modelEntries.value[0] || null));
 const hasValue = computed(() => modelEntries.value.length > 0);
 
+let typedCommitTimeout = null;
+
 function commitEntries(entries) {
+  clearTimeout(typedCommitTimeout);
   const value = isMultiple.value ? entries.map((entry) => entry.raw) : entries[0]?.raw ?? null;
   emit('update:modelValue', value);
 }
@@ -231,9 +247,13 @@ function matchesQuery(entry) {
 }
 
 const filteredEntries = computed(() => {
-  if (isServerSide.value) {
+  if (!filtersLocally.value) {
     // Items are already the results for the query, but stale ones are hidden while it is too short
-    return isQueryTooShort.value && finalQuery.value ? [] : itemEntries.value;
+    const results = isQueryTooShort.value && finalQuery.value ? [] : itemEntries.value;
+    if (finalQuery.value && !isQueryTooShort.value) return results;
+    // Before a search the selected values are listed too, so they can be seen and deselected
+    const resultKeys = new Set(results.map((entry) => entry.key));
+    return [...modelEntries.value.filter((entry) => !resultKeys.has(entry.key)), ...results];
   }
   // Like legacy, queryMinLength does not hide local items
   if (!query.value) return itemEntries.value;
@@ -249,9 +269,12 @@ const showSelectAll = computed(
     filteredEntries.value.length > 0
 );
 
+const showSearchFor = computed(() => isSearchKind.value && !!finalQuery.value);
+
 const navigableKeys = computed(() => [
   ...(showSelectAll.value ? [SELECT_ALL_KEY] : []),
   ...filteredEntries.value.map((entry) => entry.key),
+  ...(showSearchFor.value ? [SEARCH_FOR_KEY] : []),
 ]);
 
 const queryDebounceValue = computed(() => Number(props.queryDebounce) || 0);
@@ -264,17 +287,93 @@ function emitSearchNow(value) {
 }
 const emitSearch = useDebounceFn(emitSearchNow, queryDebounceValue);
 
+function launchSearch(value) {
+  lastSearchedQuery = value;
+  emit('search', value);
+}
+
+// Text set by the component itself (the selected value's name, or cleared), which is not a search
+let silentQuery = null;
+
 watch(query, (newValue, oldValue) => {
   if (newValue !== oldValue) emit('update:searchString', newValue || '');
 });
 
+function toTypedValue(text) {
+  const first = itemEntries.value[0];
+  if (first && !isObjectValue(first.raw)) return text;
+  return { [props.idAttribute]: text, [props.nameAttribute]: text };
+}
+
+function commitTypedText(text) {
+  if (!text) {
+    if (hasValue.value) commitEntries([]);
+    return;
+  }
+  const lowerText = text.toLowerCase();
+  const match = itemEntries.value.find(
+    (entry) => String(getName(entry) ?? '').toLowerCase() === lowerText
+  );
+  const entry = match || toEntry(toTypedValue(text));
+  if (selectedEntry.value?.key !== entry.key) commitEntries([entry]);
+}
+
+let hasTypedDuringLoading = false;
+
+function scheduleTypedCommit(text) {
+  clearTimeout(typedCommitTimeout);
+  typedCommitTimeout = setTimeout(() => {
+    if (props.loading) hasTypedDuringLoading = true;
+    else commitTypedText(text);
+  }, queryDebounceValue.value);
+}
+
+watch(
+  () => props.loading,
+  (loading) => {
+    if (loading || !hasTypedDuringLoading) return;
+    hasTypedDuringLoading = false;
+    if (isPlainSearch.value) commitTypedText(finalQuery.value);
+  }
+);
+
 watch(
   finalQuery,
-  (value) => {
-    if (!isServerSide.value) return;
+  (value, oldValue) => {
+    if (silentQuery !== null) {
+      const isSilent = value === silentQuery;
+      silentQuery = null;
+      if (isSilent) return;
+    }
+    if (oldValue !== undefined && isPlainSearch.value) scheduleTypedCommit(value);
+    if (!searchesWhileTyping.value) return;
     if (value && isQueryTooShort.value) return;
     emitSearch(value);
   },
+  { immediate: true }
+);
+
+function setQueryWithoutSearch(value) {
+  const text = (value || '').trim();
+  if (text !== finalQuery.value) silentQuery = text;
+  query.value = value || null;
+}
+
+function syncQueryToValue(valueKey, oldValueKey) {
+  if (!isSearchKind.value) return;
+  // Without a value on the first run, keep an initial searchString
+  if (valueKey === null && oldValueKey === undefined) return;
+  const name = selectedEntry.value ? String(getName(selectedEntry.value) ?? '') : '';
+  // Same text in another case or with spaces around it (e.g. "dota 2 " for "Dota 2") is left as typed
+  if ((query.value || '').trim().toLowerCase() === name.toLowerCase()) return;
+  setQueryWithoutSearch(name);
+}
+
+// Only when the value itself changes; new items rebuild the entry and must not restore deleted text
+watch(
+  () =>
+    selectedEntry.value ? `${selectedEntry.value.key}\n${getName(selectedEntry.value)}` : null,
+  syncQueryToValue,
   { immediate: true }
 );
 
@@ -303,12 +402,12 @@ function focusInput() {
 }
 
 function initSearchInput(shouldClear = true, shouldFocus = true) {
-  if (shouldClear) query.value = null;
+  if (shouldClear && !isSearchKind.value) query.value = null;
   if (shouldFocus) refQuery.value?.focus();
 }
 
 function openMenu(shouldClear = true, shouldFocus = true) {
-  if (props.disabled || menuOpen.value) return;
+  if (props.disabled || menuOpen.value || isPlainSearch.value) return;
   panelWidth.value = refContainer.value?.offsetWidth;
   menuOpen.value = true;
   nextTick(() => initSearchInput(shouldClear, shouldFocus));
@@ -318,7 +417,7 @@ function resetMenuState() {
   menuOpen.value = false;
   highlightedKey.value = null;
   tapStage.value = 0;
-  query.value = null;
+  if (!isSearchKind.value) query.value = null;
 }
 
 function closeMenu() {
@@ -335,11 +434,15 @@ onClickOutside(refRoot, closeOnClickOutside, { ignore: ['#poppers'] });
 
 function closeOnEsc() {
   menuOpen.value = false;
-  query.value = null;
+  if (!isSearchKind.value) query.value = null;
   focusInput();
 }
 
 function toggleMenu(e) {
+  if (isPlainSearch.value) {
+    refQuery.value?.focus();
+    return;
+  }
   const isInput = e.target?.id === props.id;
   const waitsForQuery =
     props.queryMinLength > 0 && isServerSide.value && itemEntries.value.length === 0;
@@ -362,18 +465,48 @@ function toggleMenu(e) {
   }
 }
 
+const isInputFocused = ref(false);
+
 function handleFocusOut(e) {
+  isInputFocused.value = false;
   if (!refListbox.value?.contains(e.relatedTarget)) menuOpen.value = false;
 }
 
 function clear() {
   commitEntries([]);
+  if (isSearchKind.value) {
+    setQueryWithoutSearch(null);
+    if (isServerSide.value) emitSearchNow('');
+  }
   if (!menuOpen.value) openMenu();
 }
 
 function selectSingle(entry) {
   commitEntries([entry]);
+  if (isSearchKind.value) launchSearch(String(getName(entry) ?? ''));
   closeMenu();
+}
+
+function confirmQuery() {
+  const text = finalQuery.value;
+  if (!text) {
+    if (menuOpen.value) closeMenu();
+    else openMenu(false);
+    return;
+  }
+  const sameName = (entry) => String(getName(entry) ?? '').toLowerCase() === text.toLowerCase();
+  const match = [selectedEntry.value, ...itemEntries.value].find(
+    (entry) => entry && sameName(entry)
+  );
+  commitEntries([match || toEntry(toTypedValue(text))]);
+  launchSearch(text);
+  closeMenu();
+}
+
+function confirmPlainSearch() {
+  clearTimeout(typedCommitTimeout);
+  commitTypedText(finalQuery.value);
+  launchSearch(finalQuery.value);
 }
 
 function toggleMultiple(entry) {
@@ -452,6 +585,10 @@ watch(highlightedKey, (key) => {
 function handleEnterSelection() {
   if (props.loading) return;
   let key = highlightedKey.value;
+  if ((!key && isSearchKind.value) || key === SEARCH_FOR_KEY) {
+    confirmQuery();
+    return;
+  }
   if (!key && filteredEntries.value.length > 0 && finalQuery.value) {
     key = filteredEntries.value[0].key;
   }
@@ -472,15 +609,17 @@ function onEnter() {
     openMenu();
     return;
   }
-  if (!menuOpen.value) {
+  if (isPlainSearch.value) {
+    if (!props.loading) confirmPlainSearch();
+    return;
+  }
+  if (!menuOpen.value && !isSearchKind.value) {
     openMenu();
     return;
   }
   if (props.loading) return;
   handleEnterSelection();
-  if (!highlightedKey.value && !isMultiple.value) {
-    closeMenu();
-  }
+  if (!highlightedKey.value && !isMultiple.value && !isSearchKind.value) closeMenu();
 }
 
 function handleShiftArrow(inputElement, direction) {
@@ -509,7 +648,8 @@ function handleKeydown(e) {
     (isPrintableChar || ['Backspace', 'Delete'].includes(e.key))
   ) {
     if (!menuOpen.value) openMenu();
-    if (hasValue.value && !isMultiple.value) clear();
+    // kind 'search' keeps its value until the typed text is committed
+    if (hasValue.value && !isMultiple.value && !isSearchKind.value) clear();
     highlightedKey.value = null;
   }
 }
@@ -526,25 +666,36 @@ function openDetails() {
 }
 
 const icon = computed(() => {
+  if (isSearchKind.value) return 'search';
   if (!isServerSide.value) return 'chevron-down';
   return props.hasDetails ? 'search-details' : 'search';
 });
 
-const shouldShowPlaceholder = computed(() => !hasValue.value && !query.value && !menuOpen.value);
-const shouldShowValue = computed(() => hasValue.value && !menuOpen.value && !query.value);
-const shouldShowInputPlaceholder = computed(() => !query.value && menuOpen.value);
+const shouldShowPlaceholder = computed(
+  () => !isSearchKind.value && !hasValue.value && !query.value && !menuOpen.value
+);
+const slots = useSlots();
+const shouldShowValue = computed(() => {
+  if (!hasValue.value || menuOpen.value) return false;
+  if (!isSearchKind.value) return !query.value;
+  // kind 'search' keeps the value as input text; customItem or an icon is shown over it until focused
+  const hasValueDisplay = !!slots.customItem || !!getIcon(selectedEntry.value);
+  const name = String(getName(selectedEntry.value) ?? '').toLowerCase();
+  return hasValueDisplay && !isInputFocused.value && finalQuery.value.toLowerCase() === name;
+});
+const shouldShowInputPlaceholder = computed(
+  () => !query.value && (menuOpen.value || (isSearchKind.value && !shouldShowValue.value))
+);
 // The clear button takes the search icon's place once a value is selected
 const shouldShowIcon = computed(
   () => !props.hasDetails && !props.loading && (isMultiple.value || !hasValue.value)
 );
-const shouldShowDetailsBtn = computed(
-  () => props.hasDetails && !props.loading && (isMultiple.value || !hasValue.value)
-);
+const shouldShowDetailsBtn = computed(() => props.hasDetails && !props.loading);
 const shouldShowClearBtn = computed(() => !isMultiple.value && hasValue.value && !props.loading);
 
 const inputPlaceholder = computed(() => {
   if (!shouldShowInputPlaceholder.value) return null;
-  return hasValue.value ? selectedNames.value : props.placeholder;
+  return hasValue.value && !isSearchKind.value ? selectedNames.value : props.placeholder;
 });
 
 const displayTooltipItems = computed(() => {
@@ -593,10 +744,7 @@ function handleListSelectionChange(selectedIds) {
   }, 150);
 }
 
-watch(
-  () => props.selectionKind,
-  (kind) => emit('update:modelValue', kind === 'multiple' ? [] : null)
-);
+watch(isMultiple, (multiple) => emit('update:modelValue', multiple ? [] : null));
 
 const rowId = inject('rowId', ref(null));
 const labelledBy = computed(() => props.labelId || rowId.value);
@@ -615,8 +763,9 @@ const minLengthText = computed(() => {
 
 const showEmptyMessage = computed(
   () =>
+    !isSearchKind.value &&
     !!finalQuery.value &&
-    !(isServerSide.value && isQueryTooShort.value) &&
+    !(!filtersLocally.value && isQueryTooShort.value) &&
     !filteredEntries.value.length &&
     !props.loading &&
     !props.enableAdditionalText
@@ -624,10 +773,42 @@ const showEmptyMessage = computed(
 
 const showMinLengthMessage = computed(
   () =>
-    isServerSide.value &&
+    !filtersLocally.value &&
     isQueryTooShort.value &&
     !filteredEntries.value.length &&
     !props.enableAdditionalText
+);
+
+const hasPanelContent = computed(
+  () =>
+    !isSearchKind.value ||
+    filteredEntries.value.length > 0 ||
+    showSearchFor.value ||
+    props.enableAdditionalText
+);
+
+const isPanelVisible = computed(() => menuOpen.value && !props.loading && hasPanelContent.value);
+
+// Animate only when the list opens or closes, not when it hides and reappears around loading
+const hasPanelShown = ref(false);
+
+watch(
+  isPanelVisible,
+  (visible) => {
+    if (visible) hasPanelShown.value = true;
+  },
+  { flush: 'post' }
+);
+
+watch(menuOpen, (open) => {
+  if (!open) hasPanelShown.value = false;
+});
+const panelTransition = computed(() =>
+  menuOpen.value && hasPanelShown.value ? 'none' : 'appear-down'
+);
+
+const searchForText = computed(() =>
+  (displayTexts.value.searchFor || '').replace('{0}', finalQuery.value)
 );
 
 const autoCompleteState = computed(() => {
@@ -643,11 +824,18 @@ const autoCompleteQuery = computed(() => {
   return isQueryTooShort.value ? '' : finalQuery.value;
 });
 
-const dataState = computed(() => JSON.stringify({ readOnly: props.readOnly, mode: 'new' }));
+const dataState = computed(() =>
+  JSON.stringify({ readOnly: props.readOnly, mode: 'new', kind: props.kind })
+);
 
 function countDigits(number) {
   return number.toString().length;
 }
+
+onUnmounted(() => {
+  clearTimeout(typedCommitTimeout);
+  clearTimeout(selectionTimeout);
+});
 
 defineExpose({ autoCompleteState, autoCompleteQuery });
 </script>
@@ -683,6 +871,7 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
         class="lx-autocomplete-default"
         ref="refContainer"
         :class="[
+          { 'lx-autocomplete-search': isSearchKind },
           { 'lx-opened': menuOpen },
           { 'lx-invalid': invalid },
           { 'lx-disabled': disabled },
@@ -766,11 +955,15 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
                       :id="id"
                       v-model="query"
                       class="lx-text-input lx-value-picker-placeholder lx-input-area"
-                      role="combobox"
-                      aria-autocomplete="list"
-                      :aria-expanded="menuOpen"
-                      :aria-controls="`${id}-listbox`"
-                      aria-haspopup="listbox"
+                      :class="{
+                        'lx-search-input': isSearchKind,
+                        'lx-autocomplete-text-hidden': isSearchKind && shouldShowValue,
+                      }"
+                      :role="isPlainSearch ? 'searchbox' : 'combobox'"
+                      :aria-autocomplete="isPlainSearch ? null : 'list'"
+                      :aria-expanded="isPlainSearch ? null : isPanelVisible"
+                      :aria-controls="isPlainSearch ? null : `${id}-listbox`"
+                      :aria-haspopup="isPlainSearch ? null : 'listbox'"
                       :aria-activedescendant="
                         menuOpen && highlightedKey ? getItemId(highlightedKey) : undefined
                       "
@@ -784,8 +977,10 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
                       :aria-describedby="describedBy"
                       :aria-busy="loading"
                       :maxlength="queryMaxLength || null"
+                      :enterkeyhint="enterKeyHint"
                       :tabindex="disabled ? '-1' : '0'"
                       :disabled="disabled"
+                      @focus="isInputFocused = true"
                       @focusout="handleFocusOut"
                     />
 
@@ -856,7 +1051,7 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
                       v-if="shouldShowClearBtn"
                       :id="`${id}-clearButton`"
                       :disabled="disabled"
-                      icon="close"
+                      icon="clear"
                       kind="ghost"
                       variant="icon-only"
                       :label="displayTexts.clear"
@@ -866,6 +1061,7 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
                     <LxButton
                       v-if="shouldShowDetailsBtn"
                       :id="`${id}-detailsButton`"
+                      customClass="lx-autocomplete-details-button"
                       :disabled="disabled"
                       icon="search-details"
                       kind="ghost"
@@ -932,9 +1128,9 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
             >
               <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events -->
               <slot name="panel" @click="closeMenu()">
-                <transition name="appear-down">
+                <transition :name="panelTransition">
                   <div
-                    v-show="menuOpen && !loading"
+                    v-show="isPanelVisible"
                     class="lx-dropdown-panel lx-region-component"
                     :id="`${id}-listbox`"
                     role="listbox"
@@ -1053,6 +1249,32 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
                         customClass="lx-popover-item-checkmark"
                         value="tick"
                       />
+                    </div>
+
+                    <div
+                      v-if="showSearchFor"
+                      class="lx-autocomplete-search-for-wrapper"
+                      :class="{ 'lx-separated': filteredEntries.length > 0 }"
+                    >
+                      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events -->
+                      <div
+                        :id="getItemId(SEARCH_FOR_KEY)"
+                        class="lx-value-picker-item lx-popover-item-text-only lx-autocomplete-search-for"
+                        :class="{ 'lx-highlighted-item': highlightedKey === SEARCH_FOR_KEY }"
+                        tabindex="-1"
+                        role="option"
+                        :aria-selected="false"
+                        :title="searchForText"
+                        @click.prevent="confirmQuery"
+                        @focus="highlightedKey = SEARCH_FOR_KEY"
+                      >
+                        <div>
+                          <span class="lx-autocomplete-item-content">
+                            <LxIcon value="search" />
+                            <span>{{ searchForText }}</span>
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     <div v-if="showEmptyMessage" class="lx-empty lx-aligned-row">

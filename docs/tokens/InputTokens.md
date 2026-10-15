@@ -33,8 +33,8 @@ LxMarkdownTextArea, LxQrScanner, LxDrawPad and LxCamera are considered complex i
 | `--input-width-s`                   | 10.5rem                                                                     |
 | `--input-width-m`                   | auto                                                                        |
 | `--input-width-l`                   | 14rem                                                                       |
-| `--input-grid-areas`                | 'tag input invalid-icon icon button'                                        |
-| `--input-grid-template-columns`     | auto 1fr auto auto auto                                                     |
+| `--input-grid-areas`                | 'tag input invalid-icon icon button button-details'                         |
+| `--input-grid-template-columns`     | auto 1fr auto auto auto auto                                                |
 | `--input-icon-size`                 | `--icon-size-s`                                                             |
 | `--input-icon-indent-left`          | `--space-0`                                                                 |
 | `--input-icon-indent-right`         | `--input-icon-wrapper-width`                                                |

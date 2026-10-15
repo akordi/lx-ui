@@ -359,6 +359,284 @@ describe('useAutoCompleteSearch reactive options', () => {
   });
 });
 
+describe('LxAutoComplete mode="new" clear and details buttons', () => {
+  test('kind="default" shows both once a value is selected, clear first', () => {
+    mountNew({ modelValue: games[0], hasDetails: true });
+    const ids = wrapper.findAll('.lx-input-wrapper .lx-button').map((b) => b.attributes('id'));
+    expect(ids).toEqual(['ac-clearButton', 'ac-detailsButton']);
+  });
+
+  test('shows only the details button without a value', () => {
+    mountNew({ hasDetails: true });
+    const ids = wrapper.findAll('.lx-input-wrapper .lx-button').map((b) => b.attributes('id'));
+    expect(ids).toEqual(['ac-detailsButton']);
+  });
+});
+
+describe('LxAutoComplete mode="new" kind="search"', () => {
+  function mountSearch(props = {}, options = {}) {
+    return mountNew({ kind: 'search', queryDebounce: 0, ...props }, options);
+  }
+
+  async function type(text) {
+    const input = wrapper.find('input');
+    input.element.focus();
+    await input.trigger('keydown', { key: text.at(-1) || 'Backspace' });
+    await input.setValue(text);
+    await nextTick();
+  }
+
+  async function typeAndEnter(text) {
+    await type(text);
+    await wrapper.find('input').trigger('keydown', { key: 'Enter' });
+    await nextTick();
+  }
+
+  function searchForRow() {
+    return document.querySelector('#poppers .lx-autocomplete-search-for');
+  }
+
+  test('looks like a search field and shows the value as input text', () => {
+    mountSearch({ modelValue: games[0] });
+    expect(wrapper.find('input').element.value).toBe('Dishonored');
+    expect(wrapper.find('.lx-autocomplete-search').exists()).toBe(true);
+    expect(wrapper.find('.lx-value').exists()).toBe(false);
+  });
+
+  test('is single selection only', async () => {
+    mountSearch({ selectionKind: 'multiple', modelValue: games[0] });
+    expect(wrapper.find('input').element.value).toBe('Dishonored');
+    expect(wrapper.find('.lx-tag').exists()).toBe(false);
+    await openMenu();
+    expect(document.querySelector('#poppers .lx-checkbox')).toBeNull();
+  });
+
+  test('searchTrigger defaults to "confirm"', () => {
+    mountSearch();
+    expect(wrapper.findComponent({ name: 'AutoCompleteNew' }).props('searchTrigger')).toBe(
+      'confirm'
+    );
+  });
+
+  test('shows the clear and details buttons together once a value is selected', () => {
+    mountSearch({ modelValue: games[0], hasDetails: true });
+    const ids = wrapper.findAll('.lx-input-wrapper .lx-button').map((b) => b.attributes('id'));
+    expect(ids).toEqual(['ac-clearButton', 'ac-detailsButton']);
+  });
+
+  describe('enterkeyhint', () => {
+    test('is "search" in kind="search"', () => {
+      mountSearch();
+      expect(wrapper.find('input').attributes('enterkeyhint')).toBe('search');
+    });
+
+    test('is not set in kind="default"', () => {
+      mountNew();
+      expect(wrapper.find('input').attributes('enterkeyhint')).toBeUndefined();
+    });
+
+    test('enterKeyHint prop overrides it', () => {
+      mountSearch({ enterKeyHint: 'go' });
+      expect(wrapper.find('input').attributes('enterkeyhint')).toBe('go');
+    });
+  });
+
+  describe('searchTrigger="confirm"', () => {
+    test('typing filters the suggestions without changing the value or searching', async () => {
+      mountSearch({ onSearch: () => {} });
+      await type('cr');
+      expect(listItems().map(textOf)).toEqual(['Crysis', 'Meklēt "cr"']);
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+      expect(wrapper.emitted('search')).toBeUndefined();
+    });
+
+    test('Enter confirms typed text that is not in items as an item object and searches', async () => {
+      mountSearch({ onSearch: () => {} });
+      await typeAndEnter('Half-Life');
+      expect(lastModelValue()).toEqual({ id: 'Half-Life', name: 'Half-Life' });
+      expect(wrapper.emitted('search')).toEqual([['Half-Life']]);
+      expect(wrapper.find('.lx-autocomplete-default').classes()).not.toContain('lx-opened');
+    });
+
+    test('Enter confirms the item when the typed text is its name', async () => {
+      mountSearch();
+      await typeAndEnter('crysis');
+      expect(lastModelValue()).toEqual(games[1]);
+    });
+
+    test('picking an item sets it and searches with its name', async () => {
+      mountSearch({ onSearch: () => {} });
+      await openMenu();
+      listItems()[2].click();
+      await nextTick();
+      expect(lastModelValue()).toEqual(games[2]);
+      expect(wrapper.emitted('search')).toEqual([['Dota 2']]);
+    });
+
+    test('the "Search for" row confirms the typed text and searches', async () => {
+      mountSearch({ onSearch: () => {} });
+      await type('blablabla');
+      expect(listItems().map(textOf)).toEqual(['Meklēt "blablabla"']);
+      searchForRow().click();
+      await nextTick();
+      expect(lastModelValue()).toEqual({ id: 'blablabla', name: 'blablabla' });
+      expect(wrapper.emitted('search')).toEqual([['blablabla']]);
+    });
+
+    test('the "Search for" row is separated only when other items are listed', async () => {
+      mountSearch();
+      await type('cr');
+      expect(
+        document.querySelector('#poppers .lx-autocomplete-search-for-wrapper').className
+      ).toContain('lx-separated');
+      await type('blablabla');
+      expect(
+        document.querySelector('#poppers .lx-autocomplete-search-for-wrapper').className
+      ).not.toContain('lx-separated');
+    });
+
+    test('shows the selected value with customItem until the field is focused', async () => {
+      mountSearch(
+        { modelValue: games[1] },
+        { slots: { customItem: '<b class="custom">{{ params.item.name }}</b>' } }
+      );
+      expect(wrapper.find('.lx-value .custom').text()).toBe('Crysis');
+      expect(wrapper.find('input').classes()).toContain('lx-autocomplete-text-hidden');
+      await wrapper.find('input').trigger('focus');
+      expect(wrapper.find('.lx-value').exists()).toBe(false);
+      expect(wrapper.find('input').element.value).toBe('Crysis');
+    });
+
+    test('shows the icon of the selected value until the field is focused', async () => {
+      mountSearch({ modelValue: games[2] });
+      expect(wrapper.find('.lx-value .lx-autocomplete-item-content').exists()).toBe(true);
+    });
+
+    test('uses idAttribute and nameAttribute for typed text', async () => {
+      mountSearch({ items: [], idAttribute: 'code', nameAttribute: 'title' });
+      await typeAndEnter('Half-Life');
+      expect(lastModelValue()).toEqual({ code: 'Half-Life', title: 'Half-Life' });
+    });
+
+    test('keeps typed text a string when items are strings', async () => {
+      mountSearch({ items: ['Dishonored', 'Crysis'] });
+      await typeAndEnter('Half-Life');
+      expect(lastModelValue()).toBe('Half-Life');
+    });
+
+    test('Enter on an empty field only opens and closes the list', async () => {
+      mountSearch();
+      const input = wrapper.find('input');
+      const container = () => wrapper.find('.lx-autocomplete-default').classes();
+
+      await input.trigger('keydown', { key: 'Enter' });
+      expect(container()).toContain('lx-opened');
+      await input.trigger('keydown', { key: 'Enter' });
+      expect(container()).not.toContain('lx-opened');
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    });
+
+    test('aria-expanded follows the visible list', async () => {
+      mountSearch({ items: [] });
+      await openMenu();
+      expect(wrapper.find('input').attributes('aria-expanded')).toBe('false');
+      await type('x');
+      expect(wrapper.find('input').attributes('aria-expanded')).toBe('true');
+    });
+
+    test('clearing empties the text and searches with an empty query', async () => {
+      mountSearch({ onSearch: () => {} });
+      await typeAndEnter('dota');
+      await wrapper.setProps({ modelValue: lastModelValue() });
+      await wrapper.find('#ac-clearButton').trigger('click');
+      expect(lastModelValue()).toBeNull();
+      expect(wrapper.find('input').element.value).toBe('');
+      expect(wrapper.emitted('search')).toEqual([['dota'], ['']]);
+    });
+  });
+
+  describe('searchTrigger="input"', () => {
+    function mountPlain(props = {}) {
+      return mountSearch({ searchTrigger: 'input', queryDebounce: 100, ...props });
+    }
+
+    test('is a plain search field without a list', async () => {
+      vi.useFakeTimers();
+      mountPlain();
+      await openMenu();
+      await type('cr');
+      expect(wrapper.find('.lx-autocomplete-default').classes()).not.toContain('lx-opened');
+      expect(listItems()).toEqual([]);
+      expect(wrapper.find('input').attributes('role')).toBe('searchbox');
+    });
+
+    test('sets the value and searches while typing', async () => {
+      vi.useFakeTimers();
+      mountPlain({ onSearch: () => {} });
+      await type('dot');
+      vi.advanceTimersByTime(100);
+      await nextTick();
+      expect(lastModelValue()).toEqual({ id: 'dot', name: 'dot' });
+      expect(wrapper.emitted('search')).toEqual([['dot']]);
+      await wrapper.setProps({ modelValue: lastModelValue() });
+
+      await type('');
+      vi.advanceTimersByTime(100);
+      await nextTick();
+      expect(lastModelValue()).toBeNull();
+      expect(wrapper.emitted('search')).toEqual([['dot'], ['']]);
+    });
+
+    test('Enter sets the value and searches right away', async () => {
+      vi.useFakeTimers();
+      mountPlain({ onSearch: () => {} });
+      await typeAndEnter('dot');
+      expect(lastModelValue()).toEqual({ id: 'dot', name: 'dot' });
+      expect(wrapper.emitted('search')).toEqual([['dot']]);
+
+      vi.advanceTimersByTime(100);
+      await nextTick();
+      expect(wrapper.emitted('search')).toEqual([['dot']]);
+      expect(wrapper.emitted('update:modelValue')).toHaveLength(1);
+    });
+
+    test('keeps spaces at the end while typing more than one word', async () => {
+      vi.useFakeTimers();
+      mountPlain({ onSearch: () => {} });
+      await type('half ');
+      vi.advanceTimersByTime(100);
+      await wrapper.setProps({ modelValue: lastModelValue() });
+      expect(lastModelValue()).toEqual({ id: 'half', name: 'half' });
+      expect(wrapper.find('input').element.value).toBe('half ');
+    });
+
+    test('deleted text is not restored when new items arrive', async () => {
+      vi.useFakeTimers();
+      mountPlain({ onSearch: () => {} });
+      await type('d');
+      vi.advanceTimersByTime(100);
+      await wrapper.setProps({ modelValue: lastModelValue() });
+      expect(wrapper.find('input').element.value).toBe('d');
+
+      await type('');
+      await wrapper.setProps({ items: [] });
+      await flushPromises();
+      expect(wrapper.find('input').element.value).toBe('');
+    });
+
+    test('pending typed text is not committed after unmount', async () => {
+      vi.useFakeTimers();
+      mountPlain();
+      await type('dot');
+      const emitted = wrapper.emitted();
+      wrapper.unmount();
+      wrapper = null;
+      vi.advanceTimersByTime(100);
+      expect(emitted['update:modelValue']).toBeUndefined();
+    });
+  });
+});
+
 describe('useAutoCompleteSearch searchString', () => {
   test('a restored searchString is shown, searched once and follows typing', async () => {
     vi.useFakeTimers();
@@ -378,8 +656,36 @@ describe('useAutoCompleteSearch searchString', () => {
   });
 });
 
+describe('LxAutoComplete mode="new" with @search before a search', () => {
+  test('lists the selected value when reopened without results', async () => {
+    mountNew({ onSearch: () => {}, items: [], queryMinLength: 1, modelValue: games[1] });
+    await openMenu();
+    expect(listItems().map(textOf)).toEqual(['Crysis']);
+    expect(document.querySelector('#poppers .lx-empty')).toBeNull();
+  });
+
+  test('lists the selected values first, then the items, in multiple selection', async () => {
+    mountNew({
+      onSearch: () => {},
+      items: [games[0]],
+      selectionKind: 'multiple',
+      modelValue: [games[1], games[0]],
+    });
+    await openMenu();
+    const labels = listItems().map((el) => textOf(el.querySelector('.lx-checkbox-text-wrapper')));
+    expect(labels).toEqual(['Crysis', 'Dishonored']);
+  });
+
+  test('shows only the results once a search runs', async () => {
+    mountNew({ onSearch: () => {}, items: [games[2]], modelValue: games[1] });
+    await openMenu();
+    await wrapper.find('input').setValue('dot');
+    expect(listItems().map(textOf)).toEqual(['Dota 2']);
+  });
+});
+
 describe('LxAutoComplete mode="new" searchString', () => {
-  test('shows and searches an initial searchString', async () => {
+  test('kind="default" shows and searches an initial searchString', async () => {
     vi.useFakeTimers();
     mountNew({ onSearch: () => {}, searchString: 'dis', queryDebounce: 100 });
     expect(wrapper.find('input').element.value).toBe('dis');
@@ -387,6 +693,35 @@ describe('LxAutoComplete mode="new" searchString', () => {
     await nextTick();
     expect(wrapper.emitted('search')).toEqual([['dis']]);
     expect(wrapper.emitted('update:searchString')).toBeUndefined();
+  });
+
+  test('kind="search" shows an initial searchString and searches it with searchTrigger="input"', async () => {
+    vi.useFakeTimers();
+    mountNew({
+      kind: 'search',
+      searchTrigger: 'input',
+      onSearch: () => {},
+      searchString: 'dis',
+      queryDebounce: 100,
+    });
+    expect(wrapper.find('input').element.value).toBe('dis');
+    vi.advanceTimersByTime(100);
+    await nextTick();
+    expect(wrapper.emitted('search')).toEqual([['dis']]);
+  });
+
+  test('kind="search" with searchTrigger="confirm" does not search an initial searchString', async () => {
+    vi.useFakeTimers();
+    mountNew({
+      kind: 'search',
+      searchTrigger: 'confirm',
+      onSearch: () => {},
+      searchString: 'dis',
+      queryDebounce: 100,
+    });
+    vi.advanceTimersByTime(100);
+    await nextTick();
+    expect(wrapper.emitted('search')).toBeUndefined();
   });
 
   test('follows searchString changes from outside and reports typing', async () => {
@@ -436,11 +771,42 @@ describe('LxAutoComplete builder registry', () => {
 });
 
 describe('LxAutoComplete mode="new" while loading', () => {
-  test('Enter does not pick from the hidden list', async () => {
+  test('kind="default": Enter does not pick from the hidden list', async () => {
     mountNew({ loading: true });
     await openMenu();
     await wrapper.find('input').setValue('cry');
     await wrapper.find('input').trigger('keydown', { key: 'Enter' });
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+  });
+
+  test('kind="search": typing and Enter do not change the value', async () => {
+    vi.useFakeTimers();
+    mountNew({
+      kind: 'search',
+      searchTrigger: 'input',
+      onSearch: () => {},
+      loading: true,
+      queryDebounce: 100,
+    });
+    await wrapper.find('input').setValue('cry');
+    vi.advanceTimersByTime(100);
+    await nextTick();
+    await wrapper.find('input').trigger('keydown', { key: 'Enter' });
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    // Only the search from typing; Enter does nothing while loading
+    expect(wrapper.emitted('search')).toEqual([['cry']]);
+  });
+
+  test('kind="search": text typed while loading is committed once loading ends', async () => {
+    vi.useFakeTimers();
+    mountNew({ kind: 'search', searchTrigger: 'input', loading: true, queryDebounce: 100 });
+    await wrapper.find('input').setValue('cry');
+    vi.advanceTimersByTime(100);
+    await nextTick();
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+
+    await wrapper.setProps({ loading: false });
+    expect(lastModelValue()).toEqual({ id: 'cry', name: 'cry' });
+    expect(wrapper.find('input').element.value).toBe('cry');
   });
 });

@@ -1845,7 +1845,8 @@ h2.lx-section-header + p.lx-invalidation-message,
   margin-top: initial;
 }
 
-.lx-autocomplete-default:not(.lx-opened):not(:has(.lx-placeholder)) .lx-text-input {
+.lx-autocomplete-default:not(.lx-opened):not(.lx-autocomplete-search):not(:has(.lx-placeholder))
+  .lx-text-input {
   caret-color: transparent;
 }
 
@@ -1873,12 +1874,24 @@ h2.lx-section-header + p.lx-invalidation-message,
   cursor: not-allowed;
 }
 
+.lx .lx-input-wrapper > .lx-button.lx-autocomplete-details-button {
+  grid-area: button-details;
+}
+
+.lx .lx-autocomplete-search .lx-text-input.lx-autocomplete-text-hidden {
+  color: transparent;
+}
+
+.lx .lx-autocomplete-search .lx-modifier-icon {
+  fill: var(--color-input-icon);
+}
+
 .lx-autocomplete-default .lx-autocomplete .lx-value .lx-item-display {
   overflow: hidden;
 }
 
 .lx .lx-input-wrapper .lx-value .lx-autocomplete-item-content > svg {
-  fill: var(--color-input-icon);
+  fill: var(--color-data);
 }
 
 .lx .lx-input-wrapper.lx-disabled .lx-value .lx-autocomplete-item-content > svg {

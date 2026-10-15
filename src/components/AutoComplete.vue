@@ -63,6 +63,21 @@ const props = defineProps({
   }, // 'simple' or 'detailed'
   // mode 'new' only. The @search listener: with it the parent searches and items are shown as given
   onSearch: { type: Function, default: null },
+  kind: {
+    type: String,
+    default: 'default',
+    options: ['default', 'search'],
+    group: 'main',
+    sequence: 0,
+  }, // mode 'new' only. 'default' - pick from items; 'search' - search field that also accepts typed text (single selection only)
+  searchTrigger: {
+    type: String,
+    default: 'confirm',
+    options: ['confirm', 'input'],
+    group: 'additional',
+    sequence: 6,
+  }, // mode 'new', kind 'search' only. 'confirm' - suggestions list, search on Enter or pick; 'input' - plain field, search while typing
+  enterKeyHint: { type: String, default: null }, // mode 'new' only. Defaults to 'search' in kind 'search'
   preloadedItems: { type: Array, default: null }, // mode 'legacy' only. Used for preloading items if items is a function and there is need to show items before user starts typing
   labelId: { type: String, default: null },
   hasSelectAll: { type: Boolean, default: false, group: 'main', sequence: 2 },
@@ -86,7 +101,7 @@ const emit = defineEmits(['update:modelValue', 'openDetails', 'update:searchStri
 // The legacy component is kept as it was, including its builder registration (builderOptions);
 // mode 'new' is not registered until legacy is removed
 const legacyOnlyProps = ['preloadedItems', 'builderOptions'];
-const newOnlyProps = ['iconAttribute', 'valueSeparator'];
+const newOnlyProps = ['iconAttribute', 'kind', 'searchTrigger', 'enterKeyHint', 'valueSeparator'];
 
 const innerProps = computed(() => {
   // onSearch is passed on as a listener below
@@ -100,7 +115,6 @@ const innerListeners = computed(() => {
     'update:searchString': (value) => emit('update:searchString', value),
     openDetails: (id) => emit('openDetails', id),
   };
-  // Only when @search is listened to, as that makes the new component search server side
   if (props.mode === 'new' && props.onSearch) listeners.search = (query) => emit('search', query);
   return listeners;
 });
