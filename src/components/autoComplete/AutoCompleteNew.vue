@@ -41,6 +41,7 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   hasDetails: { type: Boolean, default: false },
   selectionKind: { type: String, default: 'single' }, // 'single' || 'multiple'
+  tabindex: { type: [Number, String], default: 0 },
   valueSeparator: { type: String, default: 'comma' }, // 'comma' || 'slash' || 'arrow' || 'dash' || 'dot' || 'pipe'
   detailMode: { type: String, default: 'simple' }, // 'simple' || 'detailed'
   // Declared as a prop only to know whether @search is listened to; emit('search') still calls it
@@ -978,7 +979,7 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
                       :aria-busy="loading"
                       :maxlength="queryMaxLength || null"
                       :enterkeyhint="enterKeyHint"
-                      :tabindex="disabled ? '-1' : '0'"
+                      :tabindex="disabled ? '-1' : tabindex"
                       :disabled="disabled"
                       @focus="isInputFocused = true"
                       @focusout="handleFocusOut"
@@ -1055,6 +1056,7 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
                       kind="ghost"
                       variant="icon-only"
                       :label="displayTexts.clear"
+                      :tabindex="tabindex"
                       @click="clear"
                     />
 
@@ -1067,6 +1069,7 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
                       kind="ghost"
                       variant="icon-only"
                       :label="displayTexts.detailsButton"
+                      :tabindex="tabindex"
                       @keydown.space.stop.prevent="openDetails"
                       @keydown.f3.stop.prevent="openDetails"
                       @click.stop.prevent="openDetails"

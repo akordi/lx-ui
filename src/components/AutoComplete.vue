@@ -54,6 +54,7 @@ const props = defineProps({
     group: 'additional',
     sequence: 7,
   }, // mode 'new' only. Separator between selected names with selectionKind 'multiple'
+  tabindex: { type: [Number, String], default: 0 }, // mode 'new' only
   detailMode: {
     type: String,
     default: 'simple',
@@ -101,7 +102,14 @@ const emit = defineEmits(['update:modelValue', 'openDetails', 'update:searchStri
 // The legacy component is kept as it was, including its builder registration (builderOptions);
 // mode 'new' is not registered until legacy is removed
 const legacyOnlyProps = ['preloadedItems', 'builderOptions'];
-const newOnlyProps = ['iconAttribute', 'kind', 'searchTrigger', 'enterKeyHint', 'valueSeparator'];
+const newOnlyProps = [
+  'iconAttribute',
+  'kind',
+  'searchTrigger',
+  'enterKeyHint',
+  'valueSeparator',
+  'tabindex',
+];
 
 const innerProps = computed(() => {
   // onSearch is passed on as a listener below

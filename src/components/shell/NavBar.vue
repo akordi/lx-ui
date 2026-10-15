@@ -7,9 +7,13 @@ import LxButton from '@/components/Button.vue';
 import LxHeaderButtons from '@/components/shell/HeaderButtons.vue';
 import { getDisplayTexts } from '@/utils/generalUtils';
 import { generateUUID } from '@/utils/stringUtils';
+import { useGlobalSearchPlacement } from '@/components/shell/shellContext';
 import LxDropDownMenu from '@/components/DropDownMenu.vue';
 
 const LxMegaMenu = defineAsyncComponent(() => import('@/components/shell/MegaMenu.vue'));
+const LxGlobalSearchInput = defineAsyncComponent(() =>
+  import('@/components/shell/GlobalSearchInput.vue')
+);
 
 const props = defineProps({
   navItems: {
@@ -95,6 +99,7 @@ const textsDefault = {
 const displayTexts = computed(() => getDisplayTexts(props.texts, textsDefault, 'LxShell'));
 
 const width = ref(useWindowSize().width);
+const { inNav: hasGlobalSearch } = useGlobalSearchPlacement();
 const insideNavBar = ref(true);
 const nestedNavOpen = ref({});
 const dropdownRefs = ref([]);
@@ -354,6 +359,13 @@ provide('insideNavBar', insideNavBar);
     :tabindex="-1"
     @pointerleave="closeNestedNavsOnLeave"
   >
+    <div v-if="hasGlobalSearch && !navBarHidden" class="lx-nav-global-search">
+      <LxGlobalSearchInput
+        id="lx-shell-nav-global-search-input"
+        :tabindex="getTabIndex"
+        @select="emits('nav-toggle', true)"
+      />
+    </div>
     <ul class="lx-nav-group">
       <li
         v-for="(item, index) in (props.layoutMode === 'public' ||
