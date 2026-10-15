@@ -789,6 +789,18 @@
   transition: padding-top 0.4s ease-in-out;
 }
 
+.lx:not(.lx-no-animations) .lx-data-visualizer .lx-gauge-chart .lx-ring-path {
+  transition: stroke 0.2s ease;
+}
+
+.lx:not(.lx-no-animations) .lx-data-visualizer .lx-line-point {
+  transition: fill 0.2s ease;
+}
+
+.lx:not(.lx-no-animations) .lx-data-visualizer .lx-ring-path {
+  transition: fill 0.2s ease, opacity 0.2s ease;
+}
+
 .lx:not(.lx-no-animations) .primary-menu-tile,
 .lx:not(.lx-no-animations) .secondary-menu-item {
   transition: background-color 0.1s ease-in, color 0.1s ease-in, border-color 0.1s ease-in;
