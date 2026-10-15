@@ -42,7 +42,6 @@ const props = defineProps({
   /**
    * The unique identifier for the row.
    *
-   * @type {String}
    * @default generateUUID()
    * @since 0.1.63
    */
@@ -53,7 +52,6 @@ const props = defineProps({
   /**
    * The label for the row.
    *
-   * @type {String}
    * @default ''
    * @since 0.1.63
    */
@@ -66,7 +64,6 @@ const props = defineProps({
   /**
    * Description of the component.
    *
-   * @type {String}
    * @default ''
    * @since 0.1.63
    */
@@ -76,7 +73,6 @@ const props = defineProps({
   },
   /**
    * Determines whether the label should be hidden.
-   * @type {boolean}
    * @default false
    * @since 0.1.63
    */
@@ -86,7 +82,6 @@ const props = defineProps({
   },
   /**
    * The number of columns the row should take up.
-   * @type {Number|String}
    * @default 1
    * @since 0.1.63
    */
@@ -99,7 +94,6 @@ const props = defineProps({
   },
   /**
    * The number of rows that the component should take up.
-   * @type {Number|String}
    * @default 1
    * @since 0.1.63
    */
@@ -112,7 +106,6 @@ const props = defineProps({
   },
   /**
    * The orientation of the row.
-   * @type {String}
    * @default null
    * @since 0.1.63
    */
@@ -123,21 +116,18 @@ const props = defineProps({
   },
   /**
    * Determines whether the row is required.
-   * @type {Boolean}
    * @default null
    * @since 0.3.11
    */
   required: { type: Boolean, default: null },
   /**
    * The unique identifier for the input element.
-   * @type {String}
    * @default null
    * @since 0.4.0
    */
   inputId: { type: String, default: null },
   /**
    * The action definitions for the row.
-   * @type {Array}
    * @default []
    * @since 1.5.0
    */
@@ -264,7 +254,7 @@ if (props.builderOptions.useRegistry) {
     ]"
   >
     <div v-if="showHeaderWithoutInfo" class="lx-row-header">
-      <label :title="!$slots.info ? tooltip : ''" :for="inputId" v-if="!hideLabel" :id="id">
+      <label v-tooltip="!$slots.info ? tooltip : ''" :for="inputId" v-if="!hideLabel" :id="id">
         {{ label ? label : '&nbsp;' }}
         <span class="lx-required" v-if="rowRequiredMode === 'required' && required && !hideLabel">
           {{ requiredTexts.required }}
@@ -339,7 +329,7 @@ if (props.builderOptions.useRegistry) {
 
     <div v-if="showHeaderWithInfo" class="lx-row-header">
       <LxInfoWrapper class="lx-info-slot-wrapper" placement="right" v-if="!hideLabel">
-        <label :title="!$slots.info ? tooltip : ''" :for="inputId" :id="id">
+        <label v-tooltip="!$slots.info ? tooltip : ''" :for="inputId" :id="id">
           {{ label ? label : '&nbsp;' }}
           <span class="lx-required" v-if="rowRequiredMode === 'required' && required && !hideLabel">
             {{ requiredTexts.required }}

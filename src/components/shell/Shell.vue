@@ -92,6 +92,9 @@ const emits = defineEmits([
   'customButtonClick',
   'spotlightShowMore',
   'settingsClick',
+  'globalSearch',
+  'globalSearchItemClick',
+  'globalSearchDetailsClick',
 ]);
 
 const props = defineProps({
@@ -198,6 +201,10 @@ const props = defineProps({
   spotlightHasShowMore: { type: Boolean, default: false },
   spotlightHasBadge: { type: Boolean, default: true },
 
+  hasGlobalSearch: { type: Boolean, default: false },
+  globalSearchItems: { type: Array, default: () => [] }, // id, name, href, icon, iconSet
+  globalSearchLoading: { type: Boolean, default: false },
+
   texts: { type: Object, default: () => ({}) },
 });
 
@@ -293,6 +300,14 @@ const textsDefault = {
     back: 'Atpakaļ',
     showMore: 'Uzzināt vairāk',
     of: 'no',
+  },
+  globalSearch: {
+    open: 'Atvērt meklētāju',
+    close: 'Aizvērt meklētāju',
+    placeholder: 'Ievadiet nosaukuma vai apraksta daļu, lai sameklētu ierakstus',
+    hint: 'Meklējiet ierakstus visā sistēmā pēc nosaukuma vai atslēgvārda',
+    notFound: 'Nav atrasti rezultāti, kas saturētu tekstu',
+    details: 'Izvērstā meklēšana',
   },
   idleBadge: {
     minutesSingular: 'minūtes',
@@ -953,6 +968,15 @@ const navOverlayWidthBreakpoint = computed(() =>
     : MOBILE_NAV_OVERLAY_WIDTH_BREAKPOINT
 );
 
+const NAV_BAR_MODES = new Set(['default', 'full-screen', 'public', 'latvijalv']);
+
+const globalSearchCanMoveToNav = computed(
+  () => props.hasGlobalSearch && !props.hideNavBar && NAV_BAR_MODES.has(resolvedMode.value)
+);
+const globalSearchInNav = computed(
+  () => globalSearchCanMoveToNav.value && headerButtonsVisibility.value?.globalSearch === false
+);
+
 const navHiddenWidthBreakpoint = computed(() =>
   WIDE_COLLAPSE_MODES.has(resolvedMode.value)
     ? MOBILE_NAV_HIDDEN_WIDTH_BREAKPOINT_WIDE
@@ -1009,7 +1033,10 @@ watch(navBarSwitchModel, (isCollapsed, wasCollapsed) => {
     width.value <= NAV_TOGGLE_MENU_WIDTH_BREAKPOINT;
 
   if (shouldFocus) {
-    nextTick(() => focusFirstElementInContainer(nav.value));
+    nextTick(() => {
+      if (globalSearchInNav.value) nav.value?.querySelector('.lx-nav-panel')?.focus();
+      else focusFirstElementInContainer(nav.value);
+    });
   }
 });
 
@@ -1354,6 +1381,9 @@ function handleSettingsClick() {
 provide(shellContextKey, {
   props,
   width,
+  navHiddenWidthBreakpoint,
+  globalSearchCanMoveToNav,
+  globalSearchInNav,
   shell,
   header,
   main,

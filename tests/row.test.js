@@ -66,7 +66,7 @@ test('LxRow description', () => {
     },
   });
 
-  const title = wrapper.find('.lx-row').find('label').attributes('title');
+  const title = wrapper.find('.lx-row').find('label').attributes('data-lx-tooltip');
   expect(title).toBe('Label\nDescription');
 });
 
@@ -462,21 +462,22 @@ test('LxRow inputId', () => {
   expect(rowLabel.attributes('for')).toBe('one');
 });
 
-// ReferenceError: regeneratorRuntime is not defined
-// test('LxRow info slot', () => {
-//   expect(LxRow).toBeTruthy();
+test('LxRow info slot', () => {
+  expect(LxRow).toBeTruthy();
 
-//   wrapper = mount(LxForm, {
-//     slots: {
-//       default: h(LxRow, { label: 'Name' }, { default: () => '22', info: () => 'aaa' }),
-//     },
-//     global: {
-//       components: {
-//         LxRow,
-//       },
-//     },
-//   });
-// });
+  wrapper = mount(LxForm, {
+    slots: {
+      default: h(LxRow, { label: 'Name' }, { default: () => '22', info: () => 'aaa' }),
+    },
+    global: {
+      components: {
+        LxRow,
+      },
+    },
+  });
+
+  expect(wrapper.find('.lx-info-slot-wrapper').exists()).toBe(true);
+});
 
 test('LxRow aria-required on the input', () => {
   expect(LxRow).toBeTruthy();

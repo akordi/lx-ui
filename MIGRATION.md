@@ -4,6 +4,197 @@ As LX/UI evolves, some features are refined, simplified, or replaced by better a
 
 Our goal is to make upgrading predictable, transparent, and worth the effort.
 
+## Upcoming changes
+
+These changes are available now as opt-in. The old behaviour will be deprecated and later removed, so
+plan the migration ahead.
+
+### LxAutoComplete: object-based `mode="new"`
+
+> **Warning:** LxAutoComplete has a new implementation that works with objects instead of ids. It is
+> opt-in for now via `mode="new"`; `mode="legacy"` (the default) will be deprecated and removed in a
+> future release, together with `preloadedItems` and function `items`.
+
+The `mode` prop picks the implementation:
+
+- `legacy` (default) — the current component, unchanged.
+- `new` — `v-model` holds the selected object (or an array of objects for `selectionKind="multiple"`),
+  not its id.
+
+```js
+// legacy
+model.value = 'mt';
+// new
+model.value = { id: 'mt', name: 'Dishonored' };
+```
+
+What changes in `mode="new"`:
+
+- **`v-model` and `items` hold objects.** The selected value carries its own name, so it is shown even
+  when it is not in `items`.
+- **Plain strings (and numbers) work too.** A string is shown as `{ id: value, name: value }` and
+  returned as the same string, so a simple string list needs no mapping. A string `v-model` value is
+  matched against object `items` by id to find its name.
+- **`preloadedItems` is gone.** Pass the items to show before typing through `items`.
+- **`items` must be an array.** Functions are not accepted; for async search, use
+  `useLxAutoCompleteSearch` (see below).
+- **Predefined items or your own search, decided by `@search` (kind `default`).** Without a `@search`
+  listener, `items` are filtered by the query. With one, you do the searching: `items` are shown as
+  given (your results) and `search` is emitted while typing (debounced by `queryDebounce`) so you can
+  load them. As in legacy, `queryMinLength` applies only when you search; predefined items are always
+  listed. Before a search (no text, or shorter than `queryMinLength`) the list also shows the selected
+  values first, so they can be seen and deselected when the list is reopened. Listening to `@search`
+  only to log it also stops the local filtering.
+- **One `customItem` template renders both the selected value and the list items.** Its slot props
+  are `{ item, context, selected, searchString }`, where `context` is `'value'` or `'item'`. Legacy
+  templates received the item fields spread (`#customItem="{ name }"`); in the new mode use
+  `#customItem="{ item }"` and `item.name`.
+- **New `kind` prop.** `default` picks a value from `items`. `search` is a search field that also
+  accepts typed text (see below).
+- **New `iconAttribute` prop** (default `'icon'`) shows an icon next to the item name: in the list
+  with the popover item icon tokens, and in the selected value with `--color-data`, like its text. Pass
+  `null` to turn it off.
+- **New `valueSeparator` prop** chooses the separator between the selected names with
+  `selectionKind="multiple"`: `comma` (default, `a, b`), `slash` (`a / b`), `arrow` (`a › b`),
+  `dash` (`a - b`), `dot` (`a · b`) or `pipe` (`a | b`). Other values fall back to `comma`.
+- While `loading` is true the list is hidden and the value cannot change: `Enter` does nothing and, in
+  kind `search` with `searchTrigger="input"`, typed text is committed only once loading ends.
+- **The clear button uses the `clear` icon** (legacy used `close`). **With `hasDetails`, the details
+  button stays when a value is selected**, and the clear button appears to its left (legacy replaced
+  the details button with the clear button). For this `--input-grid-areas` and
+  `--input-grid-template-columns` get an extra `button-details` area, which other inputs leave empty.
+- `idAttribute`, `nameAttribute` and all other props keep working. `hasSelectAll` is ignored with
+  a `@search` listener.
+- `v-model:searchString` still sets and reports the typed text: `update:searchString` is emitted on
+  every change (also when the text is cleared), with or without `@search`. `search` is only for loading
+  results: debounced, and skipped for queries shorter than `queryMinLength`. With a `@search` listener
+  (in kind `search` only with `searchTrigger="input"`), an initial `searchString` is searched for right
+  away, as legacy did with function `items`.
+
+**Usage**
+
+```vue
+<LxAutoComplete mode="new" v-model="game" :items="games" />
+```
+
+**Async search**
+
+```vue
+<script setup>
+import { useLxAutoCompleteSearch } from '@dativa-lv/lx-ui';
+
+const { items, loading, search } = useLxAutoCompleteSearch((query) => api.searchGames(query), {
+  queryMinLength: 2,
+});
+</script>
+
+<template>
+  <LxAutoComplete
+    mode="new"
+    v-model="game"
+    :items="items"
+    :loading="loading"
+    :queryMinLength="2"
+    @search="search"
+  />
+</template>
+```
+
+`useLxAutoCompleteSearch` loads items on each `search` event and ignores responses that arrive after a
+newer request. Options: `queryMinLength`, `initialItems` (shown for shorter queries; both can be refs or
+getters) and `immediate` (fetch once for an empty query; on by default when `queryMinLength` is `0` and
+no `searchString` is given).
+
+Pass `searchString` (a value or a ref, e.g. restored from the URL) to start with that text: it is shown
+and searched for, and a ref follows what the user types. The helper returns it as `searchString` too.
+
+The helper is optional: any `items` array works together with `@search`. It also returns `bindings`, an
+optional shortcut for the props and listeners above, including `v-model:searchString`
+(`v-bind="gameSearch.bindings"`, where `gameSearch` is the helper's return value).
+
+**Search kind**
+
+`kind="search"` is a search field that also accepts text that is not in `items`. It is single
+selection only (`selectionKind="multiple"` is ignored), and the input gets `enterkeyhint="search"`
+(override it with the new `enterKeyHint` prop).
+
+- The value is shown as text in the input. With `customItem` or an item icon, the value is shown like
+  in kind `default` until the field is focused. Typed text that is not in `items` becomes a new item
+  `{ [idAttribute]: text, [nameAttribute]: text }` (a plain string when `items` are strings); text
+  that matches an item's name becomes that item.
+- `search` runs the search: `items` are suggestions and are always filtered locally by the typed text.
+- `searchTrigger` (kind `search` only) chooses how it works:
+  - `confirm` (default): typing filters the suggestions in the list, which ends with a
+    `Search for "…"` row (`texts.searchFor`), styled like "Select all" (with a divider when other items
+    are listed). `Enter`, picking an item or that row sets `v-model`, emits `search` (with the item's
+    name when an item is picked) and closes the list. Typing does not change `v-model`, and `Enter` on
+    an empty field only opens or closes the list.
+  - `input`: a plain search field without a list. While typing, after `queryDebounce`, `v-model` is set
+    to the text and `search` is emitted; `Enter` does both right away. Deleting the text sets `null`.
+- Once a value is selected, the clear button replaces the search icon. Clearing empties the text and,
+  if something was searched, emits `search` with an empty query.
+- The search icon uses `--color-input-icon`, and the field has the `lx-autocomplete-search` class.
+
+```vue
+<LxAutoComplete mode="new" kind="search" v-model="query" :items="suggestions" @search="runSearch" />
+```
+
+**Builders**
+
+`mode="new"` is not registered in the builder registry yet; `builderOptions` only applies to
+`mode="legacy"`, which registers as before. Registration moves to the new implementation when legacy
+is removed.
+
+**LxValuePicker**
+
+The `dropdown` and `dropdown-custom` variants with `hasSearch` now use `mode="new"` internally.
+LxValuePicker's own API does not change: `v-model` still holds ids (passed to LxAutoComplete as
+strings and matched against `items`) and `customItem` still receives the item fields spread. An id that
+is missing from `items` is now shown as the id instead of an empty field.
+
+**How to prepare**
+
+- Keep whole objects in your model instead of reducing selections to ids.
+- Don't add new usages of `preloadedItems` or function `items`.
+- Update `customItem` templates to the `{ item, context }` slot props when switching to `mode="new"`.
+
+## 2.3.7 → 2.3.8
+
+### Breaking changes
+
+#### LxFileUploader
+
+Uploaded file items now reuse the LxListItem structure and the LxList tokens (layout, text, icons,
+action buttons, hover and disabled colors) instead of their own styles. Both modes (default and compact)
+share one template.
+
+**Class changes**
+
+If you override the file item styles, update the selectors:
+
+| Removed                                     | Use instead                                                   |
+|---------------------------------------------|---------------------------------------------------------------|
+| `.compact-wrapper`                          | `.lx-file-upload-wrapper.compact .lx-file-wrapper`            |
+| `.lx-file-name-main-data-wrapper`           | `.lx-file-main-part > .lx-list-item > header`                 |
+| `.lx-file-name`                             | `.lx-file-name-wrapper > .lx-primary`                         |
+| `.lx-file-main-additional-info`             | `.lx-file-main-part > .lx-list-item > header > .lx-secondary` |
+| `.lx-download-icon`                         | `.lx-file-main-part .lx-list-icon-wrapper`                    |
+| `.lx-upload-buttons`                        | `.lx-file-main-part > .lx-list-item-actions`                  |
+| `.lx-file-indicators .lx-invalidation-icon` | `.lx-file-main-part .lx-invalidation-icon-wrapper`            |
+
+## 2.3.6 → 2.3.7
+
+### Breaking changes
+
+#### LxNumberInput
+
+**Token renames**
+
+- `--input-divider-height` → `--input-stepper-divider-height`
+- `--input-divider-border` → `--input-stepper-divider-border`
+- `--number-input-track-max-width` → `--input-slider-max-width`
+- `--number-input-track-min-width` → `--input-slider-min-width`
+
 ## 2.3.5 → 2.3.6
 
 ### New state color tokens

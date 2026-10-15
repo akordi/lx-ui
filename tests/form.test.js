@@ -4,7 +4,6 @@ import LxSection from '@/components/forms/Section.vue';
 import LxRow from '@/components/forms/Row.vue';
 import LxDropDownMenu from '@/components/DropDownMenu.vue';
 import { mount } from '@vue/test-utils';
-import 'regenerator-runtime/runtime';
 
 let wrapper;
 

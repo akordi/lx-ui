@@ -2,7 +2,6 @@
 import { test, expect, describe, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import LxPersonDisplay from '@/components/PersonDisplay.vue';
-import 'regenerator-runtime/runtime';
 
 let wrapper;
 

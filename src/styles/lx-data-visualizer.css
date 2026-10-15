@@ -461,3 +461,317 @@
 .lx-data-visualizer .lx-target-wrapper-multiple  .target-value-multiple .lx-info-wrapper-content{
   border-radius: var(--border-radius-full);
 }
+
+.lx-data-visualizer .lx-donut-visualizer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: var(--space-2000);
+}
+
+.lx-data-visualizer .lx-donut-visualizer.show-legend {
+  padding-bottom: var(--space-2000);
+  border-bottom: var(--border-width-2) solid var(--color-chrome);
+}
+
+.lx-data-visualizer .donut-container {
+  position: relative;
+  width: 14rem;
+  height: 14rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--space-0125);
+}
+
+.lx-data-visualizer .donut-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.lx-data-visualizer .donut-center {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lx-data-visualizer .donut-center-value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 2rem;
+  color: var(--color-data);
+  margin: 0;
+  text-align: center;
+}
+
+.lx-data-visualizer {
+  --gauge-progress-default: var(--color-brand);
+  --gauge-goal-default: var(--color-region);
+}
+
+.lx-region .lx-data-visualizer,
+.lx-region-component .lx-data-visualizer {
+  --gauge-goal-default: var(--color-region-2);
+}
+
+.lx-data-visualizer .lx-gauge-visualizer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.lx-data-visualizer .lx-gauge-visualizer.show-legend {
+  padding-bottom: var(--space-2000);
+  border-bottom: var(--border-width-2) solid var(--color-chrome);
+}
+
+.lx-data-visualizer .lx-gauge-chart {
+  --gauge-size: 336; /* 21rem */
+  --gauge-baseline: 196;
+  --gauge-radius: calc(var(--gauge-size) / 2 - var(--gauge-stroke) / 2);
+  width: calc(var(--gauge-size) / 16 * 1rem);
+  height: 14rem;
+  display: block;
+}
+
+@media (max-width: 499px) {
+  .lx-data-visualizer .lx-gauge-chart {
+    --gauge-size: 224; /* 14rem */
+    --gauge-baseline: 160;
+  }
+}
+
+.lx-data-visualizer .lx-gauge-origin {
+  transform: translate(50%, calc(var(--gauge-baseline) * 1px));
+}
+
+.lx-data-visualizer .lx-gauge-chart .lx-ring-path {
+  fill: none;
+  stroke: var(--bar-color, var(--color-brand));
+  stroke-width: calc(var(--gauge-stroke) * 1px);
+  vector-effect: non-scaling-stroke;
+  transform: scale(var(--gauge-radius));
+}
+
+.lx-data-visualizer .lx-gauge-value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 2rem;
+  fill: var(--color-data);
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.lx-data-visualizer .lx-gauge-end-marker {
+  display: none;
+  transform: translateX(calc(var(--gauge-radius) * 1px));
+}
+
+.lx-theme-contrast .lx-data-visualizer .lx-gauge-end-marker {
+  display: block;
+  stroke: var(--contrast-foreground);
+  stroke-width: var(--border-width-2);
+}
+
+.lx-theme-contrast .lx-data-visualizer .lx-gauge-value {
+  fill: var(--contrast-foreground);
+}
+
+.lx-data-visualizer .lx-ring-segment {
+  outline: none;
+  cursor: pointer;
+}
+
+.lx-data-visualizer .lx-ring-path {
+  fill: var(--bar-color, var(--color-brand));
+  stroke: none;
+}
+
+.lx-data-visualizer .lx-ring-segment:not(.is-goal):hover .lx-ring-path,
+.lx-data-visualizer .lx-ring-segment:not(.is-goal):focus-visible .lx-ring-path {
+  fill: var(--color-interactive-hover-background);
+}
+
+.lx-data-visualizer .lx-gauge-chart .lx-ring-segment:not(.is-goal):hover .lx-ring-path,
+.lx-data-visualizer .lx-gauge-chart .lx-ring-segment:not(.is-goal):focus-visible .lx-ring-path {
+  fill: none;
+  stroke: var(--color-interactive-hover-background);
+}
+
+.lx-data-visualizer .lx-gauge-chart .lx-ring-segment.is-goal {
+  cursor: help;
+}
+
+.lx-theme-contrast .lx-data-visualizer .lx-ring-segment.is-goal .lx-ring-path {
+  --bar-color: transparent;
+}
+
+.lx-data-visualizer .lx-line-visualizer {
+  width: 100%;
+}
+
+.lx-data-visualizer .lx-line-visualizer.show-legend {
+  padding-bottom: var(--space-1000);
+  border-bottom: var(--border-width-2) solid var(--color-chrome);
+}
+
+.lx-data-visualizer .lx-line-chart {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(10rem, 1fr);
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-0500);
+  padding-right: max(var(--space-0500), var(--line-x-overhang, 0px));
+}
+
+.lx-data-visualizer .lx-line-y-axis {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  height: 13rem;
+  width: var(--line-y-width, 2rem);
+  min-width: 2rem;
+  margin-right: var(--space-0500);
+}
+
+.lx-data-visualizer .lx-line-y-label {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  line-height: 1;
+  font-size: var(--font-size-small);
+  color: var(--color-label);
+}
+
+.lx-data-visualizer .lx-line-plot {
+  position: relative;
+  height: 13rem;
+}
+
+.lx-data-visualizer .lx-line-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+}
+
+.lx-data-visualizer .lx-line-grid {
+  stroke: var(--color-chrome);
+  stroke-width: var(--border-width-1);
+}
+
+.lx-data-visualizer .lx-line-path {
+  fill: none;
+  stroke: var(--bar-color, var(--color-brand));
+  stroke-width: var(--border-width-2);
+  stroke-linejoin: round;
+}
+
+.lx-data-visualizer .lx-line-column {
+  outline: none;
+  cursor: pointer;
+}
+
+.lx-data-visualizer .lx-line-hover-area {
+  fill: transparent;
+}
+
+.lx-data-visualizer .lx-line-hover-line {
+  stroke: transparent;
+  stroke-width: var(--border-width-1);
+  stroke-dasharray: 4 4;
+  pointer-events: none;
+}
+
+.lx-data-visualizer .lx-line-column:hover .lx-line-hover-line,
+.lx-data-visualizer .lx-line-column:focus-visible .lx-line-hover-line {
+  stroke: var(--color-data);
+}
+
+.lx-data-visualizer .lx-line-x-axis {
+  position: relative;
+  box-sizing: content-box;
+  height: var(--line-x-height, 1rem);
+  padding-top: var(--space-1000);
+  padding-bottom: var(--space-1000);
+}
+
+.lx-data-visualizer .lx-line-x-label {
+  position: absolute;
+  width: max-content;
+  transform: translateX(-50%);
+  font-size: var(--font-size-small);
+  color: var(--color-label);
+  white-space: nowrap;
+}
+
+.lx-data-visualizer .lx-line-x-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lx-data-visualizer .lx-line-x-axis.is-vertical .lx-line-x-label {
+  transform: none;
+  width: 0;
+}
+
+.lx-data-visualizer .lx-line-x-axis.is-vertical .lx-line-x-text {
+  width: max-content;
+  max-width: 10rem;
+  transform-origin: 0 0;
+  transform: rotate(-90deg) translate(-100%, -50%);
+}
+
+.lx-theme-contrast .lx-data-visualizer .lx-line-column:hover .lx-line-hover-line,
+.lx-theme-contrast .lx-data-visualizer .lx-line-column:focus-visible .lx-line-hover-line {
+  stroke: var(--color-interactive-hover-background);
+  fill: var(--color-interactive-hover-background);
+}
+
+.lx-data-visualizer .lx-line-point-ring {
+  fill: var(--bar-color, var(--color-brand));
+}
+
+.lx-data-visualizer .lx-line-point-center {
+  fill: var(--color-background);
+}
+
+.lx-region .lx-data-visualizer .lx-line-point-center,
+.lx-region-component .lx-data-visualizer .lx-line-point-center {
+  fill: var(--color-region-2);
+}
+
+.lx-data-visualizer .lx-line-column:hover .lx-line-point-center,
+.lx-data-visualizer .lx-line-column:focus-visible .lx-line-point-center {
+  fill: var(--bar-color, var(--color-brand));
+}
+
+.lx-theme-contrast .lx-data-visualizer .lx-line-column:hover .lx-line-point-ring,
+.lx-theme-contrast .lx-data-visualizer .lx-line-column:hover .lx-line-point-center {
+  fill: var(--color-interactive-hover-background);
+}
+
+.lx-data-visualizer .lx-line-grid.is-active {
+  stroke: transparent;
+}
+
+.lx-data-visualizer .lx-line-scroll {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-width: 0;
+}
+
+.lx-data-visualizer .lx-line-scroll.is-scrollable {
+  overflow-x: auto;
+  padding-top: var(--space-0500);
+  margin-top: calc(var(--space-0500) * -1);
+}
+
+.lx-data-visualizer .lx-line-scroll.is-scrollable .lx-line-scroll-content {
+  box-sizing: border-box;
+  padding-inline: var(--space-0500);
+  min-width: calc((var(--line-count) - 1) * 1.5rem + var(--space-1000));
+}

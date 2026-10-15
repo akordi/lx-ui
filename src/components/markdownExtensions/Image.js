@@ -58,6 +58,26 @@ const Image = Node.create({
     return ['img', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)];
   },
 
+  addStorage() {
+    return {
+      markdown: {
+        // Default tiptap-markdown serializer is meant for inline images and does not close the block,
+        // so a following block (e.g. heading) would be written on the same line as the image
+        serialize(state, node) {
+          const alt = state.esc(node.attrs.alt || '');
+          const src = node.attrs.src.replace(/[()]/g, '\\$&');
+          const title = node.attrs.title ? ` "${node.attrs.title.replace(/"/g, '\\"')}"` : '';
+
+          state.write(`![${alt}](${src}${title})`);
+
+          if (!this.options.inline) {
+            state.closeBlock(node);
+          }
+        },
+      },
+    };
+  },
+
   addCommands() {
     return {
       setImage:

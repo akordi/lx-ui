@@ -343,6 +343,7 @@ const config = computed(() => ({
   disabled: false,
   min: null,
   max: maxLengthComp.value,
+  setMaxIfBigger: false,
   allowBlank: false,
   minimumNumberOfCharacters: 0,
   shouldRound: true,
@@ -741,7 +742,7 @@ defineExpose({ focus });
         :aria-label="placeholder"
         :disabled="disabled"
         :maxlength="maxLengthValue"
-        :title="tooltip"
+        v-tooltip="tooltip"
         :aria-labelledby="labelledBy"
         :aria-required="ariaRequired"
         :aria-errormessage="showInvalidationMessage ? `${id}-invalidation-message` : null"
@@ -776,7 +777,7 @@ defineExpose({ focus });
         v-model="model"
         v-bind="config"
         :disabled="disabled"
-        :title="tooltip"
+        v-tooltip="tooltip"
         :placeholder="placeholder"
         :aria-invalid="invalid"
         :aria-required="ariaRequired"

@@ -20,11 +20,13 @@ import {
   remToPx,
 } from '@/utils/generalUtils';
 import { useWindowSize, useElementSize, isClient } from '@vueuse/core';
+import { useGlobalSearchPlacement } from '@/components/shell/shellContext';
 
 const LxMegaMenu = defineAsyncComponent(() => import('@/components/shell/MegaMenu.vue'));
 const LxEmptyState = defineAsyncComponent(() => import('@/components/EmptyState.vue'));
 const LxInfoBox = defineAsyncComponent(() => import('@/components/InfoBox.vue'));
 const LxAvatar = defineAsyncComponent(() => import('@/components/Avatar.vue'));
+const LxGlobalSearch = defineAsyncComponent(() => import('@/components/shell/GlobalSearch.vue'));
 
 const props = defineProps({
   mode: { type: String, default: 'default' },
@@ -203,6 +205,9 @@ watch(closeSignal, () => {
 
 const PUBLIC_MODE_WIDTH_BREAKPOINT = 900;
 
+const { hasGlobalSearch, canMoveToNav: globalSearchCanMoveToNav } = useGlobalSearchPlacement();
+
+const globalSearchButtonRef = ref(null);
 const spotlightButtonRef = ref(null);
 const helpButtonRef = ref(null);
 const customButtonRef = ref(null);
@@ -222,6 +227,7 @@ function useBorderBoxElementWidth(element) {
   return useElementSize(element, undefined, { box: 'border-box' }).width;
 }
 
+const globalSearchButtonWidth = useBorderBoxElementWidth(() => globalSearchButtonRef.value);
 const spotlightButtonWidth = useBorderBoxElementWidth(() => spotlightButtonRef.value);
 const helpButtonWidth = useBorderBoxElementWidth(() => helpButtonRef.value);
 const customButtonWidth = useBorderBoxElementWidth(() => customButtonRef.value);
@@ -304,6 +310,7 @@ watch(
 );
 
 const buttonWidthRefs = {
+  globalSearch: globalSearchButtonWidth,
   spotlight: spotlightButtonWidth,
   help: helpButtonWidth,
   custom: customButtonWidth,
@@ -319,6 +326,7 @@ const buttonWidthEntries = Object.entries(buttonWidthRefs);
 const buttonWidthSources = Object.values(buttonWidthRefs);
 
 const buttonNaturalWidths = {
+  globalSearch: 0,
   spotlight: 0,
   help: 0,
   custom: 0,
@@ -339,6 +347,7 @@ function updateButtonNaturalWidths() {
 }
 
 const buttonsEligibility = computed(() => ({
+  globalSearch: hasGlobalSearch.value,
   spotlight: props.hasSpotlight,
   help: props.hasHelp,
   custom: props.hasCustomButton,
@@ -360,6 +369,7 @@ function getButtonWidth(key) {
 
 // Lower number = higher priority to keep visible.
 const buttonsPriority = {
+  globalSearch: 0,
   spotlight: 5,
   theme: 3,
   language: 4,
@@ -368,11 +378,30 @@ const buttonsPriority = {
 };
 
 const ALWAYS_VISIBLE_BUTTON_KEYS = ['help', 'custom', 'alert', 'user'];
-const OPTIONAL_BUTTON_KEYS = ['spotlight', 'theme', 'language', 'megaMenu', 'login'];
+const OPTIONAL_BUTTON_KEYS = [
+  'globalSearch',
+  'spotlight',
+  'theme',
+  'language',
+  'megaMenu',
+  'login',
+];
+
+const alwaysVisibleKeys = computed(() =>
+  globalSearchCanMoveToNav.value
+    ? ALWAYS_VISIBLE_BUTTON_KEYS
+    : ['globalSearch', ...ALWAYS_VISIBLE_BUTTON_KEYS]
+);
+const optionalKeys = computed(() =>
+  globalSearchCanMoveToNav.value
+    ? OPTIONAL_BUTTON_KEYS
+    : OPTIONAL_BUTTON_KEYS.filter((key) => key !== 'globalSearch')
+);
 const LOGIN_ICON_ONLY_ALLOWED_MODES = new Set(['default', 'public', 'latvijalv', 'full-screen']);
 
-/** @type {{ spotlight: boolean, theme: boolean, language: boolean, megaMenu: boolean, login: boolean }} */
+/** @type {{ globalSearch: boolean, spotlight: boolean, theme: boolean, language: boolean, megaMenu: boolean, login: boolean }} */
 const DEFAULT_BUTTONS_VISIBILITY = {
+  globalSearch: true,
   spotlight: true,
   theme: true,
   language: true,
@@ -494,16 +523,16 @@ function handleDefaultModeVisibility(availableWidth) {
     }
   }
 
-  const requiredBaseWidth = ALWAYS_VISIBLE_BUTTON_KEYS.reduce(
+  const requiredBaseWidth = alwaysVisibleKeys.value.reduce(
     (sum, key) => (buttonsEligibility.value[key] ? sum + getButtonWidth(key) : sum),
     0
   );
 
   let usedWidth = requiredBaseWidth;
 
-  const optionalEligibleKeys = OPTIONAL_BUTTON_KEYS.filter(
-    (key) => buttonsEligibility.value[key]
-  ).sort((a, b) => (buttonsPriority[a] ?? 0) - (buttonsPriority[b] ?? 0));
+  const optionalEligibleKeys = optionalKeys.value
+    .filter((key) => buttonsEligibility.value[key])
+    .sort((a, b) => (buttonsPriority[a] ?? 0) - (buttonsPriority[b] ?? 0));
 
   const nextVisibility = { ...DEFAULT_BUTTONS_VISIBILITY };
 
@@ -581,6 +610,7 @@ watch(
     windowWidth,
     headerWidth,
     navToggleWidth,
+    globalSearchCanMoveToNav,
     ...buttonsEligibilitySources,
     ...buttonWidthSources,
   ],
@@ -1043,6 +1073,13 @@ const loginButtonKind = computed(() => {
         :disabled="headerNavDisable"
         @click="helpClicked"
       />
+    </div>
+    <div
+      v-if="buttonsEligibility.globalSearch && buttonsVisibility.globalSearch"
+      ref="globalSearchButtonRef"
+      class="lx-global-search-button"
+    >
+      <LxGlobalSearch />
     </div>
     <div
       v-if="buttonsEligibility.custom"

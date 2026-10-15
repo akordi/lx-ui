@@ -88,3 +88,12 @@
 .lx.lx-no-transparency .lx-component-toolbar.lx-scrolled .lx-toolbar-promoted-action .lx-button {
   box-shadow: none;
 }
+
+.lx.lx-no-transparency .lx-layout-digimaks .lx-blur-layer {
+  background: var(--color-background);
+  mask-image: none;
+}
+
+.lx.lx-no-transparency .lx-layout-digimaks .lx-glow {
+  visibility: hidden;
+}

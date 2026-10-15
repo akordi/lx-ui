@@ -8,12 +8,12 @@ const pluginConfig = defineConfig({
   base: './',
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      '@': path.resolve(import.meta.dirname, 'src'),
     },
   },
   build: {
     lib: {
-      entry: path.resolve(__dirname, 'src/vite/index.js'),
+      entry: path.resolve(import.meta.dirname, 'src/vite/index.js'),
       name: 'AkordiLxUiVite',
       fileName: (format) => `akordi-lx-ui-vite.${format}.js`,
       formats: ['es'],

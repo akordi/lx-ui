@@ -298,4 +298,5 @@
 .lx-info-wrapper .lx-tooltip-text {
   color: var(--color-tooltip-text-secondary);
   font-size: var(--tooltip-text-font-size);
+  white-space: pre-line;
 }

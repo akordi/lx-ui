@@ -34,10 +34,9 @@ const libraryLoaders = {
   },
 
   c2pa: async () => {
-    const { createC2pa, selectProducer } = await import('c2pa');
-    const wasmSrc = (await import('c2pa/dist/assets/wasm/toolkit_bg.wasm?url')).default;
-    const workerSrc = (await import('c2pa/dist/c2pa.worker.js?url')).default;
-    return { createC2pa, selectProducer, wasmSrc, workerSrc };
+    const { createC2pa, Reader } = await import('@contentauth/c2pa-web');
+    const wasmSrc = (await import('@contentauth/c2pa-web/resources/c2pa.wasm?url')).default;
+    return { createC2pa, Reader, wasmSrc };
   },
 
   sanitizeUrl: async () => {
@@ -51,8 +50,6 @@ const libraryLoaders = {
       heading,
       starterKit,
       placeholder,
-      link,
-      underline,
       characterCount,
       textStyle,
       color,
@@ -63,8 +60,6 @@ const libraryLoaders = {
       import('@tiptap/extension-heading'),
       import('@tiptap/starter-kit'),
       import('@tiptap/extension-placeholder'),
-      import('@tiptap/extension-link'),
-      import('@tiptap/extension-underline'),
       import('@tiptap/extension-character-count'),
       import('@tiptap/extension-text-style'),
       import('@tiptap/extension-color'),
@@ -77,8 +72,6 @@ const libraryLoaders = {
       Heading: heading.Heading,
       StarterKit: starterKit.StarterKit,
       Placeholder: placeholder.Placeholder,
-      Link: link.Link,
-      Underline: underline.Underline,
       CharacterCount: characterCount.CharacterCount,
       TextStyle: textStyle.TextStyle,
       Color: color.Color,

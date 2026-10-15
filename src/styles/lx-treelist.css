@@ -160,7 +160,7 @@
 }
 
 .tree-list .tree-item .tree-item-body.selected-children>.lx-button:not(.lx-disabled) > .lx-button-content-wrapper svg {
-    fill: var(--color-data);
+    fill: var(--color-selected);
 }
 
 .lx-list-wrapper .tree-list .tree-item .tree-item-body.selected-children>.lx-button:hover:not(.lx-disabled) {

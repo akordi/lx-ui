@@ -3,6 +3,7 @@ import { defineComponent, h, onMounted, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 
 import LxShell from '@/components/shell/Shell.vue';
+import { useGlobalSearchPlacement } from '@/components/shell/shellContext';
 
 const mockedScreenWidth = ref(1024);
 
@@ -570,4 +571,49 @@ test('navbar is not inert on wide screens', async () => {
 
   expect(wrapper.find('nav').element.inert).toBe(false);
   expect(wrapper.find('main').element.inert).toBe(false);
+});
+
+const GlobalSearchPlacementNavBarStub = defineComponent({
+  name: 'LxNavBar',
+  setup() {
+    return useGlobalSearchPlacement();
+  },
+  template: '<div data-testid="global-search-placement">{{ canMoveToNav }}|{{ inNav }}</div>',
+});
+
+async function mountShellWithHeaderVisibility(headerButtonsVisibility, props = {}) {
+  const HeaderButtonsStub = defineComponent({
+    name: 'LxHeaderButtons',
+    emits: ['update:headerButtonsVisibility'],
+    setup(_, { emit }) {
+      onMounted(() => emit('update:headerButtonsVisibility', headerButtonsVisibility));
+    },
+    template: '<div data-stub="LxHeaderButtons" />',
+  });
+
+  wrapper = mount(LxShell, {
+    props: { ...baseProps, hasGlobalSearch: true, ...props },
+    global: {
+      stubs: {
+        ...globalStubs,
+        LxMainHeader: false,
+        LxHeaderButtons: HeaderButtonsStub,
+        LxNavBar: GlobalSearchPlacementNavBarStub,
+        LxDropDownMenu: createStub('LxDropDownMenu'),
+        LxList: createStub('LxList'),
+        RouterLink: createStub('RouterLink'),
+        'router-link': createStub('router-link'),
+      },
+    },
+  });
+  await settleShell();
+  return wrapper.find('[data-testid="global-search-placement"]').text();
+}
+
+test('global search moves to the nav when the header hides it', async () => {
+  expect(await mountShellWithHeaderVisibility({ globalSearch: false })).toBe('true|true');
+});
+
+test('global search stays in the header while it fits', async () => {
+  expect(await mountShellWithHeaderVisibility({ globalSearch: true })).toBe('true|false');
 });

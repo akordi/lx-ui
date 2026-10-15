@@ -256,13 +256,6 @@ function prepareCode(value) {
   return value?.toString();
 }
 
-watch(
-  () => props.groupDefinitions,
-  (newValue) => {
-    responsiveGroupDefinitions.value = newValue;
-  }
-);
-
 function getDuplicateItemIds(items) {
   const counts = new Map();
   (items || []).forEach((item) => {
@@ -788,6 +781,14 @@ function prepareUnGroupedItemsArray() {
 watch(
   () => props.includeUnspecifiedGroups,
   () => {
+    triggerItemsArray();
+  }
+);
+
+watch(
+  () => props.groupDefinitions,
+  (newValue) => {
+    responsiveGroupDefinitions.value = newValue;
     triggerItemsArray();
   }
 );

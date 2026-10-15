@@ -103,7 +103,7 @@
 .lx-dropdown-default-content .lx-value-picker-item .lx-radio-button-wrapper {
   width: 100%;
   overflow: hidden;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .lx-dropdown-default-content .lx-value-picker-item > div,
@@ -598,4 +598,111 @@
 
 .lx-dropdown-panel .lx-dropdown-menu-tag-wrapper .lx-tag.lx-tags-tile-selected svg {
   fill: var(--color-popover-item-icon-selected);
+}
+
+/* LxAutoComplete item content (list items and the selected value) */
+.lx-autocomplete-item-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--popover-item-gap);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.lx-autocomplete-item-content > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lx-autocomplete-item-content > svg {
+  flex-shrink: 0;
+  width: var(--popover-item-icon-size-s);
+  height: var(--popover-item-icon-size-s);
+  /* TODO: workaround to center the icon on the first line, fix with the popover icon height update */
+  margin-top: max(0px, calc((1lh - var(--popover-item-icon-size-s)) / 2));
+  fill: var(--color-popover-item-icon);
+}
+
+.lx-touch-mode .lx-autocomplete-item-content > svg {
+  width: var(--popover-item-icon-size-l);
+  height: var(--popover-item-icon-size-l);
+  margin-top: max(0px, calc((1lh - var(--popover-item-icon-size-l)) / 2));
+}
+
+.lx-dropdown-panel .lx-popover-item-text-only:has(> div > .lx-autocomplete-item-content) {
+  --popover-item-gap: inherit;
+}
+
+.lx-dropdown-panel .lx-value-picker-item:hover .lx-autocomplete-item-content > svg {
+  fill: var(--color-popover-item-icon-hover);
+}
+
+.lx-dropdown-panel .lx-value-picker-item:active .lx-autocomplete-item-content > svg {
+  fill: var(--color-popover-item-icon-active);
+}
+
+.lx-dropdown-panel .lx-value-picker-item:focus .lx-autocomplete-item-content > svg,
+.lx-dropdown-panel .lx-value-picker-item.lx-highlighted-item .lx-autocomplete-item-content > svg {
+  fill: var(--color-popover-item-icon-focus);
+}
+
+.lx-dropdown-panel .lx-value-picker-item.lx-selected .lx-autocomplete-item-content > svg {
+  fill: var(--color-popover-item-icon-selected);
+}
+
+.lx-dropdown-default-content .lx-value-picker-item > .lx-autocomplete-custom-item {
+  display: flex;
+  align-items: center;
+}
+
+.lx-dropdown-default-content .lx-value-picker-item > .lx-autocomplete-custom-item > * {
+  min-width: 0;
+}
+
+/* The "Search for" row is an action, coloured like "Select all" */
+.lx-dropdown-default-content .lx-dropdown-panel .lx-value-picker-item.lx-autocomplete-search-for {
+  color: var(--color-brand);
+}
+
+.lx-dropdown-panel .lx-value-picker-item.lx-autocomplete-search-for .lx-autocomplete-item-content > svg {
+  fill: var(--color-brand);
+}
+
+.lx-theme-contrast .lx-dropdown-default-content .lx-value-picker-item.lx-autocomplete-search-for:hover {
+  color: var(--contrast-background);
+}
+
+.lx-theme-contrast .lx-value-picker-item.lx-autocomplete-search-for:hover .lx-autocomplete-item-content > svg {
+  fill: var(--contrast-background);
+}
+
+.lx-theme-contrast .lx-dropdown-default-content .lx-value-picker-item.lx-autocomplete-search-for:focus {
+  color: var(--contrast-foreground);
+}
+
+.lx-theme-contrast .lx-value-picker-item.lx-autocomplete-search-for:focus .lx-autocomplete-item-content > svg {
+  fill: var(--contrast-foreground);
+}
+
+/* Divider above the "Search for" row, like the one below "Select all" */
+.lx-dropdown-default-content > .lx-dropdown-panel > .lx-autocomplete-search-for-wrapper.lx-separated {
+  position: relative;
+  padding-top: var(--popover-item-set-gap);
+}
+
+.lx-dropdown-default-content .lx-autocomplete-search-for-wrapper.lx-separated::before {
+  display: block;
+  content: "";
+  position: absolute;
+  background: var(--color-popover-divider);
+  width: stretch;
+  width: -webkit-fill-available;
+  margin: var(--popover-divider-margin);
+  height: var(--popover-divider-height);
+  top: var(--space-0);
+}
+
+.lx-dropdown-default-content .lx-autocomplete-search-for-wrapper.lx-separated > .lx-value-picker-item {
+  margin-top: var(--popover-item-set-gap);
 }

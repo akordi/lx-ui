@@ -2,7 +2,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, test, expect, afterEach } from 'vitest';
 import LxDurationInput from '@/components/DurationInput.vue';
-import 'regenerator-runtime/runtime';
 
 let wrapper;
 

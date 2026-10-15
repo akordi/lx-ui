@@ -511,7 +511,12 @@ defineExpose({ closeMenu, openMenu, preventClose, menuOpen });
 </script>
 
 <template>
-  <div class="lx-context-container" :class="[{ 'lx-selected': menuOpen }, customClass]">
+  <div
+    class="lx-context-container"
+    :class="[{ 'lx-selected': menuOpen }, customClass]"
+    data-component="lx-drop-down-menu"
+    :data-id="id"
+  >
     <LxPopper
       :placement="placement"
       :offset-skid="offsetSkid"
@@ -636,7 +641,7 @@ defineExpose({ closeMenu, openMenu, preventClose, menuOpen });
               <div
                 v-if="getGroupLabel(groupName)"
                 :id="`${groupName}-group`"
-                :title="getGroupLabel(groupName)"
+                v-tooltip="getGroupLabel(groupName)"
                 class="lx-label"
               >
                 {{ getGroupLabel(groupName) }}
@@ -760,7 +765,7 @@ defineExpose({ closeMenu, openMenu, preventClose, menuOpen });
               <div
                 v-if="getGroupLabel(groupName)"
                 :id="`${groupName}-group`"
-                :title="getGroupLabel(groupName)"
+                v-tooltip="getGroupLabel(groupName)"
                 class="lx-label"
               >
                 {{ getGroupLabel(groupName) }}
