@@ -1,6 +1,6 @@
 <script setup>
 import { computed, inject, provide, ref, watch } from 'vue';
-import { onClickOutside, useEventListener, useResizeObserver } from '@vueuse/core';
+import { isClient, onClickOutside, useEventListener, useResizeObserver } from '@vueuse/core';
 
 import LxButton from '@/components/Button.vue';
 import LxGlobalSearchInput from '@/components/shell/GlobalSearchInput.vue';
@@ -58,7 +58,10 @@ function updateOpenPanelPosition() {
 
 watch(width, updateOpenPanelPosition);
 useResizeObserver(header, updateOpenPanelPosition);
-useEventListener(window, 'scroll', updateOpenPanelPosition, { passive: true });
+// `window`/`document` are bare global references: naming them as an argument throws under SSR
+// (there's no such binding in Node), so these must stay behind an isClient check rather than
+// relying on useEventListener's own no-op-under-SSR behavior.
+if (isClient) useEventListener(window, 'scroll', updateOpenPanelPosition, { passive: true });
 
 function getToggleButton() {
   return buttonWrapperRef.value?.querySelector('button');
@@ -90,25 +93,26 @@ function leaveSearch(event, onLeave) {
   onLeave();
 }
 
-useEventListener(
-  document,
-  'keydown',
-  (event) => {
-    if (!isOpen.value || !searchInputRef.value?.isInSearch(event.target)) return;
-    const isOnDetails = event.target === searchInputRef.value.getDetailsButton();
+if (isClient)
+  useEventListener(
+    document,
+    'keydown',
+    (event) => {
+      if (!isOpen.value || !searchInputRef.value?.isInSearch(event.target)) return;
+      const isOnDetails = event.target === searchInputRef.value.getDetailsButton();
 
-    if (event.key === 'Escape') {
-      leaveSearch(event, () => close(true));
-    } else if (event.key === 'Tab' && event.shiftKey && !isOnDetails) {
-      leaveSearch(event, () => close(true));
-    } else if (event.key === 'Tab' && !event.shiftKey && isOnDetails) {
-      leaveSearch(event, () => {
-        close();
-        focusNextFocusableElement(getToggleButton());
-      });
-    }
-  },
-  { capture: true }
+      if (event.key === 'Escape') {
+        leaveSearch(event, () => close(true));
+      } else if (event.key === 'Tab' && event.shiftKey && !isOnDetails) {
+        leaveSearch(event, () => close(true));
+      } else if (event.key === 'Tab' && !event.shiftKey && isOnDetails) {
+        leaveSearch(event, () => {
+          close();
+          focusNextFocusableElement(getToggleButton());
+        });
+      }
+    },
+    { capture: true }
 );
 
 function onToggleKeydown(event) {

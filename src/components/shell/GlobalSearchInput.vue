@@ -1,6 +1,6 @@
 <script setup>
 import { computed, defineAsyncComponent, getCurrentInstance, inject, ref, watch } from 'vue';
-import { useEventListener } from '@vueuse/core';
+import { isClient, useEventListener } from '@vueuse/core';
 
 import LxIcon from '@/components/Icon.vue';
 import { shellContextKey } from '@/components/shell/shellContext';
@@ -65,27 +65,29 @@ function isInSearch(target) {
   );
 }
 
-// Runs before LxAutoComplete's own handlers, which would clear the query on Tab
-useEventListener(
-  document,
-  'keydown',
-  (event) => {
-    if (!isInSearch(event.target)) return;
-    const detailsButton = getDetailsButton();
-    const isOnDetails = event.target === detailsButton;
+// Runs before LxAutoComplete's own handlers, which would clear the query on Tab. `document` is a
+// bare global reference: naming it as an argument throws under SSR, so this stays behind isClient.
+if (isClient)
+  useEventListener(
+    document,
+    'keydown',
+    (event) => {
+      if (!isInSearch(event.target)) return;
+      const detailsButton = getDetailsButton();
+      const isOnDetails = event.target === detailsButton;
 
-    if (isOnDetails && (event.key === 'Enter' || event.key === ' ')) {
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.key === ' ') emits('globalSearchDetailsClick', query.value);
-    } else if (event.key === 'Tab' && !event.shiftKey && !isOnDetails && detailsButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      detailsButton.focus();
-    }
-  },
-  { capture: true }
-);
+      if (isOnDetails && (event.key === 'Enter' || event.key === ' ')) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.key === ' ') emits('globalSearchDetailsClick', query.value);
+      } else if (event.key === 'Tab' && !event.shiftKey && !isOnDetails && detailsButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        detailsButton.focus();
+      }
+    },
+    { capture: true }
+  );
 
 defineExpose({ isInSearch, getDetailsButton });
 </script>

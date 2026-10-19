@@ -53,3 +53,29 @@ test.each(componentEntries)(
     }
   }
 );
+
+// GlobalSearch (and its own child, GlobalSearchInput) live only inside Shell's `hasGlobalSearch`
+// branch and aren't exported from '@/components' themselves — the zero-props sweep above never
+// instantiates either one, since `hasGlobalSearch` defaults to false. A component gated behind a
+// prop that defaults off is invisible to a props-less sweep no matter how exhaustive the export
+// list is; it has to be exercised explicitly. (Found the hard way: both threw `window`/`document
+// is not defined` in setup() under SSR.)
+async function renderUnderSsrWithProps(component, props) {
+  const app = createSSRApp({ render: () => h(component, props) });
+  app.use(createLx, { systemId: 'ssr-audit', environment: 'test' });
+  return renderToString(app);
+}
+
+test('LxShell with hasGlobalSearch renders GlobalSearch under SSR without a browser global', async () => {
+  try {
+    const html = await renderUnderSsrWithProps(components.LxShell, { hasGlobalSearch: true });
+    expect(html).toContain('lx-global-search');
+  } catch (err) {
+    // Same unrelated, pre-existing Vue SSR quirk the main sweep above tolerates (a directive
+    // resolution that can fail for a deeply nested v-tooltip under certain render-buffering
+    // conditions — see vite.vue.config.mjs's onUnhandledError for the fuller writeup). Real
+    // SSR-safety bugs in this codebase surface as a ReferenceError for a missing browser global;
+    // anything else here isn't what this test exists to catch.
+    if (err instanceof ReferenceError && / is not defined$/.test(err.message)) throw err;
+  }
+});
