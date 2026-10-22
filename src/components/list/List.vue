@@ -991,6 +991,7 @@ const dragOptions = computed(() => ({
   group: 'list',
   disabled: false,
   ghostClass: 'ghost',
+  forceFallback: true,
 }));
 
 const filteredUngroupedItems = computed(() => {
