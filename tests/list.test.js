@@ -2,6 +2,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { RouterLinkStub, flushPromises, mount } from '@vue/test-utils';
 import { nextTick, ref } from 'vue';
+import draggable from 'vuedraggable/src/vuedraggable';
 import LxList from '@/components/list/List.vue';
 import * as libLoader from '@/utils/libLoader';
 import { lxDevUtils } from '@/utils';
@@ -1076,6 +1077,7 @@ describe('Loading announcement', () => {
 
 describe('Draggable', () => {
   test('pins the native drag image to the grab point', async () => {
+    const loadLibrarySpy = vi.spyOn(libLoader, 'loadLibrary').mockResolvedValue(draggable);
     wrapper = mountComponent({
       props: {
         kind: 'draggable',
@@ -1086,9 +1088,7 @@ describe('Draggable', () => {
       },
       attachTo: document.body,
     });
-    await vi.waitFor(() =>
-      expect(wrapper.find('.list-draggable-area > [data-draggable]').exists()).toBe(true)
-    );
+    await flushPromises();
 
     const item = wrapper.find('.list-draggable-area > [data-draggable]').element;
     vi.spyOn(item, 'getBoundingClientRect').mockReturnValue({ left: 100, top: 300 });
@@ -1098,5 +1098,6 @@ describe('Draggable', () => {
     item.dispatchEvent(event);
 
     expect(dataTransfer.setDragImage).toHaveBeenCalledWith(item, 12, 9);
+    loadLibrarySpy.mockRestore();
   });
 });
