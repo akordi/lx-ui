@@ -776,6 +776,13 @@ function changeDragging() {
   });
 }
 
+// Chrome misplaces the native drag image when the item or its ancestors are positioned
+// (item actions, form sections), so pin the image to the point where the item was grabbed.
+function setDragImage(event) {
+  const { left, top } = event.target.getBoundingClientRect();
+  event.dataTransfer.setDragImage(event.target, event.clientX - left, event.clientY - top);
+}
+
 function focusHandle(element) {
   nextTick(() => {
     document.getElementById(`handleId-${element[props.idAttribute]}`)?.focus();
@@ -1741,6 +1748,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             :disabled="loading || busy || draggableIsDisabledByQuery"
             :aria-labelledby="labelledBy"
             @start="changeDragging"
+            @dragstart="setDragImage"
             @end="changeDragging"
             @change="onMoveItem"
           >
@@ -2353,6 +2361,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             :disabled="loading || busy || draggableIsDisabledByQuery"
             :aria-labelledby="labelledBy"
             @start="changeDragging"
+            @dragstart="setDragImage"
             @end="changeDragging"
             @change="onMoveItem"
           >
@@ -2479,6 +2488,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
               :disabled="loading || busy || draggableIsDisabledByQuery"
               :aria-labelledby="labelledBy"
               @start="changeDragging"
+              @dragstart="setDragImage"
               @end="changeDragging"
               @change="onMoveItem"
             >

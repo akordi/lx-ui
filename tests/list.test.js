@@ -1073,3 +1073,30 @@ describe('Loading announcement', () => {
     { props: { hasVirtualization: false } }
   );
 });
+
+describe('Draggable', () => {
+  test('pins the native drag image to the grab point', async () => {
+    wrapper = mountComponent({
+      props: {
+        kind: 'draggable',
+        items: [
+          { id: '1', name: 'One' },
+          { id: '2', name: 'Two' },
+        ],
+      },
+      attachTo: document.body,
+    });
+    await vi.waitFor(() =>
+      expect(wrapper.find('.list-draggable-area > [data-draggable]').exists()).toBe(true)
+    );
+
+    const item = wrapper.find('.list-draggable-area > [data-draggable]').element;
+    vi.spyOn(item, 'getBoundingClientRect').mockReturnValue({ left: 100, top: 300 });
+    const dataTransfer = { setData: vi.fn(), setDragImage: vi.fn() };
+    const event = new MouseEvent('dragstart', { bubbles: true, clientX: 112, clientY: 309 });
+    Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+    item.dispatchEvent(event);
+
+    expect(dataTransfer.setDragImage).toHaveBeenCalledWith(item, 12, 9);
+  });
+});
