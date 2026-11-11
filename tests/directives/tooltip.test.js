@@ -279,7 +279,7 @@ describe('v-tooltip dismissing', () => {
     ['contextmenu', () => document.dispatchEvent(new MouseEvent('contextmenu'))],
     ['scroll', () => document.dispatchEvent(new Event('scroll'))],
     ['Escape', () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))],
-    ['blur', () => trigger().dispatchEvent(new FocusEvent('blur'))],
+    ['blur', () => trigger().dispatchEvent(new FocusEvent('focusout', { bubbles: true }))],
   ])('%s closes it', (name, fire) => {
     wrapper = mountHost('Tooltip text');
     open(trigger());
@@ -287,6 +287,16 @@ describe('v-tooltip dismissing', () => {
 
     fire();
     expect(popper()).toBeNull();
+  });
+
+  test('adds no focus listeners to the trigger, which would make SVG elements focusable', () => {
+    wrapper = mountHost('Tooltip text');
+    const spy = vi.spyOn(trigger(), 'addEventListener');
+    open(trigger());
+
+    const types = spy.mock.calls.map(([type]) => type);
+    expect(types).not.toContain('blur');
+    expect(types).not.toContain('focusout');
   });
 });
 
@@ -452,6 +462,36 @@ describe('v-tooltip inert states', () => {
 
     open(trigger());
     expect(popper()).toBeNull();
+  });
+
+  test('does not open when nested inside an LxInfoWrapper trigger with a panel', () => {
+    wrapper = mount(
+      {
+        template: `<div class="lx-info-wrapper-content lx-rich-kind">
+            <button class="trigger" v-tooltip="'Tooltip text'">Trigger</button>
+          </div>`,
+        directives: { tooltip: vTooltip },
+      },
+      { attachTo: document.body }
+    );
+
+    open(trigger());
+    expect(popper()).toBeNull();
+  });
+
+  test('opens inside an LxInfoWrapper trigger that has no panel', () => {
+    wrapper = mount(
+      {
+        template: `<div class="lx-info-wrapper-content lx-rich-kind lx-disabled">
+            <button class="trigger" v-tooltip="'Tooltip text'">Trigger</button>
+          </div>`,
+        directives: { tooltip: vTooltip },
+      },
+      { attachTo: document.body }
+    );
+
+    open(trigger());
+    expect(tooltipText()).toBe('Tooltip text');
   });
 });
 

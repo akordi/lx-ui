@@ -4,7 +4,9 @@ import LxIcon from '@/components/Icon.vue';
 import LxDropDownMenu from '@/components/DropDownMenu.vue';
 import { getDisplayTexts } from '@/utils/generalUtils';
 import LxButton from '@/components/Button.vue';
+import LxActionButton from '@/components/ActionButton.vue';
 import { generateUUID } from '@/utils/stringUtils';
+import { flattenNestedActions, resolveActionGroups } from '@/utils/actionDefinitionsUtils';
 
 const props = defineProps({
   id: { type: String, default: () => generateUUID() },
@@ -23,6 +25,7 @@ const props = defineProps({
     validator: (value) =>
       typeof value === 'string' && ['default', 'clickable', 'button'].includes(value),
   },
+  actionGroupDefinitions: { type: Array, default: null },
   actionDefinitions: { type: Array, default: () => [] },
   texts: { type: Object, default: () => ({}) },
 });
@@ -52,20 +55,20 @@ const containerClasses = computed(() => {
   let baseClasses = '';
   switch (props.variant) {
     case 'error':
-      baseClasses = 'lx-info-box-button lx-alert-error';
+      baseClasses = 'lx-alert-error';
       break;
     case 'warning':
-      baseClasses = 'lx-info-box-button lx-alert-warning';
+      baseClasses = 'lx-alert-warning';
       break;
     case 'info':
-      baseClasses = 'lx-info-box-button lx-alert-info';
+      baseClasses = 'lx-alert-info';
       break;
     case 'success':
-      baseClasses = 'lx-info-box-button lx-alert-success';
+      baseClasses = 'lx-alert-success';
       break;
     case 'default':
     default:
-      baseClasses = 'lx-info-box-button lx-alert-info';
+      baseClasses = 'lx-alert-info';
       break;
   }
 
@@ -73,6 +76,13 @@ const containerClasses = computed(() => {
 });
 
 const emits = defineEmits(['actionClick']);
+
+const actionDefinitionsResolved = computed(
+  () =>
+    flattenNestedActions(
+      resolveActionGroups(props.actionDefinitions, props.actionGroupDefinitions)
+    ) || []
+);
 
 function handleActionClick(actionName, selectedItemId = 'default') {
   emits('actionClick', actionName, selectedItemId);
@@ -89,6 +99,7 @@ function handleClick(event) {
 <template>
   <div
     :id="id"
+    class="lx-info-box"
     :class="containerClasses"
     :role="kind === 'clickable' ? 'button' : undefined"
     :tabindex="kind === 'clickable' ? '0' : '-1'"
@@ -100,16 +111,12 @@ function handleClick(event) {
     <div class="lx-info-box-icon">
       <LxIcon :value="iconName" />
     </div>
-    <div class="lx-alert-data">
-      <div class="lx-alert-header">
-        <p class="lx-data">
-          {{ label }}
-        </p>
+    <div class="lx-info-box-content-wrapper">
+      <div class="lx-primary">
+        {{ label }}
       </div>
-      <div class="lx-alert-description" v-if="description">
-        <p class="lx-description">
-          {{ description }}
-        </p>
+      <div class="lx-secondary" v-if="description">
+        {{ description }}
       </div>
     </div>
     <div
@@ -117,32 +124,20 @@ function handleClick(event) {
       :class="{
         'lx-info-box-additional-buttons-hidden': kind === 'default' || kind === 'clickable',
       }"
-      v-if="actionDefinitions?.length > 0 && props.kind === 'button'"
+      v-if="actionDefinitionsResolved?.length > 0 && props.kind === 'button'"
     >
-      <LxButton
-        v-if="actionDefinitions.length === 1"
-        :id="actionDefinitions[0].id"
-        :label="actionDefinitions[0].name || actionDefinitions[0].label"
-        :title="actionDefinitions[0].title || actionDefinitions[0].tooltip"
-        :icon="actionDefinitions[0].icon"
-        :iconSet="actionDefinitions[0].iconSet"
+      <LxActionButton
+        v-if="actionDefinitionsResolved.length === 1"
+        :action="actionDefinitionsResolved[0]"
+        :id="actionDefinitionsResolved[0].id"
         kind="ghost"
-        :loading="actionDefinitions[0].loading"
-        :busy="actionDefinitions[0].busy"
-        :destructive="actionDefinitions[0].destructive"
-        :disabled="actionDefinitions[0].disabled"
         variant="icon-only"
-        :active="actionDefinitions[0].active"
-        :badge="actionDefinitions[0].badge"
-        :badgeType="actionDefinitions[0].badgeType"
-        :badgeIcon="actionDefinitions[0].badgeIcon"
-        :badgeTitle="actionDefinitions[0].badgeTitle"
-        :href="actionDefinitions[0].href"
-        @click="handleActionClick(actionDefinitions[0].id, props.id)"
+        @click="handleActionClick(actionDefinitionsResolved[0].id, props.id)"
       />
       <LxDropDownMenu
         v-else
-        :actionDefinitions="actionDefinitions"
+        :actionDefinitions="actionDefinitionsResolved"
+        :actionGroupDefinitions="actionGroupDefinitions"
         @actionClick="(id) => handleActionClick(id, props.id)"
       >
         <div class="lx-toolbar">

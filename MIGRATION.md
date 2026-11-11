@@ -158,6 +158,165 @@ is missing from `items` is now shown as the id instead of an empty field.
 - Don't add new usages of `preloadedItems` or function `items`.
 - Update `customItem` templates to the `{ item, context }` slot props when switching to `mode="new"`.
 
+## 2.3.11 → 2.3.12
+
+### Other changes
+
+#### Recovery after lost network
+
+Before, if a page or lazy component failed to load (for example, while offline), the app kept failing
+to load it even after the connection came back, until the page was reloaded. LX/UI now recovers from
+this:
+
+- While offline, the navigation is cancelled and the user stays on the current page with an error
+  notification. After the connection returns, the next click works again.
+- If loading failed on an unstable network, the user also stays on the current page with an error
+  notification. The next navigation then opens the target page with a full browser page load
+  instead of in-app routing, since the browser keeps failed modules cached until a new page load.
+  As with any page load, state kept only in memory (e.g. stores) is lost.
+
+**What to do**
+
+Install `createLx` **after** the router, so it can find it:
+
+```js
+myApp.use(router);
+myApp.use(createLx, { ... });
+```
+
+If `createLx` is installed first, it logs a warning and the recovery is not active.
+
+Errors are shown as LxShell notifications, alongside the ones in your notify store. Latvian texts are
+built in; for other languages, pass them through `texts` (or `setLxComponentTexts` on locale change):
+
+```js
+texts: {
+  LxDynamicImport: {
+    offline: 'No internet connection. Check your connection and try again.',
+    loadFailed: 'Failed to load page content. Please try again.',
+  },
+},
+```
+
+Routes added later with `router.addRoute` are not covered.
+
+## 2.3.9 → 2.3.10
+
+### Breaking changes
+
+#### Links
+
+**Token renames**
+
+The `--text-decoration-link` (previous value: `underline`) token has been split into four tokens to support two types of links:
+
+- Inline links use `--link-inline-text-decoration` and `--link-inline-text-decoration-hover`. They appear within or between text elements, such as in LxMarkdownTextArea or LxRichTextDisplay.
+- Standalone links use `--link-standalone-text-decoration` and `--link-standalone-text-decoration-hover`. They appear independently, where their placement and styling make them recognizable as links, such as in breadcrumbs or a site map.
+
+#### LxDataGrid
+
+Columns with `type: 'icon'` now render LxBadge instead of LxIcon. The data format does not
+change: a string renders a badge with only an icon, and `{ icon, iconSet, label, title, category }`
+renders a badge with an icon, text, or both.
+
+**Class changes**
+
+If you override the icon column styles or target it in tests, update the selectors.
+
+| Removed                                     | Use instead                                    |
+|---------------------------------------------|------------------------------------------------|
+| `svg.lx-grid-column-icon`                   | `.lx-grid-column-icon .lx-badge-icon`          |
+| `.lx-grid-icon-text`                        | `.lx-grid-column-icon .lx-badge-text`          |
+| `.lx-grid-icon-wrapper.only-icon`           | `.lx-grid-icon-wrapper .lx-badge-icon-only`    |
+| `.lx-grid-icon-wrapper.lx-icon-has-tooltip` | none (the tooltip is handled by LxInfoWrapper) |
+
+## 2.3.8 → 2.3.9
+
+### Breaking changes
+
+#### LxFileUploader
+
+The drag-and-drop area (`draggable`) is now an LxButton (kind `tertiary`, dashed border) instead of a
+custom `<div role="button">`. It uses the tertiary button tokens and states (hover, focus, active,
+disabled). The component API does not change.
+
+**Class changes**
+
+If you override the upload button styles or target it in tests, update the selectors. In both default and
+`draggable` modes, the upload button is now wrapped in `.lx-draggable-drop-zone`.
+
+| Removed                                                   | Use instead                                                      |
+|-----------------------------------------------------------|------------------------------------------------------------------|
+| `.lx-draggable-upload-wrapper`                            | `.lx-draggable-upload-button`                                    |
+| `.lx-draggable-upload-wrapper > p`                        | `.lx-draggable-upload-button .lx-button-label`                   |
+| `.lx-draggable-upload-wrapper > svg`                      | `.lx-draggable-upload-button .lx-button-icon`                    |
+| `.lx-draggable-upload-wrapper > svg.lx-invalidation-icon` | `.lx-draggable-upload-button .lx-button-icon` (icon `invalid`)   |
+| `.lx-draggable-upload-wrapper > .lx-loader-wrapper`       | `.lx-draggable-upload-button .lx-loader-container`               |
+| `.lx-draggable-upload-wrapper.lx-dragging`                | `.lx-draggable-upload-button.lx-dragging`                        |
+| `.lx-draggable-upload-wrapper.lx-disabled`                | `.lx-draggable-upload-button.lx-disabled`                        |
+| `.lx-draggable-upload-wrapper.lx-invalid`                 | `.lx-file-upload-wrapper.lx-invalid .lx-draggable-upload-button` |
+| `.lx-draggable-wrapper > .lx-button:first-child`          | `.lx-draggable-wrapper > .lx-draggable-drop-zone > .lx-button`   |
+
+#### LxTabControl
+
+**`level` prop removed**
+
+The `level` prop has been removed. It only added corresponding CSS classes to the component ('lx-sticky', 'lx-sticky-2'), without providing meaningful built-in styling or behavior.
+
+If you were passing `level` to `LxTabControl`, remove the prop. If your custom styles or selectors relied on the classes generated by it, update them accordingly.
+
+#### LxTextInput: no `mask="currency"` with `kind="search"`
+
+`kind="search"` now renders the LxAutoComplete search field (`mode="new"`, `kind="search"`,
+`searchTrigger="input"`), so all search fields share one component. All masks except `currency`
+keep working as before: the field shows the masked text and `v-model` gets the unmasked value.
+
+`mask="currency"` is no longer supported with `kind="search"`. It is ignored (the field accepts any
+text) and a warning is logged in development environments. Use `kind="default"` for amount fields, or
+another mask (e.g. `decimal`) if the field must stay a search field.
+
+**Before:**
+
+```vue
+<LxTextInput v-model="amount" kind="search" mask="currency" />
+```
+
+**After:**
+
+```vue
+<LxTextInput v-model="amount" kind="default" mask="currency" />
+<!-- or, as a search field -->
+<LxTextInput v-model="amount" kind="search" mask="decimal" />
+```
+
+### Other changes
+
+#### Router guard must return `lxFlowUtils.beforeEach`
+
+Since 2.3, `lxFlowUtils.beforeEach` returns the redirect (`notAuthorized`, `forbidden`, `error`)
+instead of calling `next`. If your guard only awaits it, the redirect is lost and protected routes
+open for users without a session or scope. Return the result:
+
+**Before:**
+
+```js
+router.beforeEach(async (to, from) => {
+  await lxFlowUtils.beforeEach(to, from, appStore, authStore, routeCheckCallback);
+});
+```
+
+**After:**
+
+```js
+router.beforeEach(async (to, from) => {
+  return lxFlowUtils.beforeEach(to, from, appStore, authStore, routeCheckCallback);
+});
+```
+
+The redirects now also keep the current route params, so they work when the error routes are nested
+under a parent with a required param (e.g. `/:lang`). Workarounds that add those params to the
+returned redirect can be removed.
+
 ## 2.3.7 → 2.3.8
 
 ### Breaking changes
@@ -337,6 +496,7 @@ New `texts.emptyValue` key (default `'Nav norādīts'`), shown in `readOnly` mod
 
 - Remove the `next` parameter from all custom guards and callbacks.
 - Replace every `next(...)` call with an equivalent `return` statement.
+- Return the result of `lxFlowUtils.beforeEach` from your `router.beforeEach` guard (see 2.3.8 → 2.3.9).
 
 | Old (`next()`)            | New (return-based)          |
 |---------------------------|-----------------------------|

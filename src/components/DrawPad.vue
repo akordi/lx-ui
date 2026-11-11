@@ -1,6 +1,6 @@
 , group: 'main'
 <script setup>
-import { ref, onMounted, onUnmounted, watch, computed, inject, getCurrentInstance } from 'vue';
+import { ref, onMounted, onUnmounted, watch, computed, inject } from 'vue';
 import { useThrottleFn } from '@vueuse/core';
 import { logError, logWarn } from '@/utils/devUtils';
 import useLx from '@/hooks/useLx';
@@ -9,7 +9,7 @@ import { clampText, getDisplayTexts, isDefined } from '@/utils/generalUtils';
 import LxToolbar from '@/components/Toolbar.vue';
 import LxIcon from '@/components/Icon.vue';
 import LxInfoWrapper from '@/components/InfoWrapper.vue';
-import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/builderUtils';
+import { useBuilderRegistration } from '@/utils/builderUtils';
 import { generateUUID } from '@/utils/stringUtils';
 
 const props = defineProps({
@@ -46,6 +46,7 @@ const props = defineProps({
     sequence: 6,
   },
   actionDefinitions: { type: Array, default: () => [], group: 'additional', sequence: 6 },
+  actionGroupDefinitions: { type: Array, default: null },
   texts: { type: Object, default: () => ({}), group: 'additional', sequence: 100 },
   builderOptions: {
     type: Object,
@@ -477,24 +478,7 @@ onUnmounted(() => {
 
 defineExpose({ getPng });
 
-if (props.builderOptions?.useRegistry) {
-  const instance = getCurrentInstance();
-  // Adds default texts to ensure they are available in the builder instance
-  instance.type.props.texts.options = textsDefault;
-  registerBuilderInstance({
-    name: 'LxDrawPad',
-    instance,
-    props,
-    builderName: props.builderOptions?.schemaPath,
-    componentStack: props.builderOptions?.componentStack?.concat([
-      { id: props?.id, name: 'LxDrawPad' },
-    ]),
-  });
-
-  onUnmounted(() => {
-    unregisterBuilderInstance(props?.id);
-  });
-}
+useBuilderRegistration('LxDrawPad', props, { texts: textsDefault });
 </script>
 
 <template>
@@ -505,6 +489,7 @@ if (props.builderOptions?.useRegistry) {
         class="lx-embedded-toolbar"
         :disabled="props.disabled"
         :actionDefinitions="toolbarActions"
+        :actionGroupDefinitions="actionGroupDefinitions"
         :sticky="stickyToolbar"
         :wrapperRef="wrapperRef"
         @actionClick="toolbarActionClick"

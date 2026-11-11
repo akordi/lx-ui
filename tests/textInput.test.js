@@ -1,10 +1,13 @@
 // @ts-nocheck
-import { test, expect, describe, afterEach, vi } from 'vitest';
+import { test, expect, describe, afterEach, beforeAll, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { ref } from 'vue';
 import LxTextInput from '@/components/TextInput.vue';
+import * as devUtils from '@/utils/devUtils';
 
 let wrapper;
+
+beforeAll(() => import('@/components/autoComplete/AutoCompleteNew.vue'), 30000);
 
 // LxFlag resolves its country name on demand as of this change (the country database is a
 // separate chunk), so poll for the label instead of asserting straight after mount.
@@ -243,6 +246,18 @@ describe('LxTextInput', () => {
         expect(wrapper.find('.lx-uppercase').exists()).toBe(true);
         expect(props.uppercase).toBe(true);
       });
+
+      test('kind:search - is applied to the search field, v-model keeps typed case', async () => {
+        wrapper = mount(LxTextInput, {
+          props: { kind: 'search', uppercase: true, modelValue: 'Fallout 4' },
+        });
+        await vi.waitFor(() => {
+          expect(wrapper.find('.lx-search-input').exists()).toBe(true);
+        });
+
+        expect(wrapper.find('.lx-uppercase .lx-search-input').exists()).toBe(true);
+        expect(wrapper.get('.lx-search-input').element.value).toBe('Fallout 4');
+      });
     });
 
     describe('invalid and invalidationMessage', () => {
@@ -276,6 +291,19 @@ describe('LxTextInput', () => {
 
         await wrapper.vm.$nextTick();
         expect(props.modelValue).toBe('123');
+      });
+
+      test('leaves room for thousands separators in integer and decimal masks', () => {
+        wrapper = mount(LxTextInput, { props: { mask: 'integer', maxlength: 4 } });
+        expect(wrapper.find('.lx-text-input').attributes('maxlength')).toBe('4');
+        wrapper.unmount();
+
+        wrapper = mount(LxTextInput, { props: { mask: 'decimal', maxlength: 10 } });
+        expect(wrapper.find('.lx-text-input').attributes('maxlength')).toBe('13');
+        wrapper.unmount();
+
+        wrapper = mount(LxTextInput, { props: { maxlength: 10 } });
+        expect(wrapper.find('.lx-text-input').attributes('maxlength')).toBe('10');
       });
     });
 
@@ -364,6 +392,147 @@ describe('LxTextInput', () => {
 
         const inputElement = wrapper.find('.lx-text-input').element;
         expect(inputElement.value).toBe('12,34 €');
+      });
+
+      test('currency - groups thousands with spaces', () => {
+        wrapper = mount(LxTextInput, {
+          props: { mask: 'currency', modelValue: 100000000 },
+        });
+
+        expect(wrapper.find('.lx-text-input').element.value).toBe('100 000 000,00 €');
+      });
+
+      test('currency - does not group four integer digits', () => {
+        wrapper = mount(LxTextInput, {
+          props: { mask: 'currency', modelValue: 9876 },
+        });
+
+        expect(wrapper.find('.lx-text-input').element.value).toBe('9876,00 €');
+      });
+
+      test('currency - groups from five integer digits', () => {
+        wrapper = mount(LxTextInput, {
+          props: { mask: 'currency', modelValue: 10123 },
+        });
+
+        expect(wrapper.find('.lx-text-input').element.value).toBe('10 123,00 €');
+      });
+
+      test('currency - readOnly does not group four integer digits', () => {
+        wrapper = mount(LxTextInput, {
+          props: { mask: 'currency', readOnly: true, modelValue: '9876' },
+        });
+
+        expect(wrapper.find('.lx-data').text()).toBe('9876,00 €');
+      });
+
+      test('integer - groups from five digits', async () => {
+        wrapper = mount(LxTextInput, {
+          props: {
+            mask: 'integer',
+            modelValue: null,
+            'onUpdate:modelValue': (value) => wrapper.setProps({ modelValue: value }),
+          },
+        });
+
+        const input = wrapper.find('.lx-text-input');
+        await input.setValue('9876');
+        expect(input.element.value).toBe('9876');
+
+        await input.setValue('1234567');
+        expect(input.element.value).toBe('1 234 567');
+        const emitted = wrapper.emitted()['update:modelValue'];
+        expect(emitted[emitted.length - 1]).toEqual(['1234567']);
+      });
+
+      test('decimal - groups integer part from five digits', async () => {
+        wrapper = mount(LxTextInput, {
+          props: {
+            mask: 'decimal',
+            modelValue: null,
+            'onUpdate:modelValue': (value) => wrapper.setProps({ modelValue: value }),
+          },
+        });
+
+        const input = wrapper.find('.lx-text-input');
+        await input.setValue('9876,5');
+        expect(input.element.value).toBe('9876,5');
+
+        await input.setValue('12345,67');
+        expect(input.element.value).toBe('12 345,67');
+        const emitted = wrapper.emitted()['update:modelValue'];
+        expect(emitted[emitted.length - 1]).toEqual(['12345.67']);
+      });
+
+      test('integer and decimal - readOnly groups from five digits', () => {
+        wrapper = mount(LxTextInput, {
+          props: { mask: 'integer', readOnly: true, modelValue: '-1234567' },
+        });
+        expect(wrapper.find('.lx-data').text()).toBe('-1 234 567');
+        wrapper.unmount();
+
+        wrapper = mount(LxTextInput, {
+          props: { mask: 'decimal', readOnly: true, modelValue: '9876.5' },
+        });
+        expect(wrapper.find('.lx-data').text()).toBe('9876,5');
+        wrapper.unmount();
+
+        wrapper = mount(LxTextInput, {
+          props: { mask: 'decimal', readOnly: true, modelValue: '12345.67' },
+        });
+        expect(wrapper.find('.lx-data').text()).toBe('12 345,67');
+      });
+
+      test('currency - custom currency code', () => {
+        wrapper = mount(LxTextInput, {
+          props: { mask: 'currency', options: { currency: 'USD' }, modelValue: 1234.5 },
+        });
+
+        expect(wrapper.find('.lx-text-input').element.value).toBe('1234,50 $');
+      });
+
+      test('currency - readOnly groups thousands and uses custom currency', () => {
+        wrapper = mount(LxTextInput, {
+          props: {
+            mask: 'currency',
+            options: { currency: 'GBP' },
+            readOnly: true,
+            modelValue: '-1234567.891',
+          },
+        });
+
+        expect(wrapper.find('.lx-data').text()).toBe('-1 234 567,89 £');
+      });
+
+      test('currency - readOnly defaults to euro', () => {
+        wrapper = mount(LxTextInput, {
+          props: { mask: 'currency', readOnly: true, modelValue: 12.3 },
+        });
+
+        expect(wrapper.find('.lx-data').text()).toBe('12,30 €');
+      });
+
+      test('currency - grouped value emits unformatted number', async () => {
+        wrapper = mount(LxTextInput, {
+          props: { mask: 'currency', modelValue: 0 },
+        });
+
+        await wrapper.find('.lx-text-input').setValue('1 234 567,89 €');
+
+        const emitted = wrapper.emitted()['update:modelValue'];
+        expect(emitted[emitted.length - 1]).toEqual(['1234567.89']);
+      });
+
+      test('currency - maxlength limits typed value', async () => {
+        wrapper = mount(LxTextInput, {
+          props: { mask: 'currency', modelValue: 0, maxlength: 3 },
+        });
+
+        const input = wrapper.find('.lx-text-input');
+        await input.setValue('12,00 €');
+        await input.setValue('1 234,00 €');
+
+        expect(input.element.value).toBe('12,00 €');
       });
 
       test('default > time', async () => {
@@ -594,7 +763,7 @@ describe('LxTextInput', () => {
         expect(wrapper.find('.lx-input-wrapper').exists()).toBe(true);
       });
 
-      test('kind:search - text-input and search-input wrapper should exist', () => {
+      test('kind:search - renders LxAutoComplete search with the model value as text', async () => {
         wrapper = mount(LxTextInput, {
           props: {
             kind: 'search',
@@ -604,10 +773,162 @@ describe('LxTextInput', () => {
         const props = wrapper.props();
 
         expect(props.kind).toBe('search');
-        expect(props.kind).toBeTypeOf('string');
         expect(props.modelValue).toBe('Custom model value');
-        expect(props.modelValue).toBeTypeOf('string');
-        expect(wrapper.find('.lx-text-input.lx-search-input').exists()).toBe(true);
+        await vi.waitFor(() => {
+          expect(wrapper.find('[data-component="lx-auto-complete"]').exists()).toBe(true);
+        });
+        const searchInput = wrapper.get('.lx-text-input.lx-search-input');
+        expect(searchInput.element.value).toBe('Custom model value');
+        expect(searchInput.attributes('role')).toBe('searchbox');
+        expect(
+          wrapper
+            .find('[data-component="lx-text-input"] [data-component="lx-auto-complete"]')
+            .exists()
+        ).toBe(true);
+        expect(JSON.parse(wrapper.attributes('data-state')).kind).toBe('search');
+      });
+
+      test('kind:search - typing updates v-model right away', async () => {
+        wrapper = mount(LxTextInput, {
+          props: {
+            kind: 'search',
+            modelValue: null,
+            'onUpdate:modelValue': (value) => wrapper.setProps({ modelValue: value }),
+          },
+        });
+        await vi.waitFor(() => {
+          expect(wrapper.find('.lx-search-input').exists()).toBe(true);
+        });
+
+        await wrapper.get('.lx-search-input').setValue('wit');
+
+        expect(wrapper.emitted('update:modelValue').at(-1)).toEqual(['wit']);
+        expect(wrapper.props('modelValue')).toBe('wit');
+      });
+
+      test('kind:search - clear button empties v-model', async () => {
+        wrapper = mount(LxTextInput, {
+          props: {
+            kind: 'search',
+            modelValue: 'witcher',
+            'onUpdate:modelValue': (value) => wrapper.setProps({ modelValue: value }),
+          },
+        });
+        await vi.waitFor(() => {
+          expect(wrapper.find('.lx-search-input').exists()).toBe(true);
+        });
+
+        await wrapper.get('.lx-button').trigger('click');
+
+        expect(wrapper.emitted('update:modelValue').at(-1)).toEqual(['']);
+        expect(wrapper.get('.lx-search-input').element.value).toBe('');
+        expect(wrapper.find('.lx-button').exists()).toBe(false);
+      });
+
+      test('kind:search - maxlength limits the search text', async () => {
+        wrapper = mount(LxTextInput, {
+          props: { kind: 'search', maxlength: 5 },
+        });
+        await vi.waitFor(() => {
+          expect(wrapper.find('.lx-search-input').exists()).toBe(true);
+        });
+
+        expect(wrapper.get('.lx-search-input').attributes('maxlength')).toBe('5');
+      });
+
+      test('kind:search - focus requested before load is applied once loaded', async () => {
+        wrapper = mount(LxTextInput, {
+          props: { kind: 'search' },
+          attachTo: document.body,
+        });
+
+        wrapper.vm.focus();
+
+        await vi.waitFor(() => {
+          const searchInput = wrapper.find('.lx-search-input');
+          expect(searchInput.exists()).toBe(true);
+          expect(document.activeElement).toBe(searchInput.element);
+        });
+      });
+
+      function mountMaskedSearch(props) {
+        wrapper = mount(LxTextInput, {
+          props: {
+            kind: 'search',
+            modelValue: null,
+            'onUpdate:modelValue': (value) => wrapper.setProps({ modelValue: value }),
+            ...props,
+          },
+        });
+        return vi.waitFor(() => {
+          expect(wrapper.find('.lx-search-input').exists()).toBe(true);
+        });
+      }
+
+      test('kind:search - personCodeLv mask formats typed text, v-model is unmasked', async () => {
+        await mountMaskedSearch({ mask: 'personCodeLv' });
+        const input = wrapper.get('.lx-search-input');
+
+        await input.setValue('0102ab0320102');
+
+        expect(input.element.value).toBe('010203-20102');
+        expect(wrapper.props('modelValue')).toBe('01020320102');
+        expect(input.attributes('inputmode')).toBe('numeric');
+      });
+
+      test('kind:search - personCodeLv mask shows an external value masked', async () => {
+        await mountMaskedSearch({ mask: 'personCodeLv', modelValue: '01020320102' });
+
+        expect(wrapper.get('.lx-search-input').element.value).toBe('010203-20102');
+      });
+
+      test('kind:search - decimal mask with convertToString false gives a number', async () => {
+        await mountMaskedSearch({ mask: 'decimal', convertToString: false });
+        const input = wrapper.get('.lx-search-input');
+
+        await input.setValue('12,75');
+
+        expect(input.element.value).toBe('12,75');
+        expect(wrapper.props('modelValue')).toBe(12.75);
+      });
+
+      test('kind:search - integer mask rejects letters', async () => {
+        await mountMaskedSearch({ mask: 'integer' });
+        const input = wrapper.get('.lx-search-input');
+
+        await input.setValue('12a3');
+
+        expect(input.element.value).toBe('123');
+        expect(wrapper.props('modelValue')).toBe('123');
+      });
+
+      test('kind:search - external null stays null', async () => {
+        await mountMaskedSearch({ mask: 'personCodeLv', modelValue: '01020320102' });
+
+        await wrapper.setProps({ modelValue: null });
+
+        expect(wrapper.get('.lx-search-input').element.value).toBe('');
+        expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+      });
+
+      test('kind:search - currency mask is ignored with a dev warning', async () => {
+        const logWarnSpy = vi.spyOn(devUtils, 'logWarn').mockImplementation(() => {});
+
+        try {
+          await mountMaskedSearch({ id: 'price', mask: 'currency' });
+          const input = wrapper.get('.lx-search-input');
+
+          await input.setValue('12abc');
+
+          expect(input.element.value).toBe('12abc');
+          expect(wrapper.findAll('input')).toHaveLength(1);
+          expect(logWarnSpy).toHaveBeenCalledWith(
+            'LxTextInput [price]: mask "currency" is not supported with kind "search" and is ignored',
+            undefined
+          );
+        } finally {
+          logWarnSpy.mockRestore();
+        }
       });
 
       test('kind:password - input type should be "password"', () => {

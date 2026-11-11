@@ -4,12 +4,23 @@ import LxIcon from '@/components/Icon.vue';
 import LxEmptyValue from '@/components/EmptyValue.vue';
 import { getDisplayTexts } from '@/utils/generalUtils';
 import { generateUUID } from '@/utils/stringUtils';
+import { useBuilderRegistration } from '@/utils/builderUtils';
 
 const props = defineProps({
   id: { type: String, default: () => generateUUID() },
   value: { type: [Object, String, Number], default: null },
-  dictionary: { type: Array, default: () => [{}] },
+  dictionary: { type: Array, default: () => [{}], group: 'main', sequence: 1 },
   texts: { type: Object, default: () => ({}) },
+  builderOptions: {
+    type: Object,
+    default: () => ({
+      innerComponent: false,
+      schemaPath: null,
+      componentStack: null,
+      useRegistry: false,
+      customItemPath: null,
+    }),
+  },
 });
 
 const textsDefault = {
@@ -113,6 +124,8 @@ const stateIcon = computed(() => {
   if (displayShape === 'custom') return getCustomStatusIcon(options, displayType);
   return getShapeIcon(displayShape, displayType);
 });
+
+useBuilderRegistration('LxStateDisplay', props);
 </script>
 <template>
   <!--
@@ -125,6 +138,7 @@ const stateIcon = computed(() => {
 
   <div
     v-if="definition"
+    :data-id="id"
     class="lx-state"
     :class="[
       `lx-state-${definition?.displayType} ${
@@ -144,5 +158,5 @@ const stateIcon = computed(() => {
     />
     <div v-if="!isIconOnly" class="lx-state-text">{{ definition?.displayName }}</div>
   </div>
-  <LxEmptyValue v-else :texts="{ emptyValue: displayTexts.emptyValue }" />
+  <LxEmptyValue v-else :id="id" :texts="{ emptyValue: displayTexts.emptyValue }" />
 </template>

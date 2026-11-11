@@ -1,11 +1,12 @@
 <script setup>
-import { computed, defineAsyncComponent, getCurrentInstance, inject, ref, watch } from 'vue';
+import { computed, getCurrentInstance, inject, ref, watch } from 'vue';
+import { lxDefineAsyncComponent } from '@/utils/dynamicImportUtils';
 import { isClient, useEventListener } from '@vueuse/core';
 
 import LxIcon from '@/components/Icon.vue';
 import { shellContextKey } from '@/components/shell/shellContext';
 
-const LxAutoComplete = defineAsyncComponent(() => import('@/components/AutoComplete.vue'));
+const LxAutoComplete = lxDefineAsyncComponent(() => import('@/components/AutoComplete.vue'));
 
 const componentProps = defineProps({
   id: { type: String, required: true },
@@ -13,7 +14,7 @@ const componentProps = defineProps({
   tabindex: { type: [Number, String], default: 0 },
 });
 
-const componentEmits = defineEmits(['select']);
+const componentEmits = defineEmits(['select', 'openDetails']);
 
 const { props, displayTexts, emits } = inject(shellContextKey, {});
 const router = getCurrentInstance()?.appContext.config.globalProperties.$router;
@@ -54,6 +55,11 @@ const selectedModel = computed({
   },
 });
 
+function openDetails() {
+  emits('globalSearchDetailsClick', query.value);
+  componentEmits('openDetails');
+}
+
 function getDetailsButton() {
   return rootRef.value?.querySelector(`#${componentProps.id}-detailsButton`);
 }
@@ -79,7 +85,7 @@ if (isClient)
       if (isOnDetails && (event.key === 'Enter' || event.key === ' ')) {
         event.preventDefault();
         event.stopPropagation();
-        if (event.key === ' ') emits('globalSearchDetailsClick', query.value);
+        if (event.key === ' ') openDetails();
       } else if (event.key === 'Tab' && !event.shiftKey && !isOnDetails && detailsButton) {
         event.preventDefault();
         event.stopPropagation();
@@ -109,7 +115,7 @@ defineExpose({ isInSearch, getDetailsButton });
       :placeholder="texts.placeholder"
       :texts="autoCompleteTexts"
       @search="search"
-      @openDetails="emits('globalSearchDetailsClick', query)"
+      @openDetails="openDetails"
     >
       <template #customItem="{ item }">
         <span

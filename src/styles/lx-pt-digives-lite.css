@@ -17,6 +17,15 @@
   --color-focus-background: #9f1853;
   --color-destructive: #ba1b23;
 
+  --color-blue: #036cf5;
+  --color-green: #198038;
+  --color-yellow: #f1c21b;
+  --color-orange: #c55300;
+  --color-purple: #6554c0;
+  --color-red: #da1e28;
+  --color-teal: #178295;
+  --color-grey: #6c6c6c;
+
   --font-family-mono: 'RobotoLX', monospace, sans-serif;
   --font-weight-data: 600;
   --font-weight-bold: 600;
@@ -30,16 +39,48 @@
 
   --notification-text-primary-font-weight: var(--font-weight-data);
 }
-.lx.lx-theme-dark {
-	--color-brand: #cb728c;
-	--color-interactive-background: #cb728c;
-	--color-interactive-hover-background: #9f1853;
-	--color-interactive-secondary-background: #3c3e44;
-	--color-highlight: #291e1f;
-	--color-background: #131516;
-	--color-region: #212123;
-	--color-region-2: #151719;
-	--color-region-hover: #2f2f31;
-	--color-nav-item-background-selected: var(--color-highlight);
+
+/* Data grid icon column badge looks like a plain icon */
+.lx .lx-data-grid-wrapper .lx-badge.lx-grid-column-icon {
+  --badge-min-width-s: var(--space-0);
+  --badge-min-height-s: var(--space-0);
+  --badge-padding-s: var(--space-0);
+  --badge-padding-icon-only-s: var(--space-0);
+  --badge-gap-s: var(--space-0500);
+  --badge-border-s: var(--border-width-0) solid transparent;
+  --badge-icon-size-s: var(--icon-size-m);
+  --badge-text-font-weight: var(--data-grid-text-default-font-weight);
+  --color-badge-text: currentColor;
+  --color-badge-background: transparent;
+  --color-badge-icon: var(--color-data-grid-foreground-secondary);
 }
 
+.lx .lx-data-grid-wrapper .lx-grid-row:hover .lx-badge.lx-grid-column-icon {
+  --color-badge-icon: var(--color-data-grid-foreground-hover);
+}
+
+.lx .lx-data-grid-wrapper .lx-grid-column-icon .lx-badge-text {
+  margin-top: var(--space-0250);
+}
+
+.lx.lx-theme-dark {
+  --color-brand: #cb728c;
+  --color-interactive-background: #cb728c;
+  --color-interactive-hover-background: #9f1853;
+  --color-interactive-secondary-background: #3c3e44;
+  --color-highlight: #291e1f;
+  --color-background: #131516;
+  --color-region: #212123;
+  --color-region-2: #151719;
+  --color-region-hover: #2f2f31;
+  --color-nav-item-background-selected: var(--color-highlight);
+
+  --color-blue: #4c9aff;
+  --color-green: #36b37e;
+  --color-yellow: #f1c21b;
+  --color-orange: #ffab00;
+  --color-purple: #998dd9;
+  --color-red: #ff603a;
+  --color-teal: #00b8d9;
+  --color-grey: var(--color-label);
+}

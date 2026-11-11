@@ -52,11 +52,12 @@ dialog.lx-modal > header > .lx-primary,
   border: var(--modal-border);
   border-radius: var(--modal-border-radius);
   margin: var(--space-3000);
-  max-height:  calc(100vh - calc(var(--space-3000) * 2)); /* --space-3000 * 2 to account for top & bottom margin */
+  max-height: calc(100vh - calc(var(--space-3000) * 2)); /* --space-3000 * 2 to account for top & bottom margin */
 }
 
 dialog.lx-modal {
   overflow: visible;
+  position: fixed;
   margin: auto;
   padding: var(--space-0);
 }
@@ -337,11 +338,12 @@ dialog.lx-modal > header > .lx-button:focus:hover svg,
   text-overflow: ellipsis;
 }
 
-/*** LxDialog ***/ 
+/*** LxDialog ***/
 
 .lx-dialog > header .lx-illustration {
   height: var(--modal-illustration-size);
   width: var(--modal-illustration-size);
+  margin-top: var(--space-0500);
 }
 
 .lx-dialog > header .lx-illustration > svg {
@@ -394,7 +396,7 @@ dialog.lx-modal > header > .lx-button:focus:hover svg,
   padding: var(--space-0);
 }
 
-.lx-layout .lx-modal.lx-modal-form .lx-main .lx-form-grid > header.lx-sticky {
+.lx-layout .lx-modal.lx-modal-form .lx-main .lx-form-grid .lx-form-grid-header-sticky {
   top: var(--space-0);
 }
 
@@ -410,7 +412,7 @@ dialog.lx-modal > header > .lx-button:focus:hover svg,
 }
 
 @media (max-height: 499px) {
-  .lx-modal-form .lx-form-grid > header.lx-sticky {
+  .lx-modal-form .lx-form-grid .lx-form-grid-header-sticky {
     position: sticky;
   }
 }

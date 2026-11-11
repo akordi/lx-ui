@@ -11,24 +11,27 @@ import {
   Comment,
   Fragment,
   Text,
-  defineAsyncComponent,
 } from 'vue';
+import { lxDefineAsyncComponent } from '@/utils/dynamicImportUtils';
 import { useDebounceFn, useElementSize, useElementBounding, useScroll } from '@vueuse/core';
 import LxToolbarGroup from '@/components/ToolbarGroup.vue';
 import LxButton from '@/components/Button.vue';
+import LxActionButton from '@/components/ActionButton.vue';
 import LxDropDownMenu from '@/components/DropDownMenu.vue';
 import LxToggle from '@/components/Toggle.vue';
 import { generateUUID, foldToAscii } from '@/utils/stringUtils';
 import { getDisplayTexts } from '@/utils/generalUtils';
 import useLx from '@/hooks/useLx';
 import { logWarn } from '@/utils/devUtils';
+import { resolveActionGroups } from '@/utils/actionDefinitionsUtils';
 import { useToolbarResponsiveness } from '@/hooks/useToolbarResponsiveness';
 
-const LxTextInput = defineAsyncComponent(() => import('@/components/TextInput.vue'));
+const LxAutoComplete = lxDefineAsyncComponent(() => import('@/components/AutoComplete.vue'));
 
 const props = defineProps({
   id: { type: String, default: () => generateUUID() },
   actionDefinitions: { type: Array, default: () => [] },
+  actionGroupDefinitions: { type: Array, default: null },
   noBorders: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
@@ -38,6 +41,7 @@ const props = defineProps({
   searchSide: { type: String, default: 'client' }, // client, server
   searchMode: { type: String, default: 'default' }, // default, compact, defaultForce
   useSearchDebounce: { type: Boolean, default: false },
+  searchItems: { type: Array, default: () => [] }, // server side only. Suggestions for the typed searchString
   hasSelectAll: { type: Boolean, default: false },
   sticky: { type: Boolean, default: false },
   selectionState: { type: String, default: 'checkbox' }, // checkbox, checkbox-filled, checkbox-indeterminate, radiobutton-filled
@@ -51,6 +55,10 @@ const props = defineProps({
     default: () => ({}),
   },
 });
+
+const actionDefinitionsResolved = computed(() =>
+  resolveActionGroups(props.actionDefinitions, props.actionGroupDefinitions)
+);
 
 const emits = defineEmits([
   'actionClick',
@@ -115,12 +123,12 @@ watch(isSearchExpanded, (value) => {
   emits('searchExpandedChange', value);
 });
 
-// LxTextInput loads on demand, so on the first expand the ref appears only once that module
+// LxAutoComplete loads on demand, so on the first expand the ref appears only once that module
 // resolves — focusing on the next tick would miss it. Focus when the input actually mounts.
 watch(searchInputCompact, (input) => {
   if (input && shouldFocusCompactSearch.value) {
     shouldFocusCompactSearch.value = false;
-    input.focus();
+    document.getElementById(`${props.id}-search-input`)?.focus();
   }
 });
 
@@ -133,7 +141,7 @@ function updateSlotContentFlags() {
 
 const isToolbarEmpty = computed(
   () =>
-    !props.actionDefinitions.length &&
+    !actionDefinitionsResolved.value.length &&
     !props.hasSearch &&
     !props.hasSelectAll &&
     !hasDefaultSlotContent.value &&
@@ -153,13 +161,13 @@ const defaultAreaComputed = computed(() => {
 });
 
 function getArea(action) {
-  const parentAction = props.actionDefinitions.find(
+  const parentAction = actionDefinitionsResolved.value.find(
     (a) => action.groupId && a.nestedGroupId && a.nestedGroupId === action.groupId
   );
 
   return parentAction
-    ? parentAction.area ?? defaultAreaComputed.value
-    : action.area ?? defaultAreaComputed.value;
+    ? (parentAction.area ?? defaultAreaComputed.value)
+    : (action.area ?? defaultAreaComputed.value);
 }
 
 function applyDefaults(action, overrides = {}) {
@@ -258,11 +266,11 @@ function processGroup(group) {
 }
 
 const actionsProcessed = computed(() => {
-  if (!props.actionDefinitions.length) {
+  if (!actionDefinitionsResolved.value.length) {
     return [];
   }
 
-  const normalizedActions = props.actionDefinitions.map((a) => applyDefaults(a));
+  const normalizedActions = actionDefinitionsResolved.value.map((a) => applyDefaults(a));
   const regularActions = normalizedActions.filter((a) => !a.extra);
   const extraActions = normalizedActions.filter((a) => a.extra);
   const sortedExtraActions = defaultAreaComputed.value ? extraActions : [...extraActions].reverse();
@@ -421,18 +429,28 @@ function serverSideSearch() {
 }
 
 const searchInputRefresh = ref(0);
+const searchValue = ref(null);
 
-function clear() {
-  searchStringRaw.value = '';
-  isSearchActive.value = false;
-  searchInputRefresh.value += 1;
-
-  if (props.searchSide === 'client') {
-    clientSideSearch();
-  } else if (props.searchSide === 'server') {
-    serverSideSearch();
-  }
+function confirmServerSearch(value) {
+  searchStringRaw.value = value;
+  serverSideSearch();
 }
+
+// Server side searches on Enter or a picked suggestion; client side filters while typing
+const searchBindings = computed(() => {
+  const isServer = props.searchSide === 'server';
+  return {
+    id: `${props.id}-search-input`,
+    mode: 'new',
+    kind: 'search',
+    searchTrigger: isServer ? 'confirm' : 'input',
+    items: isServer ? props.searchItems : [],
+    placeholder: displayTexts.value.placeholder,
+    disabled: props.disabled || props.loading || props.busy,
+    texts: { clear: displayTexts.value.clear },
+    ...(isServer ? { onSearch: confirmServerSearch } : {}),
+  };
+});
 
 const isSelectAllDisabled = computed(
   () => props.disabled || props.loading || props.busy || isSearchActive.value
@@ -459,6 +477,7 @@ watch(
 watch(
   () => props.searchSide,
   () => {
+    searchValue.value = null;
     searchInputRefresh.value += 1;
   }
 );
@@ -469,6 +488,7 @@ function toggleSearch() {
   }
 
   searchStringRaw.value = '';
+  searchValue.value = null;
   isSearchExpanded.value = !isSearchExpanded.value;
 
   shouldFocusCompactSearch.value = isSearchExpanded.value;
@@ -637,25 +657,10 @@ const dataState = computed(() =>
         />
       </LxToolbarGroup>
       <LxToolbarGroup v-if="promotedAction?.area === 'left'" class="lx-toolbar-promoted-action">
-        <LxButton
+        <LxActionButton
+          :action="promotedAction"
           :id="getActionId(promotedAction.id)"
-          :label="promotedAction.name || promotedAction.label"
-          :title="promotedAction.title || promotedAction.tooltip"
-          :icon="promotedAction.icon"
-          :iconSet="promotedAction.iconSet"
-          :variant="promotedAction.variant"
-          :kind="promotedAction.kind"
-          :loading="promotedAction.loading"
-          :busy="promotedAction.busy"
-          :destructive="promotedAction.destructive"
           :disabled="promotedAction.disabled || props.disabled || props.loading"
-          :active="promotedAction.active"
-          :badge="promotedAction.badge"
-          :badgeType="promotedAction.badgeType"
-          :badgeIcon="promotedAction.badgeIcon"
-          :badgeTitle="promotedAction.badgeTitle"
-          :customClass="promotedAction.customClass"
-          :href="promotedAction.href"
           @click="handleActionClick(promotedAction.id)"
         />
       </LxToolbarGroup>
@@ -694,6 +699,7 @@ const dataState = computed(() =>
             <LxDropDownMenu
               :disabled="props.disabled || props.loading"
               :actionDefinitions="actionsOverflow"
+              :actionGroupDefinitions="actionGroupDefinitions"
               @actionClick="(id, value) => handleActionClick(id, { value })"
             >
               <LxButton
@@ -714,26 +720,13 @@ const dataState = computed(() =>
             class="action-definitions-group"
           >
             <template v-for="action in group.actions" :key="action?.id">
-              <LxButton
+              <LxActionButton
                 v-if="isActionButton(action)"
+                :action="action"
                 :id="getActionId(action?.id)"
-                :label="action?.name || action?.label"
-                :title="action?.title || action?.tooltip"
-                :icon="action?.icon"
-                :iconSet="action?.iconSet"
                 :kind="action?.kind || 'ghost'"
-                :loading="action?.loading"
-                :busy="action?.busy"
-                :destructive="action?.destructive"
                 :disabled="action?.disabled || props.disabled || props.loading"
-                :active="action?.active"
                 variant="icon-only"
-                :customClass="action?.customClass"
-                :badge="action?.badge"
-                :badgeType="action?.badgeType"
-                :badgeIcon="action?.badgeIcon"
-                :badgeTitle="action?.badgeTitle"
-                :href="action?.href"
                 @click="handleActionClick(action?.id)"
               />
               <LxToggle
@@ -755,25 +748,15 @@ const dataState = computed(() =>
                 :actionDefinitions="actionsByGroupId.get(action?.nestedGroupId) ?? []"
                 @actionClick="(id, value) => handleActionClick(id, { value })"
               >
-                <LxButton
+                <LxActionButton
                   v-if="isActionDropDown(action)"
+                  :action="action"
+                  :omit="['href']"
                   :id="getActionId(action?.id)"
-                  :label="action?.name || action?.label"
-                  :title="action?.title || action?.tooltip"
                   :icon="action?.icon || 'menu'"
-                  :iconSet="action?.iconSet"
                   :kind="action?.kind || 'ghost'"
                   :tabindex="-1"
-                  :loading="action?.loading"
-                  :busy="action?.busy"
-                  :destructive="action?.destructive"
                   :disabled="action?.disabled || props.disabled || props.loading"
-                  :active="action?.active"
-                  :badge="action?.badge"
-                  :badgeType="action?.badgeType"
-                  :badgeIcon="action?.badgeIcon"
-                  :badgeTitle="action?.badgeTitle"
-                  :customClass="action?.customClass"
                   variant="icon-only"
                 />
               </LxDropDownMenu>
@@ -791,41 +774,11 @@ const dataState = computed(() =>
             v-if="hasSearch && autoSearchMode === 'default'"
             class="lx-toolbar-search"
           >
-            <LxTextInput
-              ref="searchInputDefault"
-              :id="`${id}-search-input`"
+            <LxAutoComplete
               :key="searchInputRefresh"
-              role="search"
-              v-model="searchStringRaw"
-              :kind="searchSide === 'server' ? 'default' : 'search'"
-              :placeholder="displayTexts.placeholder"
-              :disabled="disabled || loading || busy"
-              :builderOptions="{
-                innerComponent: true,
-              }"
-              @keydown.enter="serverSideSearch"
-            />
-            <LxButton
-              v-if="searchSide === 'server'"
-              :id="`${id}-search-button`"
-              icon="search"
-              kind="ghost"
-              variant="icon-only"
-              :label="displayTexts.search"
-              :disabled="disabled || loading || busy"
-              :loading="loading"
-              @click="serverSideSearch"
-            />
-            <LxButton
-              v-if="searchStringRaw"
-              :id="`${id}-search-clear-button`"
-              icon="clear"
-              kind="ghost"
-              variant="icon-only"
-              :label="displayTexts.clear"
-              :disabled="disabled || loading || busy"
-              :loading="loading"
-              @click="clear"
+              v-bind="searchBindings"
+              v-model="searchValue"
+              v-model:searchString="searchStringRaw"
             />
           </LxToolbarGroup>
 
@@ -855,26 +808,13 @@ const dataState = computed(() =>
             class="action-definitions-group"
           >
             <template v-for="action in group.actions" :key="action?.id">
-              <LxButton
+              <LxActionButton
                 v-if="isActionButton(action)"
+                :action="action"
                 :id="getActionId(action?.id)"
-                :label="action?.name || action?.label"
-                :title="action?.title || action?.tooltip"
-                :icon="action?.icon"
-                :iconSet="action?.iconSet"
                 :kind="action?.kind || 'ghost'"
-                :loading="action?.loading"
-                :busy="action?.busy"
-                :destructive="action?.destructive"
                 :disabled="action?.disabled || props.disabled || props.loading"
-                :active="action?.active"
                 variant="icon-only"
-                :customClass="action?.customClass"
-                :badge="action?.badge"
-                :badgeType="action?.badgeType"
-                :badgeIcon="action?.badgeIcon"
-                :badgeTitle="action?.badgeTitle"
-                :href="action?.href"
                 @click="handleActionClick(action?.id)"
               />
               <LxToggle
@@ -896,25 +836,15 @@ const dataState = computed(() =>
                 :actionDefinitions="actionsByGroupId.get(action?.nestedGroupId) ?? []"
                 @actionClick="(id, value) => handleActionClick(id, { value })"
               >
-                <LxButton
+                <LxActionButton
                   v-if="isActionDropDown(action)"
+                  :action="action"
+                  :omit="['href']"
                   :id="getActionId(action?.id)"
-                  :label="action?.name || action?.label"
-                  :title="action?.title || action?.tooltip"
                   :icon="action?.icon || 'menu'"
-                  :iconSet="action?.iconSet"
                   :kind="action?.kind || 'ghost'"
                   :tabindex="-1"
-                  :loading="action?.loading"
-                  :busy="action?.busy"
-                  :destructive="action?.destructive"
                   :disabled="action?.disabled || props.disabled || props.loading"
-                  :active="action?.active"
-                  :badge="action?.badge"
-                  :badgeType="action?.badgeType"
-                  :badgeIcon="action?.badgeIcon"
-                  :badgeTitle="action?.badgeTitle"
-                  :customClass="action?.customClass"
                   variant="icon-only"
                 />
               </LxDropDownMenu>
@@ -937,6 +867,7 @@ const dataState = computed(() =>
             <LxDropDownMenu
               :disabled="props.disabled || props.loading"
               :actionDefinitions="actionsOverflow"
+              :actionGroupDefinitions="actionGroupDefinitions"
               @actionClick="(id, value) => handleActionClick(id, { value })"
             >
               <LxButton
@@ -954,25 +885,10 @@ const dataState = computed(() =>
       </div>
 
       <LxToolbarGroup v-if="promotedAction?.area === 'right'" class="lx-toolbar-promoted-action">
-        <LxButton
+        <LxActionButton
+          :action="promotedAction"
           :id="getActionId(promotedAction.id)"
-          :label="promotedAction.name || promotedAction.label"
-          :title="promotedAction.title || promotedAction.tooltip"
-          :icon="promotedAction.icon"
-          :iconSet="promotedAction.iconSet"
-          :variant="promotedAction.variant"
-          :kind="promotedAction.kind"
-          :loading="promotedAction.loading"
-          :busy="promotedAction.busy"
-          :destructive="promotedAction.destructive"
           :disabled="promotedAction.disabled || props.disabled || props.loading"
-          :active="promotedAction.active"
-          :badge="promotedAction.badge"
-          :badgeType="promotedAction.badgeType"
-          :badgeIcon="promotedAction.badgeIcon"
-          :badgeTitle="promotedAction.badgeTitle"
-          :customClass="promotedAction.customClass"
-          :href="promotedAction.href"
           @click="handleActionClick(promotedAction.id)"
         />
       </LxToolbarGroup>
@@ -1026,45 +942,12 @@ const dataState = computed(() =>
         v-if="hasSearch && isSearchExpanded && autoSearchMode === 'compact'"
         class="toolbar-search"
       >
-        <LxTextInput
+        <LxAutoComplete
           ref="searchInputCompact"
-          :id="`${id}-search-input`"
-          role="search"
-          v-model="searchStringRaw"
-          :kind="searchSide === 'server' ? 'default' : 'search'"
-          :placeholder="displayTexts.placeholder"
-          :disabled="disabled || loading || busy"
-          :builderOptions="{
-            innerComponent: true,
-          }"
-          @keydown.enter="serverSideSearch"
+          v-bind="searchBindings"
+          v-model="searchValue"
+          v-model:searchString="searchStringRaw"
         />
-
-        <div class="lx-group lx-slot-wrapper">
-          <LxButton
-            v-if="searchSide === 'server'"
-            :id="`${id}-search-button`"
-            icon="search"
-            kind="ghost"
-            variant="icon-only"
-            :label="displayTexts.search"
-            :disabled="disabled || loading || busy"
-            :loading="loading"
-            @click="serverSideSearch"
-          />
-
-          <LxButton
-            v-if="searchStringRaw"
-            :id="`${id}-search-clear-button`"
-            icon="clear"
-            kind="ghost"
-            variant="icon-only"
-            :label="displayTexts.clear"
-            :disabled="disabled || loading || busy"
-            :loading="loading"
-            @click="clear"
-          />
-        </div>
       </div>
 
       <slot name="secondRow" />

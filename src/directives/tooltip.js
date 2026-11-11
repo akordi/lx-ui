@@ -20,6 +20,8 @@ const PANEL_ID = 'lx-tooltip-panel';
 const MARKER_ATTR = 'data-lx-tooltip';
 const HIGH_Z_INDEX = '9000';
 const NESTED_TOOLTIP_SELECTOR = '.lx-info-wrapper-content.lx-tooltip-kind';
+const NESTED_INFO_WRAPPER_SELECTOR =
+  '.lx-info-wrapper-content.lx-rich-kind:not(.lx-disabled):not(.lx-responsive-view)';
 
 const registry = new WeakMap();
 // Events already claimed by a nested trigger; weak so dispatched events stay collectable
@@ -73,12 +75,18 @@ function isTouchOnly() {
   return hoverNoneQuery?.matches === true;
 }
 
+function isNested(el) {
+  const parent = el.parentElement;
+  return Boolean(
+    parent?.closest(NESTED_TOOLTIP_SELECTOR) || parent?.closest(NESTED_INFO_WRAPPER_SELECTOR)
+  );
+}
+
 function isInert(el, entry) {
   if (!entry?.text || entry.suppressed) return true;
   // Touch devices never get a hover tooltip
   if (isTouchOnly()) return true;
-  // Already inside an LxTooltip – let the component own the hover
-  if (el.parentElement?.closest(NESTED_TOOLTIP_SELECTOR)) return true;
+  if (isNested(el)) return true;
   return false;
 }
 
@@ -177,6 +185,7 @@ function bindGlobals() {
   document.addEventListener('contextmenu', hide);
   document.addEventListener('visibilitychange', hide);
   document.addEventListener('keydown', onKeydown);
+  document.addEventListener('focusout', onTriggerFocusOut, true);
   globalThis.addEventListener?.('resize', hide);
   state.globalsBound = true;
 }
@@ -187,6 +196,7 @@ function unbindGlobals() {
   document.removeEventListener('contextmenu', hide);
   document.removeEventListener('visibilitychange', hide);
   document.removeEventListener('keydown', onKeydown);
+  document.removeEventListener('focusout', onTriggerFocusOut, true);
   globalThis.removeEventListener?.('resize', hide);
   state.globalsBound = false;
 }
@@ -219,7 +229,6 @@ function show(el, cursorX, cursorY) {
   state.currentEl = el;
   state.isOpen = true;
   state.savedCursorPos = { x: cursorX, y: cursorY };
-  el.addEventListener('blur', onTriggerBlur);
 
   // Must run after insertion – the clamp needs the panel's measured size
   positionPanel(cursorX, cursorY + CURSOR_HEIGHT);
@@ -237,7 +246,6 @@ function hide() {
     el.removeAttribute('aria-describedby');
     entry.ownsAria = false;
   }
-  el?.removeEventListener('blur', onTriggerBlur);
 
   const { nodes } = state;
   if (nodes) {
@@ -342,8 +350,9 @@ function onTriggerLeave(event) {
   handleLeave(event);
 }
 
-function onTriggerBlur() {
-  hide();
+// Listening on the trigger itself would make SVG elements focusable in Chromium
+function onTriggerFocusOut(event) {
+  if (event.target === state.currentEl) hide();
 }
 
 function runHitTest(clientX, clientY) {
@@ -521,8 +530,7 @@ function unmounted(el) {
  */
 export function openTooltip(el) {
   const entry = registry.get(el);
-  if (!entry?.text || entry.suppressed || el.parentElement?.closest(NESTED_TOOLTIP_SELECTOR))
-    return;
+  if (!entry?.text || entry.suppressed || isNested(el)) return;
   if (state.currentEl === el && state.isOpen) return;
 
   hide();

@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref, provide, watch, inject, defineAsyncComponent } from 'vue';
+import { computed, ref, provide, watch, inject } from 'vue';
+import { lxDefineAsyncComponent } from '@/utils/dynamicImportUtils';
 import { vOnClickOutside } from '@vueuse/components';
 import { useWindowSize, useWindowScroll } from '@vueuse/core';
 
@@ -10,9 +11,9 @@ import { generateUUID } from '@/utils/stringUtils';
 import { useGlobalSearchPlacement } from '@/components/shell/shellContext';
 import LxDropDownMenu from '@/components/DropDownMenu.vue';
 
-const LxMegaMenu = defineAsyncComponent(() => import('@/components/shell/MegaMenu.vue'));
-const LxGlobalSearchInput = defineAsyncComponent(() =>
-  import('@/components/shell/GlobalSearchInput.vue')
+const LxMegaMenu = lxDefineAsyncComponent(() => import('@/components/shell/MegaMenu.vue'));
+const LxGlobalSearchInput = lxDefineAsyncComponent(
+  () => import('@/components/shell/GlobalSearchInput.vue')
 );
 
 const props = defineProps({
@@ -364,6 +365,7 @@ provide('insideNavBar', insideNavBar);
         id="lx-shell-nav-global-search-input"
         :tabindex="getTabIndex"
         @select="emits('nav-toggle', true)"
+        @openDetails="emits('nav-toggle', true)"
       />
     </div>
     <ul class="lx-nav-group">

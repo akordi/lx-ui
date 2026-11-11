@@ -2,6 +2,7 @@
 import { onMounted, ref, computed, nextTick, watch, inject } from 'vue';
 import LxIcon from '@/components/Icon.vue';
 import LxButton from '@/components/Button.vue';
+import LxActionButton from '@/components/ActionButton.vue';
 import LxValuePicker from '@/components/ValuePicker.vue';
 import LxDropDownMenu from '@/components/DropDownMenu.vue';
 import { useElementBounding, useElementSize } from '@vueuse/core';
@@ -12,7 +13,6 @@ const props = defineProps({
   id: { type: String, default: () => generateUUID() },
   modelValue: { type: String, default: '' },
   items: { type: Array, default: () => [] },
-  level: { type: Number, default: 1 },
   kind: { type: String, default: 'default' }, // 'default', 'icon-only', 'combo'
   texts: { type: Object, default: () => ({}) },
 });
@@ -145,17 +145,13 @@ onMounted(() => {
 });
 </script>
 <template>
-  <div :id="id" class="lx-tab-control" :style="`${topOutOfBounds}`" ref="tabControl">
+  <div :id="id" class="lx-tab-control lx-tab-wizard" :style="`${topOutOfBounds}`" ref="tabControl">
     <header
       ref="tabHeader"
-      class="lx-toolbar"
-      :class="[
-        { 'lx-sticky': level === 1 },
-        { 'lx-sticky-2': level > 1 },
-        { 'tab-control-default': kind === 'default' },
-      ]"
+      class="lx-tab-wizard-toolbar"
+      :class="[{ 'lx-tab-control-default': kind === 'default' }]"
     >
-      <div class="lx-tab-container">
+      <div class="lx-tab-container lx-tab-wizard-container">
         <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
         <div
           v-for="t in props.items"
@@ -182,11 +178,15 @@ onMounted(() => {
           @keydown.right.prevent="focusNextTab"
           @keydown.space.prevent
         >
-          <p class="lx-primary" v-if="kind !== 'icon-only'">{{ t.name }}</p>
-          <LxIcon :value="t.icon" customClass="item-icon" v-if="kind !== 'default' && !t.invalid" />
+          <div class="lx-primary" v-if="kind !== 'icon-only'">{{ t.name }}</div>
+          <LxIcon
+            :value="t.icon"
+            customClass="lx-tab-icon lx-icon"
+            v-if="kind !== 'default' && !t.invalid"
+          />
           <LxIcon
             value="invalid"
-            customClass="invalid"
+            customClass="lx-invalidation-icon lx-icon"
             v-show="!(kind !== 'default' && !t.invalid)"
           />
           <span
@@ -197,23 +197,10 @@ onMounted(() => {
             {{ clampText(t.invalidationMessage) }}
           </span>
           <div v-if="getSectionActions(t.id).length > 0" class="additional-buttons">
-            <LxButton
+            <LxActionButton
               v-if="getSectionActions(t.id).length === 1"
+              :action="getSectionActions(t.id)[0]"
               :id="getSectionActions(t.id)[0]?.id"
-              :label="getSectionActions(t.id)[0]?.name || getSectionActions(t.id)[0]?.label"
-              :title="getSectionActions(t.id)[0]?.title || getSectionActions(t.id)[0]?.tooltip"
-              :icon="getSectionActions(t.id)[0]?.icon"
-              :iconSet="getSectionActions(t.id)[0]?.iconSet"
-              :loading="getSectionActions(t.id)[0]?.loading"
-              :busy="getSectionActions(t.id)[0]?.busy"
-              :disabled="getSectionActions(t.id)[0]?.disabled"
-              :destructive="getSectionActions(t.id)[0]?.destructive"
-              :active="getSectionActions(t.id)[0]?.active"
-              :badge="getSectionActions(t.id)[0]?.badge"
-              :badgeType="getSectionActions(t.id)[0]?.badgeType"
-              :badgeIcon="getSectionActions(t.id)[0]?.badgeIcon"
-              :badgeTitle="getSectionActions(t.id)[0]?.badgeTitle"
-              :href="getSectionActions(t.id)[0]?.href"
               variant="icon-only"
               kind="ghost"
               @click.stop="getSectionActionHandler(t.id)?.(getSectionActions(t.id)[0]?.id)"
@@ -260,23 +247,10 @@ onMounted(() => {
           @update:modelValue="setActiveTab"
         />
         <div v-if="getSectionActions(model).length > 0" class="additional-buttons">
-          <LxButton
+          <LxActionButton
             v-if="getSectionActions(model).length === 1"
+            :action="getSectionActions(model)[0]"
             :id="getSectionActions(model)[0]?.id"
-            :label="getSectionActions(model)[0]?.name || getSectionActions(model)[0]?.label"
-            :title="getSectionActions(model)[0]?.title || getSectionActions(model)[0]?.tooltip"
-            :icon="getSectionActions(model)[0]?.icon"
-            :iconSet="getSectionActions(model)[0]?.iconSet"
-            :loading="getSectionActions(model)[0]?.loading"
-            :busy="getSectionActions(model)[0]?.busy"
-            :disabled="getSectionActions(model)[0]?.disabled"
-            :destructive="getSectionActions(model)[0]?.destructive"
-            :active="getSectionActions(model)[0]?.active"
-            :badge="getSectionActions(model)[0]?.badge"
-            :badgeType="getSectionActions(model)[0]?.badgeType"
-            :badgeIcon="getSectionActions(model)[0]?.badgeIcon"
-            :badgeTitle="getSectionActions(model)[0]?.badgeTitle"
-            :href="getSectionActions(model)[0]?.href"
             variant="icon-only"
             kind="ghost"
             @click.stop="getSectionActionHandler(model)?.(getSectionActions(model)[0]?.id)"
@@ -292,7 +266,7 @@ onMounted(() => {
       </div>
     </header>
 
-    <article class="lx-tab-body">
+    <article class="lx-tab-body lx-tab-wizard-body">
       <transition name="nav">
         <slot name="body" />
       </transition>

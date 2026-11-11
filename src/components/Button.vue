@@ -14,7 +14,7 @@ const emits = defineEmits(['click']);
 
 const props = defineProps({
   id: { type: String, default: () => generateUUID() },
-  label: { type: String, default: '', required: true },
+  label: { type: String, required: true },
   title: { type: String, default: '' },
   busyTooltip: { type: String, default: '' },
   icon: { type: String, default: '' },
@@ -70,6 +70,8 @@ const overflowCheckTrigger = ref(0);
 const buttonRef = ref(null);
 
 const slots = useSlots();
+
+const holdProgress = ref(false);
 
 const click = (e) => {
   if (props.openInNewTab) emits('click', e, true);
@@ -197,7 +199,7 @@ onMounted(() => {
 
 defineOptions({ inheritAttrs: false });
 
-defineExpose({ focus, scrollIntoView, getElement });
+defineExpose({ focus, scrollIntoView, getElement, holdProgress });
 </script>
 <template>
   <button
@@ -248,11 +250,14 @@ defineExpose({ focus, scrollIntoView, getElement });
         <div class="lx-loader-container" v-if="busy">
           <LxLoader :loading="true" size="s" />
         </div>
+        <div class="lx-loader-container lx-button-hold-loader" v-else-if="holdProgress">
+          <LxLoader kind="progress" size="s" :ariaHidden="true" />
+        </div>
       </template>
       <div v-if="!showIcon && !busy"></div>
       <div
         class="lx-button-content"
-        v-if="variant !== 'icon-only' && (label?.trim() !== '' || $slots.default)"
+        v-if="variant !== 'icon-only' && (label?.trim() || $slots.default)"
       >
         <span v-if="label" ref="labelEl" class="lx-button-label">{{ label }}</span>
       </div>
@@ -316,7 +321,7 @@ defineExpose({ focus, scrollIntoView, getElement });
       </template>
       <div
         class="lx-button-content"
-        v-if="variant !== 'icon-only' && (label?.trim() !== '' || $slots.default)"
+        v-if="variant !== 'icon-only' && (label?.trim() || $slots.default)"
       >
         <span v-if="label" ref="labelEl" class="lx-button-label">{{ label }}</span>
       </div>

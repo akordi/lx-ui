@@ -2,8 +2,10 @@
 import { shallowRef, watch, computed, ref } from 'vue';
 import { generateUUID } from '@/utils/stringUtils';
 import { clampText, getDisplayTexts } from '@/utils/generalUtils';
+import { flattenNestedActions, resolveActionGroups } from '@/utils/actionDefinitionsUtils';
 import LxIcon from '@/components/Icon.vue';
 import LxButton from '@/components/Button.vue';
+import LxActionButton from '@/components/ActionButton.vue';
 import LxDropDownMenu from '@/components/DropDownMenu.vue';
 import LxInfoWrapper from '@/components/InfoWrapper.vue';
 import LxBadge from '@/components/Badge.vue';
@@ -48,6 +50,7 @@ const props = defineProps({
 
   customClass: { type: String, default: '' },
   texts: { type: Object, default: () => ({}) },
+  actionGroupDefinitions: { type: Array, default: null },
   actionDefinitions: { type: Array, default: () => [] },
 });
 
@@ -67,7 +70,12 @@ const textsDefault = {
 const displayTexts = computed(() => getDisplayTexts(props.texts, textsDefault, 'LxExpander'));
 const invalidationMessageClamped = computed(() => clampText(props.invalidationMessage));
 const showInvalidationMessage = computed(() => props.invalid && props.invalidationMessage);
-const actionDefinitionsResolved = computed(() => props.actionDefinitions || []);
+const actionDefinitionsResolved = computed(
+  () =>
+    flattenNestedActions(
+      resolveActionGroups(props.actionDefinitions, props.actionGroupDefinitions)
+    ) || []
+);
 
 const emits = defineEmits(['update:modelValue', 'resetFilters', 'actionClick']);
 
@@ -148,13 +156,16 @@ defineExpose({ focus });
     data-component="lx-expander"
   >
     <div class="lx-expander-head">
+      <!-- Focusable via the bound tabindex; the rule only recognizes literal tabindex values. -->
+      <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
       <header
         ref="expanderHeader"
         :class="[{ 'lx-head': !$slots.customHeader }, { 'lx-custom-header': $slots.customHeader }]"
         :for="id"
         v-tooltip="tooltip"
-        :tabindex="disabled ? null : 0"
+        :tabindex="disabled ? -1 : 0"
         role="button"
+        :aria-disabled="disabled ? 'true' : null"
         :aria-label="ariaLabelWithBadge"
         :aria-describedby="
           ((badge || badgeIcon) && badgeTitle) || description || invalid
@@ -191,9 +202,9 @@ defineExpose({ focus });
               <div :id="`${id}-label`" v-if="label" class="heading-4">
                 {{ label }}
               </div>
-              <legend :id="`${id}-desc`" v-if="description" class="lx-description">
+              <div :id="`${id}-desc`" v-if="description" class="lx-description">
                 {{ description }}
-              </legend>
+              </div>
             </div>
             <div class="lx-expander-additional-info" v-if="$slots.additionalInfo">
               <LxInfoWrapper :disabled="disabled">
@@ -242,23 +253,11 @@ defineExpose({ focus });
         v-if="actionDefinitionsResolved && actionDefinitionsResolved.length > 0"
       >
         <div class="additional-buttons">
-          <LxButton
+          <LxActionButton
             v-if="actionDefinitionsResolved.length === 1"
+            :action="actionDefinitionsResolved[0]"
             :id="actionDefinitionsResolved[0]?.id"
-            :label="actionDefinitionsResolved[0]?.name || actionDefinitionsResolved[0]?.label"
-            :title="actionDefinitionsResolved[0]?.title || actionDefinitionsResolved[0]?.tooltip"
-            :icon="actionDefinitionsResolved[0]?.icon"
-            :iconSet="actionDefinitionsResolved[0]?.iconSet"
-            :loading="actionDefinitionsResolved[0]?.loading"
-            :busy="actionDefinitionsResolved[0]?.busy"
             :disabled="actionDefinitionsResolved[0]?.disabled || disabled"
-            :destructive="actionDefinitionsResolved[0]?.destructive"
-            :active="actionDefinitionsResolved[0]?.active"
-            :badge="actionDefinitionsResolved[0]?.badge"
-            :badgeType="actionDefinitionsResolved[0]?.badgeType"
-            :badgeIcon="actionDefinitionsResolved[0]?.badgeIcon"
-            :badgeTitle="actionDefinitionsResolved[0]?.badgeTitle"
-            :href="actionDefinitionsResolved[0]?.href"
             variant="icon-only"
             kind="ghost"
             @click.stop="handleActionClick(actionDefinitionsResolved[0]?.id)"
@@ -266,6 +265,7 @@ defineExpose({ focus });
           <LxDropDownMenu
             v-else
             :actionDefinitions="actionDefinitionsResolved"
+            :actionGroupDefinitions="actionGroupDefinitions"
             :disabled="disabled"
             @actionClick="handleActionClick"
           >

@@ -70,6 +70,65 @@ test('LxDataGrid component mounts successfully', () => {
   expect(wrapper.exists()).toBe(true);
 });
 
+test('renders row categories with category classes and displayer', async () => {
+  wrapper = mountComponent({
+    props: {
+      hasVirtualization: false,
+      idAttribute: 'id',
+      categoryAttribute: 'status',
+      items: [
+        { id: 'categorized-row', name: 'Categorized row', status: 'blue' },
+        { id: 'uncategorized-row', name: 'Uncategorized row' },
+      ],
+    },
+  });
+
+  await nextTick();
+
+  const [categorizedRow, uncategorizedRow] = wrapper.findAll('.lx-grid-content .lx-grid-row');
+
+  expect(categorizedRow.classes()).toContain('lx-category-blue');
+  expect(categorizedRow.find('.lx-category-displayer').exists()).toBe(true);
+  expect(uncategorizedRow.classes()).not.toContain('lx-category-blue');
+});
+
+test('renders row categories in the responsive layout', async () => {
+  const originalWidth = window.innerWidth;
+  window.innerWidth = 800;
+  window.dispatchEvent(new Event('resize'));
+
+  try {
+    wrapper = mountComponent({
+      props: {
+        hasVirtualization: false,
+        idAttribute: 'id',
+        categoryAttribute: 'status',
+        columnDefinitions: [{ attributeName: 'name', kind: 'primary' }],
+        items: [{ id: 'responsive-row', name: 'Responsive row', status: 'green' }],
+      },
+    });
+
+    await nextTick();
+
+    const row = wrapper.find('.lx-appendable-list .lx-data-block-wrapper');
+
+    expect(row.classes()).toContain('lx-data-block-custom-header');
+    expect(row.find('.lx-primary.lx-title').text()).toBe('Responsive row');
+
+    const indications = row.find('.lx-indications');
+    const badge = indications.find('.lx-data-grid-category-badge');
+
+    expect(badge.classes()).toContain('lx-badge-empty');
+    expect(badge.find('.lx-badge-text').text().trim()).toBe('');
+    expect(indications.element.firstElementChild).toBe(badge.element);
+    expect(row.find('.lx-indications svg').exists()).toBe(true);
+    expect(row.find('.lx-category-displayer').exists()).toBe(false);
+  } finally {
+    window.innerWidth = originalWidth;
+    window.dispatchEvent(new Event('resize'));
+  }
+});
+
 describe('Scrollable performance', () => {
   const props = {
     idAttribute: 'id',
@@ -607,6 +666,55 @@ describe('Action column header', () => {
   });
 });
 
+describe('Grid template columns', () => {
+  const props = {
+    id: 'grid',
+    idAttribute: 'id',
+    items: [{ id: 'one', name: 'Item one', surname: 'Surname one' }],
+    columnDefinitions: [
+      { id: 'name', attributeName: 'name', name: 'Name' },
+      { id: 'surname', attributeName: 'surname', name: 'Surname' },
+    ],
+    hasSelecting: true,
+    hasVirtualization: false,
+  };
+
+  function mountWithActionVars(actionDefinitions) {
+    const lx = document.createElement('div');
+    lx.className = 'lx';
+    lx.style.setProperty('--data-grid-action-width', '2rem');
+    lx.style.setProperty('--data-grid-action-set-padding', '0 0.5rem');
+    lx.style.setProperty('--data-grid-action-gap', '0.5rem');
+    document.body.appendChild(lx);
+
+    return mountComponent({ props: { ...props, actionDefinitions }, attachTo: lx });
+  }
+
+  // Selecting and a single action share the same width, which used to drop the selecting column.
+  test.each([
+    ['one action', [{ id: 'open', name: 'Open', icon: 'open' }]],
+    [
+      'two actions',
+      [
+        { id: 'open', name: 'Open', icon: 'open' },
+        { id: 'edit', name: 'Edit', icon: 'edit' },
+      ],
+    ],
+  ])('has an entry for the selecting and action columns with %s', async (_, actionDefinitions) => {
+    wrapper = mountWithActionVars(actionDefinitions);
+
+    await flushVirtualizationSetup();
+
+    const headerRow = wrapper.find('.lx-grid-header-wrapper .lx-grid-row');
+    const template = headerRow.element.style.gridTemplateColumns.match(/minmax\([^)]*\)|\S+/g);
+
+    expect(template).toHaveLength(headerRow.element.children.length);
+    expect(template).toHaveLength(4);
+    expect(template[0]).toMatch(/px$/);
+    expect(template[3]).toMatch(/px$/);
+  });
+});
+
 describe('Row action menu', () => {
   const props = {
     id: 'grid',
@@ -1002,6 +1110,83 @@ describe('Badge definitions', () => {
     expect(badges.length).toBe(badgeDefinitions.length);
     expect(badges[0].find('desc').exists()).toBe(false);
     expect(badges[1].find('desc').text()).toBe('Piktogramma "Flash"');
+  });
+});
+
+describe('Icon column', () => {
+  const columnDefinitions = [
+    { id: 'name', name: 'Name', attributeName: 'name' },
+    { id: 'icon', name: 'Icon', attributeName: 'icon', type: 'icon' },
+  ];
+
+  function mountIcons(icon, row = {}) {
+    wrapper = mountComponent({
+      props: {
+        id: 'grid',
+        columnDefinitions,
+        items: [{ id: 1, name: 'One', icon, ...row }],
+        hasVirtualization: false,
+      },
+    });
+    return wrapper.find('[id="grid-1-icon-badge"]');
+  }
+
+  test('renders an icon name as an icon-only badge', () => {
+    const badge = mountIcons('flash');
+
+    expect(badge.classes()).toContain('lx-grid-column-icon');
+    expect(badge.classes()).toContain('lx-badge-icon-only');
+    expect(badge.find('.lx-badge-icon').exists()).toBe(true);
+    expect(badge.attributes('aria-label')).toBe('Icon');
+  });
+
+  test('keeps icon, iconSet, label and title of an icon object', () => {
+    const badge = mountIcons({
+      icon: 'flash',
+      iconSet: 'cds',
+      label: 'Label',
+      title: 'Title',
+    });
+
+    expect(badge.find('.lx-badge-icon').exists()).toBe(true);
+    expect(badge.find('.lx-badge-text').text()).toBe('Label');
+    expect(badge.attributes('aria-label')).toBe('Title');
+    // The info wrapper already shows the title, so the badge does not add its own tooltip
+    expect(badge.attributes('data-lx-tooltip')).toBeUndefined();
+  });
+
+  test('adds the category of an icon object as a badge class', () => {
+    const badge = mountIcons({ icon: 'flash', category: 'red' });
+
+    expect(badge.classes()).toContain('lx-grid-column-icon');
+    expect(badge.classes()).toContain('red');
+  });
+
+  test('does not add the row category as a badge class', () => {
+    expect(mountIcons('flash', { category: 'blue' }).classes()).not.toContain('blue');
+    expect(mountIcons({ icon: 'flash' }, { category: 'blue' }).classes()).not.toContain('blue');
+  });
+
+  test('uses the category of an icon object, not the row category', () => {
+    const badge = mountIcons({ icon: 'flash', category: 'red' }, { category: 'blue' });
+
+    expect(badge.classes()).toContain('red');
+    expect(badge.classes()).not.toContain('blue');
+  });
+
+  test('shows the label of a label-only object as badge text', () => {
+    const badge = mountIcons({ label: 'Label' });
+
+    expect(badge.classes()).toContain('lx-badge-text-only');
+    expect(badge.find('.lx-badge-text').text()).toBe('Label');
+    expect(badge.find('.lx-badge-icon').exists()).toBe(false);
+  });
+
+  test('renders an empty value for an object without icon or label', () => {
+    const badge = mountIcons({ title: 'Title' });
+
+    expect(badge.exists()).toBe(false);
+    expect(wrapper.find('.lx-data-grid .empty-icon-value').exists()).toBe(true);
   });
 });
 
@@ -2019,5 +2204,39 @@ describe('Required LxRow', () => {
     const boxes = wrapper.findAll('.lx-cell-selector input[type="checkbox"]');
     expect(boxes.length).toBe(2);
     expect(boxes.every((box) => box.attributes('aria-required') === undefined)).toBe(true);
+  });
+});
+
+describe('Nested row actions', () => {
+  const props = {
+    id: 'grid',
+    idAttribute: 'id',
+    items: [
+      { id: 'one', name: 'Item one', canShare: true },
+      { id: 'two', name: 'Item two', canShare: false },
+    ],
+    columnDefinitions: [{ id: 'name', attributeName: 'name', name: 'Name' }],
+    actionDefinitions: [
+      {
+        id: 'share',
+        name: 'Share',
+        icon: 'share',
+        nestedGroupId: 'share',
+        enableByAttribute: 'canShare',
+      },
+      { id: 'shareLink', name: 'Copy link', icon: 'link', groupId: 'share' },
+    ],
+    hasVirtualization: false,
+  };
+
+  test('skips the trigger and renders its children with inherited state', async () => {
+    wrapper = mountComponent({ props, attachTo: document.body });
+
+    await flushVirtualizationSetup();
+
+    expect(wrapper.find('#grid-one-action-share').exists()).toBe(false);
+    expect(wrapper.find('#grid-one-action-shareLink').exists()).toBe(true);
+    expect(wrapper.find('#grid-one-action-shareLink').attributes('disabled')).toBeUndefined();
+    expect(wrapper.find('#grid-two-action-shareLink').attributes('disabled')).toBeDefined();
   });
 });
