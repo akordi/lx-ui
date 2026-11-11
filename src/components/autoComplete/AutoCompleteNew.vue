@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, nextTick, watch, inject, onUnmounted, useSlots } from 'vue';
 import { onClickOutside, useDebounceFn, useWindowSize } from '@vueuse/core';
+import { IMaskDirective as vImask } from 'vue-imask';
 import { generateUUID, textSearch } from '@/utils/stringUtils';
 import { clampText, getDisplayTexts, isDefined, isNil } from '@/utils/generalUtils';
 import { logError } from '@/utils/devUtils';
@@ -55,6 +56,9 @@ const props = defineProps({
   searchAttributes: { type: Array, default: null },
   searchString: { type: String, default: null },
   enableAdditionalText: { type: Boolean, default: false },
+  // LxTextInput kind 'search' only
+  inputMask: { type: Object, default: null },
+  inputMode: { type: String, default: null },
 });
 
 const emit = defineEmits(['update:modelValue', 'openDetails', 'update:searchString', 'search']);
@@ -176,7 +180,7 @@ let typedCommitTimeout = null;
 
 function commitEntries(entries) {
   clearTimeout(typedCommitTimeout);
-  const value = isMultiple.value ? entries.map((entry) => entry.raw) : entries[0]?.raw ?? null;
+  const value = isMultiple.value ? entries.map((entry) => entry.raw) : (entries[0]?.raw ?? null);
   emit('update:modelValue', value);
 }
 
@@ -338,6 +342,16 @@ watch(
   }
 );
 
+let isDeselectedByEdit = false;
+
+function deselectOnEdit(text) {
+  if (!isSearchKind.value || !selectedEntry.value) return;
+  const name = String(getName(selectedEntry.value) ?? '');
+  if ((text || '').toLowerCase() === name.toLowerCase()) return;
+  isDeselectedByEdit = true;
+  commitEntries([]);
+}
+
 watch(
   finalQuery,
   (value, oldValue) => {
@@ -347,12 +361,34 @@ watch(
       if (isSilent) return;
     }
     if (oldValue !== undefined && isPlainSearch.value) scheduleTypedCommit(value);
+    if (oldValue !== undefined && !isPlainSearch.value) deselectOnEdit(value);
     if (!searchesWhileTyping.value) return;
     if (value && isQueryTooShort.value) return;
     emitSearch(value);
   },
   { immediate: true }
 );
+
+const composingText = ref(null);
+
+function onCompositionStart(e) {
+  composingText.value = e.target.value;
+}
+
+// No v-model: with inputMask the text comes from imask's accept event
+function onQueryInput(e) {
+  if (e.isComposing) {
+    composingText.value = e.target.value;
+    return;
+  }
+  composingText.value = null;
+  if (props.inputMask) return;
+  query.value = e.target.value;
+}
+
+function onMaskAccept(e) {
+  query.value = e.detail.value;
+}
 
 function setQueryWithoutSearch(value) {
   const text = (value || '').trim();
@@ -364,6 +400,10 @@ function syncQueryToValue(valueKey, oldValueKey) {
   if (!isSearchKind.value) return;
   // Without a value on the first run, keep an initial searchString
   if (valueKey === null && oldValueKey === undefined) return;
+  if (isDeselectedByEdit) {
+    isDeselectedByEdit = false;
+    if (valueKey === null) return;
+  }
   const name = selectedEntry.value ? String(getName(selectedEntry.value) ?? '') : '';
   // Same text in another case or with spaces around it (e.g. "dota 2 " for "Dota 2") is left as typed
   if ((query.value || '').trim().toLowerCase() === name.toLowerCase()) return;
@@ -630,10 +670,23 @@ function handleShiftArrow(inputElement, direction) {
   else inputElement.setSelectionRange(0, textLength);
 }
 
+function isEditingKey(key) {
+  const isPrintableChar = key.length === 1 && /\S/.test(key);
+  return isPrintableChar || ['Backspace', 'Delete'].includes(key);
+}
+
+function handleTypingInInput() {
+  if (!menuOpen.value) openMenu();
+  // kind 'search' keeps its value until the typed text is committed
+  if (hasValue.value && !isMultiple.value && !isSearchKind.value) clear();
+  highlightedKey.value = null;
+}
+
 function handleKeydown(e) {
   const inputElement = document.activeElement;
 
   if (e.key === 'Tab' && menuOpen.value) {
+    if (refListbox.value?.contains(inputElement)) refQuery.value?.focus();
     resetMenuState();
     return;
   }
@@ -643,16 +696,7 @@ function handleKeydown(e) {
     return;
   }
 
-  const isPrintableChar = e.key.length === 1 && /\S/.test(e.key);
-  if (
-    inputElement?.id === props.id &&
-    (isPrintableChar || ['Backspace', 'Delete'].includes(e.key))
-  ) {
-    if (!menuOpen.value) openMenu();
-    // kind 'search' keeps its value until the typed text is committed
-    if (hasValue.value && !isMultiple.value && !isSearchKind.value) clear();
-    highlightedKey.value = null;
-  }
+  if (inputElement?.id === props.id && isEditingKey(e.key)) handleTypingInInput();
 }
 
 function returnToInput() {
@@ -739,8 +783,8 @@ function handleListSelectionChange(selectedIds) {
   clearTimeout(selectionTimeout);
   selectionTimeout = setTimeout(() => {
     if (!selectedIds) return;
-    const ids = selectedIds.map(String);
-    const kept = modelEntries.value.filter((entry) => ids.includes(entry.key));
+    const ids = new Set(selectedIds.map(String));
+    const kept = modelEntries.value.filter((entry) => ids.has(entry.key));
     if (kept.length !== modelEntries.value.length) commitEntries(kept);
   }, 150);
 }
@@ -802,7 +846,9 @@ watch(
 );
 
 watch(menuOpen, (open) => {
-  if (!open) hasPanelShown.value = false;
+  if (open) return;
+  hasPanelShown.value = false;
+  highlightedKey.value = null;
 });
 const panelTransition = computed(() =>
   menuOpen.value && hasPanelShown.value ? 'none' : 'appear-down'
@@ -838,7 +884,11 @@ onUnmounted(() => {
   clearTimeout(selectionTimeout);
 });
 
-defineExpose({ autoCompleteState, autoCompleteQuery });
+function focus() {
+  refQuery.value?.focus();
+}
+
+defineExpose({ autoCompleteState, autoCompleteQuery, focus });
 </script>
 
 <template>
@@ -869,7 +919,7 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
 
     <template v-else>
       <div
-        class="lx-autocomplete-default"
+        class="lx-autocomplete-default lx-autocomplete-new"
         ref="refContainer"
         :class="[
           { 'lx-autocomplete-search': isSearchKind },
@@ -954,8 +1004,10 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
                       ref="refQuery"
                       :placeholder="inputPlaceholder"
                       :id="id"
-                      v-model="query"
+                      v-imask="inputMask"
+                      :value="composingText ?? query"
                       class="lx-text-input lx-value-picker-placeholder lx-input-area"
+                      autocomplete="off"
                       :class="{
                         'lx-search-input': isSearchKind,
                         'lx-autocomplete-text-hidden': isSearchKind && shouldShowValue,
@@ -979,8 +1031,13 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
                       :aria-busy="loading"
                       :maxlength="queryMaxLength || null"
                       :enterkeyhint="enterKeyHint"
+                      :inputmode="inputMode"
                       :tabindex="disabled ? '-1' : tabindex"
                       :disabled="disabled"
+                      @input="onQueryInput"
+                      @compositionstart="onCompositionStart"
+                      @compositionend="onQueryInput"
+                      @accept="onMaskAccept"
                       @focus="isInputFocused = true"
                       @focusout="handleFocusOut"
                     />
@@ -989,11 +1046,7 @@ defineExpose({ autoCompleteState, autoCompleteQuery });
                       {{ displayTexts.loadingState }}
                     </div>
 
-                    <div
-                      v-if="shouldShowValue"
-                      class="lx-value lx-input-area"
-                      v-tooltip="customTooltip"
-                    >
+                    <div v-if="shouldShowValue" class="lx-value lx-input-area">
                       <div>
                         <slot
                           v-if="$slots.customItem && selectedEntry"

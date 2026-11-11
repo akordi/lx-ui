@@ -1,23 +1,52 @@
 <script setup>
-import { shallowRef, computed, watch, defineAsyncComponent } from 'vue';
+import { shallowRef, computed, watch } from 'vue';
+import { lxDefineAsyncComponent, getIconLoader } from '@/utils/dynamicImportUtils';
 import IconDefault from '@/components/icons/Default.vue';
 import useLx from '@/hooks/useLx';
 import { getDisplayTexts } from '@/utils/generalUtils';
 import { generateUUID } from '@/utils/stringUtils';
+import { useBuilderRegistration } from '@/utils/builderUtils';
 
 const props = defineProps({
   id: { type: String, default: () => generateUUID() },
   value: { type: String, default: 'default' },
-  iconSet: { type: String, default: () => useLx().getGlobals()?.iconSet },
-  variant: { type: String, default: 'default' }, // 'default', 'gradient-brand', 'gradient-brand-vertical'
-  customClass: { type: String, default: '' },
-  animation: { type: String, default: 'default' }, // 'default', 'spin'
-  meaningful: { type: Boolean, default: false }, // If true, icon will be announced by screen reader
-  title: { type: String, default: '' },
-  desc: { type: String, default: '' },
+  iconSet: {
+    type: String,
+    default: () => useLx().getGlobals()?.iconSet,
+    options: ['cds', 'material', 'brand', 'phosphor'],
+    group: 'main',
+    sequence: 2,
+  },
+  variant: {
+    type: String,
+    default: 'default',
+    options: ['default', 'gradient-brand', 'gradient-brand-vertical'],
+    group: 'main',
+    sequence: 3,
+  }, // 'default', 'gradient-brand', 'gradient-brand-vertical'
+  customClass: { type: String, default: '', group: 'main', sequence: 4 },
+  animation: {
+    type: String,
+    default: 'default',
+    options: ['default', 'spin'],
+    group: 'main',
+    sequence: 5,
+  }, // 'default', 'spin'
+  meaningful: { type: Boolean, default: false, group: 'main', sequence: 6 }, // If true, icon will be announced by screen reader
+  title: { type: String, default: '', group: 'main', sequence: 1 },
+  desc: { type: String, default: '', group: 'main', sequence: 7 },
   texts: {
     type: Object,
     default: () => ({}),
+  },
+  builderOptions: {
+    type: Object,
+    default: () => ({
+      useRegistry: false,
+      schemaPath: null,
+      componentStack: null,
+      customItemPath: null,
+    }),
   },
 });
 
@@ -50,13 +79,8 @@ const icon = computed(() => {
 
 function loadIcon() {
   if (icon.value && iconSetComputed.value) {
-    iconPath.value = defineAsyncComponent({
-      loader: () =>
-        import(
-          `@/components/icons/${iconSetComputed.value ? iconSetComputed.value : 'cds'}/${
-            icon.value
-          }.vue`
-        ),
+    iconPath.value = lxDefineAsyncComponent({
+      loader: getIconLoader(iconSetComputed.value, icon.value),
       errorComponent: IconDefault,
     });
   }
@@ -88,6 +112,8 @@ const gradientComputed = computed(() => {
   }
   return null;
 });
+
+useBuilderRegistration('LxIcon', props);
 </script>
 
 <template>
@@ -100,6 +126,7 @@ const gradientComputed = computed(() => {
     focusable="false"
     data-component="lx-icon"
     :id="id"
+    :data-id="id"
     v-tooltip="props.title"
   >
     <desc>{{ props.desc ? props.desc : `${displayTexts.iconLabel} "${icon}"` }}</desc>

@@ -1,16 +1,6 @@
 <!-- eslint-disable no-param-reassign -->
 <script setup>
-import {
-  computed,
-  useSlots,
-  ref,
-  watch,
-  onMounted,
-  nextTick,
-  provide,
-  onUnmounted,
-  getCurrentInstance,
-} from 'vue';
+import { computed, useSlots, ref, watch, onMounted, nextTick, provide, onUnmounted } from 'vue';
 import {
   useElementBounding,
   useElementSize,
@@ -19,6 +9,7 @@ import {
   isClient,
 } from '@vueuse/core';
 import LxButton from '@/components/Button.vue';
+import LxActionButton from '@/components/ActionButton.vue';
 import LxInfoWrapper from '@/components/InfoWrapper.vue';
 import LxDropDownMenu from '@/components/DropDownMenu.vue';
 import LxSection from '@/components/forms/Section.vue';
@@ -26,6 +17,7 @@ import LxTabControl from '@/components/TabControl.vue';
 import LxWizard from '@/components/Wizard.vue';
 import LxIcon from '@/components/Icon.vue';
 import { generateUUID } from '@/utils/stringUtils';
+import { flattenNestedActions, resolveActionGroups } from '@/utils/actionDefinitionsUtils';
 import LxSkipLink from '@/components/SkipLink.vue';
 import {
   clampText,
@@ -33,7 +25,7 @@ import {
   getDisplayTexts,
   remToPx,
 } from '@/utils/generalUtils';
-import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/builderUtils';
+import { useBuilderRegistration } from '@/utils/builderUtils';
 
 const slots = useSlots();
 const emits = defineEmits(['actionClick', 'update:index']);
@@ -50,8 +42,8 @@ const emits = defineEmits(['actionClick', 'update:index']);
  * @property {Boolean} showPreHeaderInfo - Determines whether to show the preHeader information slot. Defaults to true.
  * @property {Boolean} showPostHeaderInfo - Determines whether to show the postHeader information slot. Defaults to true.
  * @property {Array} index - The array of sections in the form. Defaults to an empty array.
- * @property {String} indexType - The type of index for the form. Can be 'default', 'tabs', or 'expanders'. Defaults to 'default'.
- * @property {Array} actionDefinitions - The array of buttons for the form. Defaults to an empty array.
+ * @property {String} indexType - The type of index for the form. Can be 'default', 'tabs', 'expanders', 'wizard' or 'none'. Defaults to 'default'.
+ * @property {Array} actionDefinitions - The array of buttons for the form. Defaults to an empty array. With indexType 'wizard', actions with id '_lx_prev_step' / '_lx_next_step' override properties (e.g. disabled, busy, name) of the built-in wizard buttons.
  * @property {String} requiredMode - The required mode for the form. Can be 'required', 'required-asterisk', or 'optional'. Defaults to 'optional'.
  * @property {String} kind - The kind of form. Can be 'default', 'compact', or 'stripped'. Defaults to 'default'.
  * @property {Object} texts - The object containing text translations for the form.
@@ -61,6 +53,8 @@ const emits = defineEmits(['actionClick', 'update:index']);
  *
  * @function highlightRow - Highlights a row in the form.
  * @function clearHighlights - Clears all highlights in the form.
+ * @function setSelectedIndex - Selects index item (wizard step, tab or section) by id.
+ * @function getSelectedIndex - Returns id of the current wizard step or selected tab.
  *
  * @example
  * <Form
@@ -217,6 +211,7 @@ const props = defineProps({
    * @default []
    * @since 0.1.63
    */
+  actionGroupDefinitions: { type: Array, default: null },
   actionDefinitions: {
     type: Array,
     default: () => [], // { actionName: '', name: '', icon: '', kind: 'primary'/'secondary'/'tertiary'/'additional' }
@@ -477,63 +472,84 @@ provide('sectionActions', sectionActions);
 
 const wizardModel = ref(null);
 const tabModel = ref(null);
-const itemsCopy = ref([...props.index]);
+
+const itemsCopy = ref(props.index);
 
 const currentStepIndex = computed(() => itemsCopy.value.findIndex((item) => item.isCurrentStep));
-const currentStepId = computed(() => props.index?.[currentStepIndex.value]?.id || null);
+const currentStepId = computed(() => itemsCopy.value[currentStepIndex.value]?.id || null);
 
-const actionDefinitionsWizardSteps = computed(() => [
-  {
-    id: '_lx_prev_step',
-    icon: 'back',
-    name: displayTexts.value.previous,
-    kind: 'primary',
-    disabled: currentStepIndex.value === 0,
-  },
-  {
-    id: '_lx_next_step',
-    icon: 'next',
-    name: displayTexts.value.next,
-    kind: 'primary',
-    disabled: currentStepIndex.value === props.index.length - 1,
-  },
-]);
+const WIZARD_ACTION_IDS = new Set(['_lx_prev_step', '_lx_next_step']);
+
+const actionDefinitionsFlat = computed(
+  () =>
+    flattenNestedActions(
+      resolveActionGroups(props.actionDefinitions, props.actionGroupDefinitions),
+      { inheritKind: true }
+    ) || []
+);
+
+function getWizardActionOverride(id) {
+  return actionDefinitionsFlat.value.find((action) => action?.id === id) || {};
+}
+
+const actionDefinitionsWizardSteps = computed(() => {
+  const prevOverride = getWizardActionOverride('_lx_prev_step');
+  const nextOverride = getWizardActionOverride('_lx_next_step');
+  return [
+    {
+      icon: 'back',
+      name: displayTexts.value.previous,
+      ...prevOverride,
+      id: '_lx_prev_step',
+      kind: 'primary',
+      disabled: currentStepIndex.value === 0 || !!prevOverride.disabled,
+    },
+    {
+      icon: 'next',
+      name: displayTexts.value.next,
+      ...nextOverride,
+      id: '_lx_next_step',
+      kind: 'primary',
+      disabled: currentStepIndex.value === itemsCopy.value.length - 1 || !!nextOverride.disabled,
+    },
+  ];
+});
+
+function applyWizardStep(stepId) {
+  const selectedIndex = itemsCopy.value.findIndex((item) => item?.id === stepId);
+  if (selectedIndex === -1) return;
+
+  itemsCopy.value.forEach((item, index) => {
+    // eslint-disable-next-line no-param-reassign
+    item.isCurrentStep = index === selectedIndex;
+    if (item.state === 'invalid') return;
+
+    // eslint-disable-next-line no-param-reassign
+    if (index === selectedIndex) item.state = 'current';
+    // eslint-disable-next-line no-param-reassign
+    else if (index < selectedIndex) item.state = 'complete';
+    // eslint-disable-next-line no-param-reassign
+    else item.state = undefined;
+  });
+}
 
 function nextStep() {
-  const currentIndex = currentStepIndex.value;
-  if (currentIndex < props.index.length - 1) {
-    if (itemsCopy.value[currentIndex].state !== 'invalid') {
-      itemsCopy.value[currentIndex].state = 'complete';
-    }
-    itemsCopy.value[currentIndex].isCurrentStep = false;
-
-    itemsCopy.value[currentIndex + 1].isCurrentStep = true;
-
-    if (itemsCopy.value[currentIndex + 1].state !== 'invalid') {
-      itemsCopy.value[currentIndex + 1].state = 'current';
-    }
-  }
+  const target = itemsCopy.value[currentStepIndex.value + 1];
+  if (target) applyWizardStep(target.id);
 }
 
 function prevStep() {
-  const currentIndex = currentStepIndex.value;
-  if (currentIndex > 0) {
-    itemsCopy.value[currentIndex].isCurrentStep = false;
-
-    if (itemsCopy.value[currentIndex].state === 'current') {
-      itemsCopy.value[currentIndex].state = undefined;
-    }
-
-    itemsCopy.value[currentIndex - 1].isCurrentStep = true;
-
-    if (itemsCopy.value[currentIndex - 1].state === 'complete') {
-      itemsCopy.value[currentIndex - 1].state = 'current';
-    }
-  }
+  const target = itemsCopy.value[currentStepIndex.value - 1];
+  if (target) applyWizardStep(target.id);
 }
 
+const actionDefinitionsResolved = computed(() => {
+  if (indexTypeRef.value !== 'wizard') return actionDefinitionsFlat.value;
+  return actionDefinitionsFlat.value.filter((action) => !WIZARD_ACTION_IDS.has(action?.id));
+});
+
 const hasNoKind = computed(() =>
-  props.actionDefinitions?.every(
+  actionDefinitionsResolved.value?.every(
     (action) =>
       action.kind !== 'primary' &&
       action.kind !== 'secondary' &&
@@ -548,11 +564,11 @@ const primaryButtons = computed(() => {
   }
 
   // If no actions have kind attribute, treat first action as primary
-  if (hasNoKind.value && props.actionDefinitions?.length > 0) {
-    return [props.actionDefinitions[0]];
+  if (hasNoKind.value && actionDefinitionsResolved.value?.length > 0) {
+    return [actionDefinitionsResolved.value[0]];
   }
 
-  const ret = props.actionDefinitions?.filter((x) => x.kind === 'primary');
+  const ret = actionDefinitionsResolved.value?.filter((x) => x.kind === 'primary');
   if (ret?.length > 2) {
     return ret.slice(0, 2);
   }
@@ -561,20 +577,25 @@ const primaryButtons = computed(() => {
 
 const secondaryButtons = computed(() => {
   if (indexTypeRef.value === 'wizard') {
-    return props.actionDefinitions
+    return actionDefinitionsResolved.value
       ?.map((x) => (x.kind === 'primary' ? { ...x, kind: 'secondary' } : x))
       .filter((x) => x.kind === 'secondary');
   }
-  return props.actionDefinitions?.filter((x) => x.kind === 'secondary');
+  return actionDefinitionsResolved.value?.filter((x) => x.kind === 'secondary');
 });
 
 const tertiaryButtons = computed(() =>
-  props.actionDefinitions?.filter((x) => x.kind === 'tertiary')
+  actionDefinitionsResolved.value?.filter((x) => x.kind === 'tertiary')
 );
 
 const additionalButtons = computed(() =>
-  props.actionDefinitions?.filter((x) => x.kind === 'additional')
+  actionDefinitionsResolved.value?.filter((x) => x.kind === 'additional')
 );
+
+function getActionGroupLabel(groupId) {
+  const group = props.actionGroupDefinitions?.find((g) => g?.id === groupId);
+  return group?.name || group?.label || null;
+}
 
 const additionalButtonsGrouped = computed(() =>
   additionalButtons.value.reduce((acc, action) => {
@@ -788,7 +809,12 @@ watch(
         visibilities.value[sectionId] = isElementVisible(el);
       });
     });
+    const previousStepId = currentStepId.value;
     itemsCopy.value = value;
+    if (props.indexType === 'wizard') {
+      const markedStep = itemsCopy.value?.find((item) => item?.isCurrentStep)?.id;
+      applyWizardStep(markedStep || previousStepId || itemsCopy.value[0]?.id);
+    }
   }
 );
 
@@ -837,6 +863,12 @@ watch(
   }
 );
 
+function getSelectedIndex() {
+  if (props.indexType === 'wizard') return currentStepId.value;
+  if (props.indexType === 'tabs') return selectedTabValue.value ?? null;
+  return null;
+}
+
 /**
  * Sets the selected index for the forms based on the provided index ID.
  * @param {string} indexId - The identifier(id) of the index to select.
@@ -850,27 +882,7 @@ function setSelectedIndex(indexId) {
     hideAll();
   } else if (props.indexType === 'wizard') {
     wizardModel.value = indexId;
-    const selectedItem = itemsCopy.value.find((o) => o?.id === indexId);
-    const selectedIndex = itemsCopy.value.indexOf(selectedItem);
-
-    itemsCopy.value = itemsCopy.value.map((item, index) => {
-      const newItem = item;
-      if (item === selectedItem) {
-        newItem.isCurrentStep = true;
-        if (item.state !== 'invalid') {
-          newItem.state = 'current';
-        }
-      } else {
-        if (item.state !== 'invalid' && index > selectedIndex) {
-          newItem.state = undefined;
-        } else if (item.state !== 'invalid' && index < selectedIndex) {
-          newItem.state = 'complete';
-        }
-        newItem.isCurrentStep = false;
-      }
-      return newItem;
-    });
-
+    applyWizardStep(indexId);
     hideAll();
   } else if (props.indexType === 'default') {
     scrollTo(`${props.id}-${indexId}`);
@@ -953,24 +965,9 @@ onMounted(() => {
   if (props.indexType === 'tabs' || props.indexType === 'wizard') hideAll();
 });
 
-defineExpose({ highlightRow, clearHighlights, setSelectedIndex });
+defineExpose({ highlightRow, clearHighlights, setSelectedIndex, getSelectedIndex });
 
-if (props.builderOptions.useRegistry) {
-  const instance = getCurrentInstance();
-  // Adds default texts to ensure they are available in the builder instance
-  instance.type.props.texts.options = textsDefault;
-  registerBuilderInstance({
-    name: 'LxForm',
-    instance,
-    props,
-    builderName: props.builderOptions?.schemaPath,
-    componentStack: props.builderOptions?.componentStack,
-  });
-
-  onUnmounted(() => {
-    unregisterBuilderInstance(props?.id);
-  });
-}
+useBuilderRegistration('LxForm', props, { texts: textsDefault, addToStack: false });
 </script>
 <template>
   <article
@@ -983,6 +980,7 @@ if (props.builderOptions.useRegistry) {
       { 'lx-region-component': !isInsideRegionContainer },
       { 'lx-header-scrolled': isHeaderScrolled },
       { 'lx-footer-scrolled': isFooterScrolled },
+      { 'lx-form-with-tabs-steps': props.indexType === 'tabs' || props.indexType === 'wizard' },
     ]"
     ref="form"
     :aria-labelledby="showHeader && kind !== 'stripped' ? `${id}-header` : null"
@@ -1063,11 +1061,10 @@ if (props.builderOptions.useRegistry) {
 
     <header
       ref="formHeader"
+      class="lx-form-grid-header"
       :class="[
-        { 'lx-sticky': stickyHeader },
+        { 'lx-form-grid-header-sticky': stickyHeader },
         { 'lx-simple': slots.preHeader === undefined },
-        { 'lx-form-with-tabs': props.indexType === 'tabs' },
-        { 'lx-form-with-steps': props.indexType === 'wizard' },
         { 'lx-form-with-aside': props.indexType === 'default' && index?.length > 0 },
       ]"
       v-if="showHeader && kind !== 'stripped'"
@@ -1131,26 +1128,13 @@ if (props.builderOptions.useRegistry) {
       </div>
 
       <div class="lx-group lx-single-header-button" v-if="additionalButtons?.length === 1">
-        <LxButton
+        <LxActionButton
           v-for="button in additionalButtons"
-          :id="`${id}-action-${button.id}`"
           :key="button.id"
-          :label="button.name || button.label"
-          :title="button.title || button.tooltip"
-          :icon="button.icon"
-          :iconSet="button.iconSet"
+          :action="button"
+          :id="`${id}-action-${button.id}`"
           kind="ghost"
-          :loading="button.loading"
-          :busy="button.busy"
-          :destructive="button.destructive"
-          :disabled="button.disabled"
-          :active="button.active"
-          :badge="button.badge"
-          :badgeType="button.badgeType"
-          :badgeTitle="button.badgeTitle"
-          :badgeIcon="button.badgeIcon"
           variant="icon-only"
-          :href="button.href"
           @click="clickHandler(button.id)"
         />
       </div>
@@ -1200,25 +1184,22 @@ if (props.builderOptions.useRegistry) {
               v-for="(group, groupName) in additionalButtonsGrouped"
               :key="groupName"
               class="lx-button-set lx-dropdown-menu-group lx-dropdown-menu-no-panel"
+              :role="getActionGroupLabel(groupName) ? 'group' : null"
+              :aria-labelledby="getActionGroupLabel(groupName) ? `${id}-${groupName}-group` : null"
             >
+              <div
+                v-if="getActionGroupLabel(groupName)"
+                :id="`${id}-${groupName}-group`"
+                class="lx-label"
+              >
+                {{ getActionGroupLabel(groupName) }}
+              </div>
               <template v-for="button in group" :key="button?.id">
-                <LxButton
+                <LxActionButton
+                  :action="button"
+                  :omit="['variant']"
                   :id="`${id}-action-${button.id}`"
-                  :label="button.name || button.label"
-                  :title="button.title || button.tooltip"
-                  :icon="button.icon"
-                  :iconSet="button.iconSet"
-                  :loading="button.loading"
-                  :busy="button.busy"
-                  :destructive="button.destructive"
-                  :disabled="button.disabled"
-                  :active="button.active"
-                  :badge="button.badge"
-                  :badgeType="button.badgeType"
-                  :badgeTitle="button.badgeTitle"
-                  :badgeIcon="button.badgeIcon"
                   kind="ghost"
-                  :href="button.href"
                   @click="clickHandler(button.id)"
                 />
               </template>
@@ -1344,7 +1325,7 @@ if (props.builderOptions.useRegistry) {
       ref="wizard"
       :id="`${id}-wizard`"
       v-model="wizardModel"
-      :items="props.index"
+      :items="itemsCopy"
       @update:modelValue="hideAll"
       v-else-if="props.indexType === 'wizard' && index?.length > 0"
     >
@@ -1393,8 +1374,9 @@ if (props.builderOptions.useRegistry) {
     </div>
 
     <footer
+      class="lx-form-grid-footer"
       :class="[
-        { 'lx-sticky': stickyFooter },
+        { 'lx-form-grid-footer-sticky': stickyFooter },
         { 'crowded-primary-buttons': primaryButtons?.length > 1 },
         { 'crowded-not-primary-buttons': notPrimaryButtonCount > 2 },
       ]"
@@ -1402,25 +1384,13 @@ if (props.builderOptions.useRegistry) {
       ref="formFooter"
     >
       <div class="lx-group lx-buttons">
-        <LxButton
+        <LxActionButton
           v-for="button in primaryButtons"
-          :id="`${id}-action-${button.id}`"
           :key="button.id"
-          :label="button.name || button.label"
-          :title="button.title || button.tooltip"
-          :icon="button.icon"
-          :iconSet="button.iconSet"
-          :loading="button.loading"
-          :busy="button.busy"
-          :destructive="button.destructive"
-          :disabled="button.disabled"
-          :active="button.active"
-          :badge="button.badge"
-          :badgeType="button.badgeType"
-          :badgeTitle="button.badgeTitle"
-          :badgeIcon="button.badgeIcon"
+          :action="button"
+          :omit="['variant']"
+          :id="`${id}-action-${button.id}`"
           kind="primary"
-          :href="button.href"
           @click="clickHandler(button.id)"
         />
 
@@ -1428,6 +1398,7 @@ if (props.builderOptions.useRegistry) {
           custom-class="responsive-overflow"
           v-if="notPrimaryButtonCount > 1"
           :actionDefinitions="combinedFooterActions"
+          :actionGroupDefinitions="actionGroupDefinitions"
           @actionClick="(id) => clickHandler(id)"
         >
           <LxButton
@@ -1440,28 +1411,16 @@ if (props.builderOptions.useRegistry) {
           />
         </LxDropDownMenu>
 
-        <LxButton
+        <LxActionButton
           v-for="button in secondaryButtons"
-          :id="`${id}-action-${button.id}`"
           :key="button.id"
-          :label="button.name || button.label"
-          :title="button.title || button.tooltip"
-          :icon="button.icon"
-          :iconSet="button.iconSet"
-          :loading="button.loading"
-          :busy="button.busy"
-          :destructive="button.destructive"
-          :disabled="button.disabled"
-          :active="button.active"
-          :badge="button.badge"
-          :badgeType="button.badgeType"
-          :badgeTitle="button.badgeTitle"
-          :badgeIcon="button.badgeIcon"
+          :action="button"
+          :omit="['variant']"
+          :id="`${id}-action-${button.id}`"
           kind="secondary"
           :customClass="
             notPrimaryButtonCount === 1 ? 'only-responsive-button' : 'responsive-button'
           "
-          :href="button.href"
           @click="clickHandler(button.id)"
         />
       </div>
@@ -1471,28 +1430,16 @@ if (props.builderOptions.useRegistry) {
       </div>
 
       <div class="lx-group lx-responsive-l">
-        <LxButton
+        <LxActionButton
           v-for="button in tertiaryButtons"
-          :id="`${id}-action-${button.id}`"
           :key="button.id"
-          :label="button.name || button.label"
-          :title="button.title || button.tooltip"
-          :icon="button.icon"
-          :iconSet="button.iconSet"
-          :loading="button.loading"
-          :busy="button.busy"
-          :destructive="button.destructive"
-          :disabled="button.disabled"
+          :action="button"
+          :omit="['variant']"
+          :id="`${id}-action-${button.id}`"
           :customClass="
             notPrimaryButtonCount === 1 ? 'only-responsive-button' : 'responsive-button'
           "
-          :active="button.active"
-          :badge="button.badge"
-          :badgeType="button.badgeType"
-          :badgeTitle="button.badgeTitle"
-          :badgeIcon="button.badgeIcon"
           kind="tertiary"
-          :href="button.href"
           @click="clickHandler(button.id)"
         />
       </div>

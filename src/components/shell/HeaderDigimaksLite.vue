@@ -1,8 +1,8 @@
 <script setup>
-import { computed, ref, watch, provide, defineAsyncComponent } from 'vue';
+import { computed, ref, watch, provide } from 'vue';
+import { lxDefineAsyncComponent } from '@/utils/dynamicImportUtils';
 
 import LxButton from '@/components/Button.vue';
-import LxIcon from '@/components/Icon.vue';
 import LxModal from '@/components/Modal.vue';
 import LxList from '@/components/list/List.vue';
 import LxDropDownMenu from '@/components/DropDownMenu.vue';
@@ -16,9 +16,8 @@ import { shortenUserName } from '@/utils/stringUtils';
 import { getDisplayTexts } from '@/utils/generalUtils';
 import useLx from '@/hooks/useLx';
 
-const LxMegaMenu = defineAsyncComponent(() => import('@/components/shell/MegaMenu.vue'));
-const LxEmptyState = defineAsyncComponent(() => import('@/components/EmptyState.vue'));
-const LxAvatar = defineAsyncComponent(() => import('@/components/Avatar.vue'));
+const LxMegaMenu = lxDefineAsyncComponent(() => import('@/components/shell/MegaMenu.vue'));
+const LxAvatar = lxDefineAsyncComponent(() => import('@/components/Avatar.vue'));
 
 const props = defineProps({
   mode: { type: String, default: 'default' },
@@ -503,134 +502,6 @@ provide('insideHeader', insideHeader);
                 @click="helpClicked"
               />
             </div>
-
-            <div v-if="hasAlerts">
-              <LxDropDownMenu
-                v-if="alertsKind === 'menu' || alertsKind === 'combo'"
-                customClass="lx-alert-menu"
-                :disabled="headerNavDisable"
-              >
-                <LxButton
-                  customClass="lx-header-button"
-                  icon="notifications"
-                  :label="displayTexts.alertsTitle"
-                  :badge="alerts ? alerts?.length?.toString() : ''"
-                  :disabled="headerNavDisable"
-                  :badgeType="alertLevelToBadgeType"
-                  kind="ghost"
-                  tabindex="-1"
-                  variant="icon-only"
-                />
-
-                <template v-if="clickSafeAlerts" v-slot:clickSafePanel>
-                  <div class="lx-button-set" role="toolbar">
-                    <LxButton
-                      v-if="alertsKind === 'combo'"
-                      kind="ghost"
-                      :label="displayTexts.openAlerts"
-                      :disabled="headerNavDisable"
-                      icon="open"
-                      @click="alertsClicked"
-                    />
-                  </div>
-                  <ol
-                    class="lx-alert-menu-list"
-                    role="group"
-                    aria-live="polite"
-                    v-if="alerts?.length > 0"
-                  >
-                    <li
-                      v-for="item in alerts"
-                      :key="item?.id"
-                      :aria-labelledby="`alert-${item?.id}-name`"
-                      :aria-describedby="`alert-${item?.id}-desc`"
-                      class="lx-alert-button"
-                      :tabindex="item?.clickable ? 0 : null"
-                      :role="item?.clickable ? 'button' : null"
-                      :class="[
-                        { 'lx-alert-success': item?.level === 'success' },
-                        { 'lx-alert-info': item?.level === 'info' },
-                        { 'lx-alert-warning': item?.level === 'warning' },
-                        { 'lx-alert-error': item?.level === 'error' },
-                        { 'lx-alert-clickable': item?.clickable },
-                      ]"
-                      @click="alertItemClicked(item)"
-                      @keyup.enter="alertItemClicked(item)"
-                      @keyup.space="alertItemClicked(item)"
-                    >
-                      <div class="lx-icon">
-                        <LxIcon :value="pickIcon(item.level)" />
-                      </div>
-                      <div class="lx-alert-data">
-                        <div class="lx-alert-header">
-                          <p class="lx-data" :id="`alert-${item?.id}-name`">{{ item?.name }}</p>
-                        </div>
-                        <div class="lx-alert-description">
-                          <p class="lx-description" :id="`alert-${item?.id}-desc`">
-                            {{ item?.description }}
-                          </p>
-                        </div>
-                      </div>
-                    </li>
-                  </ol>
-                  <LxEmptyState v-else :label="displayTexts.noAlerts"></LxEmptyState>
-                </template>
-
-                <template v-else v-slot:panel>
-                  <div class="lx-button-set" role="toolbar">
-                    <LxButton
-                      v-if="alertsKind === 'combo'"
-                      kind="ghost"
-                      :label="displayTexts.openAlerts"
-                      :disabled="headerNavDisable"
-                      icon="open"
-                      @click="alertsClicked"
-                    />
-                  </div>
-                  <ol
-                    class="lx-alert-menu-list"
-                    role="group"
-                    aria-live="polite"
-                    v-if="alerts?.length > 0"
-                  >
-                    <li
-                      v-for="item in alerts"
-                      :key="item?.id"
-                      :aria-labelledby="`alert-${item?.id}-name`"
-                      :aria-describedby="`alert-${item?.id}-desc`"
-                      class="lx-alert-button"
-                      :tabindex="item?.clickable ? 0 : null"
-                      :role="item?.clickable ? 'button' : null"
-                      :class="[
-                        { 'lx-alert-success': item?.level === 'success' },
-                        { 'lx-alert-info': item?.level === 'info' },
-                        { 'lx-alert-warning': item?.level === 'warning' },
-                        { 'lx-alert-error': item?.level === 'error' },
-                        { 'lx-alert-clickable': item?.clickable },
-                      ]"
-                      @click="alertItemClicked(item)"
-                      @keyup.enter="alertItemClicked(item)"
-                      @keyup.space="alertItemClicked(item)"
-                    >
-                      <div class="lx-icon">
-                        <LxIcon :value="pickIcon(item.level)" />
-                      </div>
-                      <div class="lx-alert-data">
-                        <div class="lx-alert-header">
-                          <p class="lx-data" :id="`alert-${item?.id}-name`">{{ item?.name }}</p>
-                        </div>
-                        <div class="lx-alert-description">
-                          <p class="lx-description" :id="`alert-${item?.id}-desc`">
-                            {{ item?.description }}
-                          </p>
-                        </div>
-                      </div>
-                    </li>
-                  </ol>
-                  <LxEmptyState v-else :label="displayTexts.noAlerts" />
-                </template>
-              </LxDropDownMenu>
-            </div>
             <div class="lx-mega-menu" v-if="hasMegaMenu">
               <LxMegaMenu
                 id="lx-shell-mega-menu"
@@ -739,6 +610,7 @@ provide('insideHeader', insideHeader);
                   }"
                 />
               </LxRow>
+              <slot name="settingsExtra" />
             </LxForm>
             <div
               v-if="hasCustomButton"

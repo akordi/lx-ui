@@ -1,16 +1,7 @@
 <script setup>
-import {
-  computed,
-  onMounted,
-  onUnmounted,
-  watch,
-  ref,
-  inject,
-  nextTick,
-  getCurrentInstance,
-  defineAsyncComponent,
-} from 'vue';
-import { IMaskDirective as vImask } from 'vue-imask';
+import { computed, onMounted, watch, ref, inject, nextTick } from 'vue';
+import { lxDefineAsyncComponent } from '@/utils/dynamicImportUtils';
+import { IMask, IMaskDirective as vImask } from 'vue-imask';
 import { Money3Component } from 'v-money3';
 import { computedAsync } from '@vueuse/core';
 
@@ -19,14 +10,41 @@ import { flagMap } from '@/utils/flagUtils';
 import { getDisplayTexts, isDefined, isNil, clampText } from '@/utils/generalUtils';
 import { PHONE_MAX_LENGTH_BY_PREFIX } from '@/constants';
 import { loadLibrary } from '@/utils/libLoader';
+import { logWarn } from '@/utils/devUtils';
+import useLx from '@/hooks/useLx';
 
 import LxIcon from '@/components/Icon.vue';
 import LxButton from '@/components/Button.vue';
 import LxEmptyValue from '@/components/EmptyValue.vue';
 import LxInfoWrapper from '@/components/InfoWrapper.vue';
-import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/builderUtils';
+import { useBuilderRegistration } from '@/utils/builderUtils';
 
-const LxFlag = defineAsyncComponent(() => import('@/components/Flag.vue'));
+const THOUSANDS_SEPARATOR = ' ';
+const MIN_GROUPED_DIGITS = 5;
+const GROUPED_MASKS = new Set(['integer', 'decimal']);
+
+function groupThousands(integerPart, separator = THOUSANDS_SEPARATOR) {
+  if (integerPart.replace('-', '').length < MIN_GROUPED_DIGITS) return integerPart;
+  return integerPart.replace(/\B(?=(\d{3})+$)/g, separator);
+}
+
+class GroupedNumber extends IMask.MaskedNumber {
+  // imask drops `mask` equal to the class, then sees a changed mask on every update and resets the value
+  constructor(opts) {
+    super({ ...opts, mask: GroupedNumber });
+  }
+
+  // eslint-disable-next-line no-underscore-dangle
+  _insertThousandsSeparators(value) {
+    const [integerPart, ...rest] = value.split(this.radix);
+    return [groupThousands(integerPart, this.thousandsSeparator), ...rest].join(this.radix);
+  }
+}
+
+const LxFlag = lxDefineAsyncComponent(() => import('@/components/Flag.vue'));
+const LxAutoCompleteNew = lxDefineAsyncComponent(
+  () => import('@/components/autoComplete/AutoCompleteNew.vue')
+);
 
 const props = defineProps({
   id: { type: String, default: () => generateUUID() },
@@ -109,7 +127,7 @@ const props = defineProps({
   autocomplete: { type: String, default: 'off', group: 'additional', sequence: 5 },
   options: {
     type: Object,
-    default: () => ({ phone: 'lv', locale: null }),
+    default: () => ({ phone: 'lv', locale: null, currency: null }),
     // TODO: add group as well
   },
 
@@ -130,6 +148,7 @@ const textsDefault = {
   showPassword: 'Rādīt paroli',
   hidePassword: 'Paslēpt paroli',
   helperTextLabel: 'Papildinformācija',
+  clearSearch: 'Notīrīt meklēšanu',
 };
 
 const displayTexts = computed(() => getDisplayTexts(props.texts, textsDefault, 'LxTextInput'));
@@ -142,11 +161,24 @@ const emits = defineEmits(['update:modelValue']);
 const flags = flagMap;
 
 const input = ref();
+const searchInput = ref();
 const valueRaw = ref();
 const isUpdatingMask = ref(false);
+let shouldFocusSearchInput = false;
+
+// LxAutoComplete loads on demand; focus it once mounted
+watch(searchInput, (component) => {
+  if (component && shouldFocusSearchInput) {
+    shouldFocusSearchInput = false;
+    component.focus();
+  }
+});
 
 function focus() {
-  if (input.value !== null && input.value !== undefined) input.value.focus();
+  if (props.kind === 'search') {
+    if (searchInput.value) searchInput.value.focus();
+    else shouldFocusSearchInput = true;
+  } else if (input.value !== null && input.value !== undefined) input.value.focus();
 }
 
 const minValueComp = computed(() => 10 ** Number(props.maxlength || 20) - 1);
@@ -180,6 +212,14 @@ const maxLengthValue = computed(() => {
   return null;
 });
 
+const inputMaxLength = computed(() => {
+  if (!isDefined(maxLengthValue.value) || !GROUPED_MASKS.has(props.mask)) {
+    return maxLengthValue.value;
+  }
+  const max = Number(maxLengthValue.value);
+  return max >= MIN_GROUPED_DIGITS ? max + Math.floor((max - 1) / 3) : max;
+});
+
 const inputMask = computed(() => {
   if (props.kind === 'phone')
     return {
@@ -189,7 +229,8 @@ const inputMask = computed(() => {
   switch (props.mask) {
     case 'integer':
       return {
-        mask: Number,
+        mask: GroupedNumber,
+        thousandsSeparator: THOUSANDS_SEPARATOR,
         scale: 0,
         lazy: false,
         min: props.signed ? 0 - minValueComp.value : 0,
@@ -198,7 +239,8 @@ const inputMask = computed(() => {
       };
     case 'decimal':
       return {
-        mask: Number,
+        mask: GroupedNumber,
+        thousandsSeparator: THOUSANDS_SEPARATOR,
         scale: props.scale,
         min: props.signed ? 0 - minValueComp.value : 0,
         radix: ',',
@@ -247,7 +289,7 @@ const inputMask = computed(() => {
       };
     case 'email':
       return {
-        mask: /^\S*@?\S*$/,
+        mask: /^\S*$/,
       };
     case 'numeric':
       return {
@@ -331,12 +373,39 @@ function maskUpdate() {
   }
 }
 
-const maxLengthComp = computed(() => 10 ** Number(props.maxlength) - 1);
+const maxLengthComp = computed(() =>
+  isDefined(props.maxlength) ? 10 ** Number(props.maxlength) - 1 : null
+);
+
+const { environment, currency: globalCurrency } = useLx().getGlobals() ?? {};
+
+const currencySymbol = computed(() => {
+  const currencyCode = props.options?.currency || globalCurrency || 'EUR';
+
+  try {
+    return new Intl.NumberFormat('lv-LV', {
+      style: 'currency',
+      currency: currencyCode,
+      currencyDisplay: 'narrowSymbol',
+    })
+      .formatToParts(0)
+      .find((part) => part.type === 'currency').value;
+  } catch {
+    logWarn(
+      `LxTextInput [${props.id}]: currency "${currencyCode}" is not a valid ISO 4217 code`,
+      environment
+    );
+    return currencyCode;
+  }
+});
 
 const config = computed(() => ({
   prefix: '',
-  suffix: ' €',
-  thousands: '',
+  suffix: ` ${currencySymbol.value}`,
+  thousands:
+    Math.trunc(Math.abs(Number(model.value) || 0)).toString().length >= MIN_GROUPED_DIGITS
+      ? THOUSANDS_SEPARATOR
+      : '',
   decimal: ',',
   precision: 2,
   disableNegative: !props.signed,
@@ -349,6 +418,31 @@ const config = computed(() => ({
   shouldRound: true,
   focusOnRight: false,
 }));
+
+const currencyInput = ref();
+
+// v-money3 binds its options only on mount, so the input is re-keyed by separator; restore focus and cursor
+watch(
+  () => config.value.thousands,
+  async () => {
+    const el = currencyInput.value?.$el;
+    if (!el || el !== document.activeElement) return;
+    const fromEnd = el.value.length - el.selectionEnd;
+    await nextTick();
+    const newEl = currencyInput.value?.$el;
+    if (!newEl) return;
+    newEl.focus();
+    const pos = Math.max(0, newEl.value.length - fromEnd);
+    newEl.setSelectionRange(pos, pos);
+  }
+);
+
+function formatCurrencyReadOnly(value) {
+  const number = Number(value);
+  if (Number.isNaN(number)) return value + config.value.suffix;
+  const [integerPart, fractionPart] = number.toFixed(config.value.precision).split('.');
+  return `${groupThousands(integerPart)}${config.value.decimal}${fractionPart}${config.value.suffix}`;
+}
 
 // Workaround to show readonly values masked
 const forcedMaskedValue = computed(() => {
@@ -364,10 +458,16 @@ const forcedMaskedValue = computed(() => {
     case 'newbornId':
     case 'newborn-id':
       return value[11] === '/' ? value : `${value.substring(0, 11)}/${value.substring(11)}`;
-    case 'decimal':
-      return value.replace('.', ',');
+    case 'integer':
+      return groupThousands(value);
+    case 'decimal': {
+      const [integerPart, fractionPart] = value.split('.');
+      return isNil(fractionPart)
+        ? groupThousands(integerPart)
+        : `${groupThousands(integerPart)},${fractionPart}`;
+    }
     case 'currency':
-      return value.replace('.', ',') + config.value.suffix;
+      return formatCurrencyReadOnly(value);
     case 'gpslat':
       return value.replace('.', ',');
     case 'gpslon':
@@ -538,7 +638,7 @@ function formatTimeValue(newValue) {
 }
 
 function formatCurrencyValue(newValue) {
-  const res = `${newValue} €`;
+  const res = `${newValue}${config.value.suffix}`;
   return res?.replace('.', ',') === valueRaw.value ? valueRaw.value : model.value?.toString();
 }
 
@@ -630,24 +730,63 @@ onMounted(() => {
   }
 });
 
-if (!props.builderOptions?.innerComponent && props.builderOptions?.useRegistry) {
-  const instance = getCurrentInstance();
-  // Adds default texts to ensure they are available in the builder instance
-  instance.type.props.texts.options = textsDefault;
-  registerBuilderInstance({
-    name: 'LxTextInput',
-    instance,
-    props,
-    builderName: props.builderOptions?.schemaPath,
-    componentStack: props.builderOptions?.componentStack?.concat([
-      { id: props?.id, name: 'LxTextInput' },
-    ]),
-  });
+useBuilderRegistration('LxTextInput', props, { texts: textsDefault, skipInnerComponent: true });
 
-  onUnmounted(() => {
-    unregisterBuilderInstance(props?.id);
-  });
+const searchInputMask = computed(() =>
+  props.mask && !['default', 'currency'].includes(props.mask) ? inputMask.value : null
+);
+
+watch(
+  () => props.kind === 'search' && props.mask === 'currency',
+  (isUnsupported) => {
+    if (!isUnsupported) return;
+    logWarn(
+      `LxTextInput [${props.id}]: mask "currency" is not supported with kind "search" and is ignored`,
+      environment
+    );
+  },
+  { immediate: true }
+);
+const searchMask = computed(() =>
+  searchInputMask.value ? IMask.createMask(searchInputMask.value) : null
+);
+
+function unmaskSearchText(text) {
+  if (!searchMask.value) return text;
+  searchMask.value.resolve(text);
+  return searchMask.value.unmaskedValue;
 }
+
+function maskSearchValue(value) {
+  if (!searchMask.value) return String(value);
+  searchMask.value.unmaskedValue = String(value);
+  return searchMask.value.value;
+}
+
+// Kept while it matches the model, so half-typed masked text is not reformatted
+const searchTyped = ref(null);
+
+const searchText = computed(() => {
+  const value = isNil(props.modelValue) ? '' : String(props.modelValue);
+  if (searchTyped.value !== null) {
+    const typedValue = convertValue(unmaskSearchText(searchTyped.value));
+    if ((isNil(typedValue) ? '' : String(typedValue)) === value) return searchTyped.value || null;
+  }
+  return value === '' ? null : maskSearchValue(value);
+});
+
+function onSearchInput(text) {
+  searchTyped.value = text;
+  const value = convertValue(unmaskSearchText(text));
+  const current = isNil(props.modelValue) ? '' : String(props.modelValue);
+  if ((isNil(value) ? '' : String(value)) !== current) emits('update:modelValue', value);
+}
+
+const searchTexts = computed(() => ({
+  emptyValue: displayTexts.value.emptyValue,
+  helperTextLabel: displayTexts.value.helperTextLabel,
+  clear: displayTexts.value.clearSearch,
+}));
 
 const dataState = computed(() =>
   JSON.stringify({
@@ -666,140 +805,166 @@ defineExpose({ focus });
     :data-id="id"
     :data-state="dataState"
   >
-    <p
-      v-if="readOnly && props.kind !== 'password'"
-      class="lx-data"
+    <LxAutoCompleteNew
+      v-if="kind === 'search'"
+      ref="searchInput"
+      :id="id"
       :class="{ 'lx-uppercase': uppercase }"
-      :aria-labelledby="labelledBy"
-    >
-      <a v-if="isReadOnlyEmail()" class="lx-text-input-link" :href="sanitizedEmail">{{ model }}</a>
-      <template v-else>
-        {{ forcedMaskedValue }}
-        <LxEmptyValue
-          v-if="
-            model === null ||
-            model === undefined ||
-            (typeof model === 'string' && model?.trim() === '')
-          "
-          :texts="{ emptyValue: displayTexts.emptyValue }"
-        />
-      </template>
-    </p>
-    <div
-      class="lx-text-input-wrapper lx-input-wrapper"
-      :class="[
-        { 'password-mask': kind === 'password' },
-        { 'lx-invalid': invalid },
-        { 'lx-disabled': disabled },
-      ]"
-      :data-invalid="invalid ? '' : null"
-      v-if="!readOnly"
-    >
-      <div v-if="invalid" class="lx-invalidation-icon-wrapper">
-        <LxIcon customClass="lx-invalidation-icon" value="invalid" />
-      </div>
-
-      <div v-if="kind === 'search'" class="lx-input-icon-wrapper">
-        <LxIcon customClass="lx-modifier-icon" value="search" />
-      </div>
-
-      <div v-if="kind === 'phone'" class="lx-input-flag-wrapper">
-        <div
-          v-if="matchedFlags?.length > 0"
-          :class="[{ 'multiple-flags': matchedFlags?.length > 1 }]"
-        >
-          <LxFlag
-            v-for="flag in matchedFlags"
-            :key="flag"
-            :value="flag"
-            :locale="options?.locale"
-          />
-        </div>
-
-        <div v-else>
-          <LxFlag :value="options?.phone" :locale="options?.locale" />
-        </div>
-      </div>
-
-      <div class="pseudo-input" />
-      <input
-        v-if="mask !== 'currency'"
-        v-imask="inputMask"
-        ref="input"
-        :type="props.kind === 'password' && hidePassword ? 'password' : 'text'"
-        :autocomplete="autocomplete"
-        class="lx-text-input lx-input-area"
-        :class="[
-          { 'lx-invalid': invalid },
-          { 'lx-search-input': kind === 'search' },
-          { 'lx-phone-input': kind === 'phone' },
-          { 'lx-uppercase': uppercase },
-        ]"
-        :id="id"
-        :value="valueRaw"
-        :placeholder="placeholder"
-        :aria-invalid="invalid"
-        :aria-label="placeholder"
-        :disabled="disabled"
-        :maxlength="maxLengthValue"
-        v-tooltip="tooltip"
+      kind="search"
+      searchTrigger="input"
+      :modelValue="searchText"
+      :searchString="searchText"
+      :placeholder="placeholder"
+      :tooltip="tooltip"
+      :readOnly="readOnly"
+      :disabled="disabled"
+      :required="required"
+      :invalid="invalid"
+      :invalidationMessage="invalidationMessage"
+      :helperText="helperText"
+      :helperTextKind="helperTextKind"
+      :queryMaxLength="maxLengthValue"
+      :inputMask="searchInputMask"
+      :inputMode="inputMode"
+      :labelId="labelId"
+      :texts="searchTexts"
+      @update:searchString="onSearchInput"
+    />
+    <template v-else>
+      <p
+        v-if="readOnly && props.kind !== 'password'"
+        class="lx-data"
+        :class="{ 'lx-uppercase': uppercase }"
         :aria-labelledby="labelledBy"
-        :aria-required="ariaRequired"
-        :aria-errormessage="showInvalidationMessage ? `${id}-invalidation-message` : null"
-        :aria-describedby="describedBy"
-        :inputmode="inputMode"
-        @accept="onAccept"
-        @blur="onBlur"
-      />
+      >
+        <a v-if="isReadOnlyEmail()" class="lx-text-input-link" :href="sanitizedEmail">{{
+          model
+        }}</a>
+        <template v-else>
+          {{ forcedMaskedValue }}
+          <LxEmptyValue
+            v-if="
+              model === null ||
+              model === undefined ||
+              (typeof model === 'string' && model?.trim() === '')
+            "
+            :texts="{ emptyValue: displayTexts.emptyValue }"
+          />
+        </template>
+      </p>
+      <div
+        class="lx-text-input-wrapper lx-input-wrapper"
+        :class="[
+          { 'password-mask': kind === 'password' },
+          { 'lx-invalid': invalid },
+          { 'lx-disabled': disabled },
+        ]"
+        :data-invalid="invalid ? '' : null"
+        v-if="!readOnly"
+      >
+        <div v-if="invalid" class="lx-invalidation-icon-wrapper">
+          <LxIcon customClass="lx-invalidation-icon" value="invalid" />
+        </div>
 
-      <div v-if="showInfoHelper" class="lx-input-helper-wrapper">
-        <LxInfoWrapper placement="top" :disabled="disabled" :label="displayTexts.helperTextLabel">
-          <LxIcon customClass="lx-helper-icon" value="info" />
-          <template #panel>
-            <p class="lx-data">{{ helperTextClamped }}</p>
-          </template>
-        </LxInfoWrapper>
+        <div v-if="kind === 'phone'" class="lx-input-flag-wrapper">
+          <div
+            v-if="matchedFlags?.length > 0"
+            :class="[{ 'multiple-flags': matchedFlags?.length > 1 }]"
+          >
+            <LxFlag
+              v-for="flag in matchedFlags"
+              :key="flag"
+              :value="flag"
+              :locale="options?.locale"
+            />
+          </div>
+
+          <div v-else>
+            <LxFlag :value="options?.phone" :locale="options?.locale" />
+          </div>
+        </div>
+
+        <div class="pseudo-input" />
+        <input
+          v-if="mask !== 'currency'"
+          v-imask="inputMask"
+          ref="input"
+          :type="props.kind === 'password' && hidePassword ? 'password' : 'text'"
+          :autocomplete="autocomplete"
+          class="lx-text-input lx-input-area"
+          :class="[
+            { 'lx-invalid': invalid },
+            { 'lx-phone-input': kind === 'phone' },
+            { 'lx-uppercase': uppercase },
+          ]"
+          :id="id"
+          :value="valueRaw"
+          :placeholder="placeholder"
+          :aria-invalid="invalid"
+          :aria-label="placeholder"
+          :disabled="disabled"
+          :maxlength="inputMaxLength"
+          v-tooltip="tooltip"
+          :aria-labelledby="labelledBy"
+          :aria-required="ariaRequired"
+          :aria-errormessage="showInvalidationMessage ? `${id}-invalidation-message` : null"
+          :aria-describedby="describedBy"
+          :inputmode="inputMode"
+          @accept="onAccept"
+          @blur="onBlur"
+        />
+
+        <div v-if="showInfoHelper" class="lx-input-helper-wrapper">
+          <LxInfoWrapper placement="top" :disabled="disabled" :label="displayTexts.helperTextLabel">
+            <LxIcon customClass="lx-helper-icon" value="info" />
+            <template #panel>
+              <p class="lx-data">{{ helperTextClamped }}</p>
+            </template>
+          </LxInfoWrapper>
+        </div>
+
+        <LxButton
+          :id="hidePassword ? `${id}-show-password` : `${id}-hide-password`"
+          variant="icon-only"
+          kind="ghost"
+          :icon="hidePassword ? 'visible' : 'hidden'"
+          :disabled="disabled"
+          :label="hidePassword ? displayTexts.showPassword : displayTexts.hidePassword"
+          v-if="props.kind === 'password'"
+          @click="showPasswordChange()"
+        />
+
+        <Money3Component
+          v-if="mask === 'currency'"
+          ref="currencyInput"
+          :key="config.thousands"
+          v-model="model"
+          v-bind="config"
+          :disabled="disabled"
+          v-tooltip="tooltip"
+          :placeholder="placeholder"
+          :aria-invalid="invalid"
+          :aria-required="ariaRequired"
+          :aria-errormessage="showInvalidationMessage ? `${id}-invalidation-message` : null"
+          :aria-describedby="describedBy"
+          class="lx-text-input lx-input-area"
+          :class="[{ 'lx-invalid': invalid }]"
+        />
       </div>
 
-      <LxButton
-        :id="hidePassword ? `${id}-show-password` : `${id}-hide-password`"
-        variant="icon-only"
-        kind="ghost"
-        :icon="hidePassword ? 'visible' : 'hidden'"
-        :disabled="disabled"
-        :label="hidePassword ? displayTexts.showPassword : displayTexts.hidePassword"
-        v-if="props.kind === 'password'"
-        @click="showPasswordChange()"
-      />
-
-      <Money3Component
-        v-if="mask === 'currency'"
-        v-model="model"
-        v-bind="config"
-        :disabled="disabled"
-        v-tooltip="tooltip"
-        :placeholder="placeholder"
-        :aria-invalid="invalid"
-        :aria-required="ariaRequired"
-        :aria-errormessage="showInvalidationMessage ? `${id}-invalidation-message` : null"
-        :aria-describedby="describedBy"
-        class="lx-text-input lx-input-area"
-        :class="[{ 'lx-invalid': invalid }, { 'lx-search-input': props.kind === 'search' }]"
-      />
-    </div>
-
-    <div
-      class="lx-invalidation-message"
-      v-if="showInvalidationMessage"
-      :id="`${id}-invalidation-message`"
-    >
-      {{ invalidationMessageClamped }}
-    </div>
-    <div class="lx-helper-text" v-if="showInlineHelper && !readOnly" :id="`${id}-helper`">
-      {{ helperTextClamped }}
-    </div>
-    <div class="lx-invisible" v-else-if="showInfoHelper && !readOnly" :id="`${id}-helper`">
-      {{ helperTextClamped }}
-    </div>
+      <div
+        class="lx-invalidation-message"
+        v-if="showInvalidationMessage"
+        :id="`${id}-invalidation-message`"
+      >
+        {{ invalidationMessageClamped }}
+      </div>
+      <div class="lx-helper-text" v-if="showInlineHelper && !readOnly" :id="`${id}-helper`">
+        {{ helperTextClamped }}
+      </div>
+      <div class="lx-invisible" v-else-if="showInfoHelper && !readOnly" :id="`${id}-helper`">
+        {{ helperTextClamped }}
+      </div>
+    </template>
   </div>
 </template>

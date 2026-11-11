@@ -1,5 +1,11 @@
 <script setup>
-import { computed, onMounted, watch, ref, nextTick, provide, defineAsyncComponent } from 'vue';
+import { computed, onMounted, watch, ref, nextTick, provide } from 'vue';
+import {
+  lxDefineAsyncComponent,
+  importWithRetry,
+  getIconLoader,
+  importErrorNotifications,
+} from '@/utils/dynamicImportUtils';
 import {
   useColorMode,
   usePreferredReducedMotion,
@@ -34,11 +40,12 @@ function getSpotlightElementId(item) {
   return /** @type {any} */ (item)?.elementId;
 }
 
-const LxSpotlight = defineAsyncComponent(() => import('@/components/Spotlight.vue'));
-const LxDialog = defineAsyncComponent(() => import('@/components/Dialog.vue'));
-const LxNotification = defineAsyncComponent(() => import('@/components/Notification.vue'));
-const LxAccessibilitySettings = defineAsyncComponent(() =>
-  import('@/components/AccessibilitySettings.vue')
+const LxSpotlight = lxDefineAsyncComponent(() => import('@/components/Spotlight.vue'));
+const LxDialog = lxDefineAsyncComponent(() => import('@/components/Dialog.vue'));
+const loadNotification = importWithRetry(() => import('@/components/Notification.vue'));
+const LxNotification = lxDefineAsyncComponent(loadNotification);
+const LxAccessibilitySettings = lxDefineAsyncComponent(
+  () => import('@/components/AccessibilitySettings.vue')
 );
 
 const themeModel = useColorMode({
@@ -372,14 +379,43 @@ provide(
 );
 
 const notificationModel = computed({
-  get: () => props.notifications,
-  set: (value) => emits('update:notifications', value),
+  get: () => [...(props.notifications ?? []), ...importErrorNotifications.value],
+  set: (value) => {
+    const uids = new Set(value.map((n) => n.uid));
+    const ownUids = new Set(importErrorNotifications.value.map((n) => n.uid));
+    importErrorNotifications.value = importErrorNotifications.value.filter((n) => uids.has(n.uid));
+    emits(
+      'update:notifications',
+      value.filter((n) => !ownUids.has(n.uid))
+    );
+  },
 });
 
-const notificationMounted = ref(props.notifications?.length > 0);
+const notificationMounted = ref(notificationModel.value.length > 0);
+
+// Ready before it's needed, so it can still show errors while offline
+function preloadNotification() {
+  if (!navigator.onLine) return;
+  const iconSet = getGlobals()?.iconSet || 'cds';
+  [
+    loadNotification,
+    ...[
+      'NotificationInfo',
+      'NotificationSuccess',
+      'NotificationWarning',
+      'NotificationError',
+      'Close',
+    ].map((name) => getIconLoader(iconSet, name)),
+  ].forEach((load) => load().catch(() => {}));
+}
+
+onMounted(() => {
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(preloadNotification);
+  else setTimeout(preloadNotification, 2000);
+});
 
 watch(
-  () => props.notifications?.length,
+  () => notificationModel.value.length,
   (count) => {
     if (count > 0) {
       notificationMounted.value = true;
@@ -1462,6 +1498,9 @@ defineExpose({ spotlightStart, spotlightEnd, closeEverything });
       </template>
       <template #customButtonSafePanel>
         <slot name="customButtonSafePanel" />
+      </template>
+      <template #settingsExtra v-if="$slots.settingsExtra">
+        <slot name="settingsExtra" />
       </template>
       <template #backdrop>
         <slot name="backdrop" />

@@ -1,17 +1,7 @@
 <script setup>
-import {
-  ref,
-  computed,
-  watch,
-  onMounted,
-  nextTick,
-  inject,
-  provide,
-  onBeforeUnmount,
-  getCurrentInstance,
-  onUnmounted,
-} from 'vue';
+import { ref, computed, watch, onMounted, nextTick, inject, provide, onBeforeUnmount } from 'vue';
 import LxButton from '@/components/Button.vue';
+import LxActionButton from '@/components/ActionButton.vue';
 import LxExpander from '@/components/Expander.vue';
 import LxIcon from '@/components/Icon.vue';
 import LxListItem from '@/components/list/ListItem.vue';
@@ -33,7 +23,8 @@ import { loadLibrary } from '@/utils/libLoader';
 import useScrollVirtualizer, { resolveVirtualizerScrollParent } from '@/hooks/useScrollVirtualizer';
 import { useLoadingAnnouncer } from '@/hooks/useLoadingAnnouncer';
 import { useWindowSize } from '@vueuse/core';
-import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/builderUtils';
+import { useBuilderRegistration } from '@/utils/builderUtils';
+import { flattenNestedActions, resolveActionGroups } from '@/utils/actionDefinitionsUtils';
 
 const props = defineProps({
   id: { type: String, default: () => generateUUID() },
@@ -92,6 +83,7 @@ const props = defineProps({
     sequence: 10,
     options: ['client', 'server'],
   },
+  searchItems: { type: Array, default: () => [] }, // searchSide 'server' only. Suggestions for the typed searchString
   showLoadMore: { type: Boolean, default: false, group: 'main', sequence: 13 },
   loading: { type: Boolean, default: false, group: 'mode', sequence: 1 },
   busy: { type: Boolean, default: false, group: 'mode', sequence: 2 },
@@ -105,6 +97,10 @@ const props = defineProps({
     options: ['single', 'multiple'],
   },
   selectionActionDefinitions: { type: Array, default: () => [], group: 'additional', sequence: 2 },
+  actionGroupDefinitions: { type: Array, default: null },
+  toolbarActionGroupDefinitions: { type: Array, default: null },
+  selectionActionGroupDefinitions: { type: Array, default: null },
+  emptyStateActionGroupDefinitions: { type: Array, default: null },
   includeUnspecifiedGroups: { type: Boolean, default: false, group: 'additional', sequence: 4 },
   itemsStates: { type: Object, default: null },
   mode: {
@@ -234,6 +230,14 @@ const defaultListGap = ref(8);
 const searchStringClient = ref(props.searchSide === 'client' ? props.searchString : '');
 const searchStringClientRaw = ref('');
 const searchStringServer = ref(props.searchSide === 'server' ? props.searchString : '');
+// The toolbar doesn't emit a searchString set by the parent
+watch(
+  () => props.searchString,
+  (value) => {
+    searchStringClientRaw.value = value ?? '';
+  },
+  { immediate: true }
+);
 
 let invisibleBlockTimeout;
 let observer;
@@ -429,43 +433,6 @@ function handleDefaultListResize() {
   if (lastDefaultListResizeWidth !== null && width === lastDefaultListResizeWidth) return;
   lastDefaultListResizeWidth = width;
   measureDefaultList();
-}
-
-// A focused toolbar control makes the browser scroll it back into view, fighting
-// the scroll. Blur it on user scroll (wheel/touch) so scrolling stays clean, then
-// restore focus once scrolling settles (preventScroll, so it doesn't drag again).
-let pendingRefocusElement = null;
-let scrollSettleTimer = null;
-
-function armScrollSettleRestore() {
-  if (!pendingRefocusElement) return;
-  if (scrollSettleTimer) clearTimeout(scrollSettleTimer);
-  scrollSettleTimer = setTimeout(() => {
-    scrollSettleTimer = null;
-    const el = pendingRefocusElement;
-    pendingRefocusElement = null;
-    const doc = globalThis.document;
-    if (!el?.isConnected || typeof el.focus !== 'function') return;
-    // Don't steal focus if the user focused something else while scrolling.
-    if (doc.activeElement && doc.activeElement !== doc.body) return;
-    el.focus({ preventScroll: true });
-  }, 200);
-}
-
-function blurFocusedListControlOnScroll() {
-  if (!shouldVirtualizeDefaultList.value) return;
-  const doc = globalThis.document;
-  const active = doc?.activeElement;
-  if (
-    active &&
-    active !== doc.body &&
-    listWrapper.value?.contains(active) &&
-    typeof active.blur === 'function'
-  ) {
-    pendingRefocusElement = active;
-    active.blur();
-  }
-  armScrollSettleRestore();
 }
 
 function findObjectById(array) {
@@ -1448,6 +1415,14 @@ function handleToolbarActionClick(id, value) {
   emits('toolbarActionClick', id, value);
 }
 
+const selectionActionsResolved = computed(() =>
+  props.selectionActionGroupDefinitions
+    ? flattenNestedActions(
+        resolveActionGroups(props.selectionActionDefinitions, props.selectionActionGroupDefinitions)
+      )
+    : props.selectionActionDefinitions
+);
+
 const toolbarActions = computed(() => {
   if (selectedItems.value?.length > 0) {
     return [];
@@ -1474,24 +1449,7 @@ const listColsClass = computed(() => {
   return null;
 });
 
-if (props.builderOptions?.useRegistry) {
-  const instance = getCurrentInstance();
-  // Adds default texts to ensure they are available in the builder instance
-  instance.type.props.texts.options = textsDefault;
-  registerBuilderInstance({
-    name: 'LxList',
-    instance,
-    props,
-    builderName: props.builderOptions?.schemaPath,
-    componentStack: props.builderOptions?.componentStack?.concat([
-      { id: props?.id, name: 'LxList' },
-    ]),
-  });
-
-  onUnmounted(() => {
-    unregisterBuilderInstance(props?.id);
-  });
-}
+useBuilderRegistration('LxList', props, { texts: textsDefault });
 
 onMounted(async () => {
   // @ts-ignore
@@ -1502,7 +1460,7 @@ onMounted(async () => {
 
   observer = new ResizeObserver(([entry]) => {
     globalThis.requestAnimationFrame(() => {
-      const actionCount = props.selectionActionDefinitions.length;
+      const actionCount = selectionActionsResolved.value.length;
       const breakpoint = BASE_WIDTH + actionCount * WIDTH_PER_ACTION;
 
       isNarrow.value = entry.contentRect.width <= breakpoint;
@@ -1514,9 +1472,6 @@ onMounted(async () => {
   // Seed width so the first (keyboard) resize is skipped, not re-measured.
   lastDefaultListResizeWidth = globalThis.innerWidth;
   globalThis.addEventListener('resize', handleDefaultListResize);
-  globalThis.addEventListener('wheel', blurFocusedListControlOnScroll, { passive: true });
-  globalThis.addEventListener('touchmove', blurFocusedListControlOnScroll, { passive: true });
-  globalThis.addEventListener('scroll', armScrollSettleRestore, { passive: true, capture: true });
 
   if (wantsDefaultListVirtualization.value) {
     await syncDefaultListVirtualizationContext({ reloadOnScrollParentChange: true });
@@ -1529,10 +1484,6 @@ onBeforeUnmount(() => {
   cleanupDefaultListVirtualization();
   observer?.disconnect();
   globalThis.removeEventListener('resize', handleDefaultListResize);
-  globalThis.removeEventListener('wheel', blurFocusedListControlOnScroll);
-  globalThis.removeEventListener('touchmove', blurFocusedListControlOnScroll);
-  globalThis.removeEventListener('scroll', armScrollSettleRestore, { capture: true });
-  if (scrollSettleTimer) clearTimeout(scrollSettleTimer);
 });
 
 defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
@@ -1567,12 +1518,14 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
         :customClass="hasSelecting && selectedItems?.length > 0 ? 'lx-selection-toolbar' : ''"
         :id="`${id}-toolbar`"
         :actionDefinitions="toolbarActions"
+        :actionGroupDefinitions="toolbarActionGroupDefinitions"
         :disabled="busy"
         :loading="loading"
         :busy="busy"
         :hasSearch="hasSearch"
         v-model:searchString="reactiveSearchString"
         :searchSide="searchSide"
+        :searchItems="searchItems"
         :searchMode="autoSearchMode"
         :useSearchDebounce="true"
         :hasSelectAll="hasSelectAll"
@@ -1598,36 +1551,23 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             class="selection-action-button-toolbar"
           >
             <div class="selection-action-buttons">
-              <LxButton
-                v-for="selectAction in selectionActionDefinitions"
+              <LxActionButton
+                v-for="selectAction in selectionActionsResolved"
                 :key="selectAction.id"
+                :action="selectAction"
+                :omit="['variant']"
                 :id="selectAction.id"
-                :label="selectAction.name || selectAction.label"
-                :title="selectAction.title || selectAction.tooltip"
-                :loading="selectAction.loading"
-                :busy="selectAction.busy"
-                :icon="selectAction.icon"
-                :iconSet="selectAction.iconSet"
-                :destructive="selectAction.destructive"
                 :disabled="selectAction.disabled || busy || loading"
                 kind="ghost"
-                :active="selectAction.active"
-                :badge="selectAction.badge"
-                :badgeType="selectAction.badgeType"
-                :badgeIcon="selectAction.badgeIcon"
-                :badgeTitle="selectAction.badgeTitle"
-                :href="selectAction.href"
                 @click="selectionActionClick(selectAction.id, undefined, selectedItems)"
               />
             </div>
 
-            <div
-              v-if="selectionActionDefinitions?.length > 0"
-              class="selection-action-buttons-small"
-            >
+            <div v-if="selectionActionsResolved?.length > 0" class="selection-action-buttons-small">
               <LxDropDownMenu
                 :disabled="loading || busy"
-                :actionDefinitions="selectionActionDefinitions"
+                :actionDefinitions="selectionActionsResolved"
+                :actionGroupDefinitions="selectionActionGroupDefinitions"
                 @actionClick="
                   (id, actionValue) => selectionActionClick(id, actionValue, selectedItems)
                 "
@@ -1661,36 +1601,26 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
           <template v-if="selectedItems?.length > 0">
             <div v-if="hasSelecting && !insideForm" class="selection-action-button-toolbar">
               <div class="selection-action-buttons">
-                <LxButton
-                  v-for="selectAction in selectionActionDefinitions"
+                <LxActionButton
+                  v-for="selectAction in selectionActionsResolved"
                   :key="selectAction.id"
+                  :action="selectAction"
+                  :omit="['variant']"
                   :id="selectAction.id"
-                  :label="selectAction.name || selectAction.label"
-                  :title="selectAction.title || selectAction.tooltip"
-                  :loading="selectAction.loading"
-                  :busy="selectAction.busy"
-                  :icon="selectAction.icon"
-                  :iconSet="selectAction.iconSet"
-                  :destructive="selectAction.destructive"
                   :disabled="selectAction.disabled || busy || loading"
                   kind="ghost"
-                  :active="selectAction.active"
-                  :badge="selectAction.badge"
-                  :badgeType="selectAction.badgeType"
-                  :badgeIcon="selectAction.badgeIcon"
-                  :badgeTitle="selectAction.badgeTitle"
-                  :href="selectAction.href"
                   @click="selectionActionClick(selectAction.id, undefined, selectedItems)"
                 />
               </div>
 
               <div
-                v-if="selectionActionDefinitions?.length > 0"
+                v-if="selectionActionsResolved?.length > 0"
                 class="selection-action-buttons-small"
               >
                 <LxDropDownMenu
                   :disabled="loading || busy"
-                  :actionDefinitions="selectionActionDefinitions"
+                  :actionDefinitions="selectionActionsResolved"
+                  :actionGroupDefinitions="selectionActionGroupDefinitions"
                   @actionClick="
                     (id, actionValue) => selectionActionClick(id, actionValue, selectedItems)
                   "
@@ -1741,6 +1671,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
               :value="item"
               :href="item[hrefAttribute]"
               :actionDefinitions="actionDefinitions"
+              :actionGroupDefinitions="actionGroupDefinitions"
               :actionsLayout="actionsLayout"
               :icon="item[iconAttribute] ? item[iconAttribute] : icon"
               :iconSet="item[iconSetAttribute] ? item[iconSetAttribute] : iconSet"
@@ -1859,6 +1790,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
                         :value="element"
                         :href="element[hrefAttribute]"
                         :actionDefinitions="actionDefinitions"
+                        :actionGroupDefinitions="actionGroupDefinitions"
                         :actionsLayout="actionsLayout"
                         :icon="element[iconAttribute] ? element[iconAttribute] : icon"
                         :iconSet="element[iconSetAttribute] ? element[iconSetAttribute] : iconSet"
@@ -1905,7 +1837,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             :badge-title="group?.badgeTitle"
             :label="group.name"
             :id="group.id"
-            :action-definitions="groupSelectActionDefinitions(group)"
+            :actionDefinitions="groupSelectActionDefinitions(group)"
             @action-click="() => selectSection(group)"
           >
             <template #customHeader v-if="$slots.customExpanderHeader">
@@ -1942,6 +1874,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
                   :value="item"
                   :href="item[hrefAttribute]"
                   :actionDefinitions="actionDefinitions"
+                  :actionGroupDefinitions="actionGroupDefinitions"
                   :actionsLayout="actionsLayout"
                   :icon="item[iconAttribute] ? item[iconAttribute] : icon"
                   :iconSet="item[iconSetAttribute] ? item[iconSetAttribute] : iconSet"
@@ -2016,7 +1949,8 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
           :tooltipAttribute="tooltipAttribute"
           :categoryAttribute="categoryAttribute"
           :selectable-attribute="selectableAttribute"
-          :action-definitions="actionDefinitions"
+          :actionDefinitions="actionDefinitions"
+          :actionGroupDefinitions="actionGroupDefinitions"
           :actionsLayout="actionsLayout"
           :groupDefinitions="groupDefinitions"
           :icon="icon"
@@ -2054,6 +1988,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
                 :value="item"
                 :href="item[hrefAttribute]"
                 :actionDefinitions="actionDefinitions"
+                :actionGroupDefinitions="actionGroupDefinitions"
                 :actionsLayout="actionsLayout"
                 :icon="item[iconAttribute] ? item[iconAttribute] : icon"
                 :iconSet="item[iconSetAttribute] ? item[iconSetAttribute] : iconSet"
@@ -2117,7 +2052,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             :badge-title="group?.badgeTitle"
             :label="group.name"
             :id="group.id"
-            :action-definitions="groupSelectActionDefinitions(group)"
+            :actionDefinitions="groupSelectActionDefinitions(group)"
             @action-click="() => selectSection(group)"
           >
             <LxTreeList
@@ -2134,7 +2069,8 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
               :tooltipAttribute="tooltipAttribute"
               :categoryAttribute="categoryAttribute"
               :selectable-attribute="selectableAttribute"
-              :action-definitions="actionDefinitions"
+              :actionDefinitions="actionDefinitions"
+              :actionGroupDefinitions="actionGroupDefinitions"
               :actionsLayout="actionsLayout"
               :groupDefinitions="groupDefinitions"
               :icon="icon"
@@ -2174,7 +2110,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             :badge-title="group?.badgeTitle"
             :label="group.name"
             :id="group.id"
-            :action-definitions="groupSelectActionDefinitions(group)"
+            :actionDefinitions="groupSelectActionDefinitions(group)"
             @action-click="() => selectSection(group)"
           >
             <div class="tree-list-wrapper">
@@ -2193,6 +2129,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
                     :value="item"
                     :href="item[hrefAttribute]"
                     :actionDefinitions="actionDefinitions"
+                    :actionGroupDefinitions="actionGroupDefinitions"
                     :actionsLayout="actionsLayout"
                     :icon="item[iconAttribute] ? item[iconAttribute] : icon"
                     :iconSet="item[iconSetAttribute] ? item[iconSetAttribute] : iconSet"
@@ -2275,6 +2212,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
               :value="row.item"
               :href="row.item[hrefAttribute]"
               :actionDefinitions="actionDefinitions"
+              :actionGroupDefinitions="actionGroupDefinitions"
               :actionsLayout="actionsLayout"
               :icon="row.item[iconAttribute] ? row.item[iconAttribute] : icon"
               :iconSet="row.item[iconSetAttribute] ? row.item[iconSetAttribute] : iconSet"
@@ -2346,6 +2284,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
               :value="item"
               :href="item[hrefAttribute]"
               :actionDefinitions="actionDefinitions"
+              :actionGroupDefinitions="actionGroupDefinitions"
               :actionsLayout="actionsLayout"
               :icon="item[iconAttribute] ? item[iconAttribute] : icon"
               :iconSet="item[iconSetAttribute] ? item[iconSetAttribute] : iconSet"
@@ -2463,6 +2402,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
                         :value="element"
                         :href="element[hrefAttribute]"
                         :actionDefinitions="actionDefinitions"
+                        :actionGroupDefinitions="actionGroupDefinitions"
                         :actionsLayout="actionsLayout"
                         :icon="element[iconAttribute] ? element[iconAttribute] : icon"
                         :iconSet="element[iconSetAttribute] ? element[iconSetAttribute] : iconSet"
@@ -2588,6 +2528,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
                           :value="element"
                           :href="element[hrefAttribute]"
                           :actionDefinitions="actionDefinitions"
+                          :actionGroupDefinitions="actionGroupDefinitions"
                           :actionsLayout="actionsLayout"
                           :icon="element[iconAttribute] ? element[iconAttribute] : icon"
                           :iconSet="element[iconSetAttribute] ? element[iconSetAttribute] : iconSet"
@@ -2640,7 +2581,8 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
           :tooltipAttribute="tooltipAttribute"
           :categoryAttribute="categoryAttribute"
           :selectable-attribute="selectableAttribute"
-          :action-definitions="actionDefinitions"
+          :actionDefinitions="actionDefinitions"
+          :actionGroupDefinitions="actionGroupDefinitions"
           :actionsLayout="actionsLayout"
           :icon="icon"
           :iconSet="iconSet"
@@ -2684,6 +2626,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             :value="element"
             :href="element[hrefAttribute]"
             :actionDefinitions="actionDefinitions"
+            :actionGroupDefinitions="actionGroupDefinitions"
             :actionsLayout="actionsLayout"
             :icon="element[iconAttribute] ? element[iconAttribute] : icon"
             :iconSet="element[iconSetAttribute] ? element[iconSetAttribute] : iconSet"
@@ -2738,6 +2681,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
         :description="displayTexts?.noItemsDescription"
         :icon="emptyStateIcon"
         :actionDefinitions="emptyStateActionDefinitions"
+        :actionGroupDefinitions="emptyStateActionGroupDefinitions"
         @actionClick="handleEmptyStateActionClick"
       />
       <LxEmptyState

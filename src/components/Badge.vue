@@ -4,15 +4,24 @@ import useLx from '@/hooks/useLx';
 import LxIcon from '@/components/Icon.vue';
 import { lxDevUtils } from '@/utils';
 import { generateUUID } from '@/utils/stringUtils';
+import { useBuilderRegistration } from '@/utils/builderUtils';
 
 const props = defineProps({
   id: { type: String, default: () => generateUUID() },
-  icon: { type: String, default: null },
-  iconSet: { type: String, default: () => useLx().getGlobals()?.iconSet },
+  icon: { type: String, default: null, group: 'main', sequence: 1 },
+  iconSet: {
+    type: String,
+    default: () => useLx().getGlobals()?.iconSet,
+    options: ['cds', 'material', 'brand', 'phosphor'],
+    group: 'main',
+    sequence: 2,
+  },
   value: { type: String, default: null },
   tooltip: {
     type: String,
     default: null,
+    group: 'main',
+    sequence: 3,
     validator: (v, p) => {
       // If icon or value is non-empty, tooltip must be non-empty
       if ((p.icon || p.value) && !v) {
@@ -25,7 +34,23 @@ const props = defineProps({
       return true;
     },
   },
-  type: { type: String, default: 'auto' }, // auto, number, text
+  tooltipDisabled: { type: Boolean, default: false }, // Skips the hover tooltip but keeps it as the accessible name – for when a wrapping component already shows it
+  type: {
+    type: String,
+    default: 'auto',
+    options: ['auto', 'number', 'text'],
+    group: 'main',
+    sequence: 4,
+  },
+  builderOptions: {
+    type: Object,
+    default: () => ({
+      useRegistry: false,
+      schemaPath: null,
+      componentStack: null,
+      customItemPath: null,
+    }),
+  },
 });
 
 const isValueNumber = computed(() => {
@@ -40,6 +65,8 @@ const isTextOnly = computed(() => !!props.value && !props.icon);
 const isEmpty = computed(
   () => props.value != null && String(props.value).trim() === '' && !props.icon
 );
+
+useBuilderRegistration('LxBadge', props);
 </script>
 <template>
   <div
@@ -50,8 +77,9 @@ const isEmpty = computed(
       'lx-badge-text-only': isTextOnly,
       'lx-badge-empty': isEmpty,
     }"
-    v-tooltip="tooltip"
+    v-tooltip="{ value: tooltip, disabled: tooltipDisabled }"
     :id="id"
+    :data-id="id"
     :aria-label="tooltip"
     data-component="lx-badge"
   >
@@ -60,7 +88,7 @@ const isEmpty = computed(
       class="lx-badge-icon"
       :value="icon"
       :iconSet="iconSet"
-      :title="tooltip"
+      :title="tooltipDisabled ? '' : tooltip"
       :aria-hidden="true"
     />
     <template v-if="icon || value">

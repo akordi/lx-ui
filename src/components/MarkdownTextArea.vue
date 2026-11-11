@@ -1,15 +1,5 @@
 <script setup>
-import {
-  ref,
-  computed,
-  watch,
-  onMounted,
-  onBeforeUnmount,
-  nextTick,
-  inject,
-  getCurrentInstance,
-  onUnmounted,
-} from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, inject } from 'vue';
 import { useElementSize } from '@vueuse/core';
 import PlaceholderData from '@/components/markdownExtensions/PlaceholderData';
 import ImageComponent from '@/components/markdownExtensions/Image';
@@ -32,7 +22,7 @@ import { checkArrayObjectProperty } from '@/utils/arrayUtils';
 import { getDisplayTexts, clampText, isNil } from '@/utils/generalUtils';
 import { formatUrl } from '@/utils/format/string';
 import { loadLibrary } from '@/utils/libLoader';
-import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/builderUtils';
+import { useBuilderRegistration } from '@/utils/builderUtils';
 
 const props = defineProps({
   id: { type: String, default: () => generateUUID() },
@@ -65,6 +55,7 @@ const props = defineProps({
   labelId: { type: String, default: null },
   stickyToolbar: { type: Boolean, default: false, group: 'additional', sequence: 3 },
   actionDefinitions: { type: Array, default: () => [], group: 'additional', sequence: 4 },
+  actionGroupDefinitions: { type: Array, default: null },
   texts: { type: Object, default: () => ({}), group: 'additional', sequence: 100 },
   builderOptions: {
     type: Object,
@@ -1084,24 +1075,7 @@ function getPlainText() {
   return editor.value?.getText() || '';
 }
 
-if (props.builderOptions?.useRegistry) {
-  const instance = getCurrentInstance();
-  // Adds default texts to ensure they are available in the builder instance
-  instance.type.props.texts.options = textsDefault;
-  registerBuilderInstance({
-    name: 'LxMarkdownTextArea',
-    instance,
-    props,
-    builderName: props.builderOptions?.schemaPath,
-    componentStack: props.builderOptions?.componentStack?.concat([
-      { id: props?.id, name: 'LxMarkdownTextArea' },
-    ]),
-  });
-
-  onUnmounted(() => {
-    unregisterBuilderInstance(props?.id);
-  });
-}
+useBuilderRegistration('LxMarkdownTextArea', props, { texts: textsDefault });
 
 const dataState = computed(() =>
   JSON.stringify({
@@ -1137,6 +1111,7 @@ defineExpose({ removeImageLoader, removeAllImageLoaders, repleaceImageLoader, ge
           ref="toolbarRef"
           :disabled="isDisabled"
           :actionDefinitions="toolbarActions"
+          :actionGroupDefinitions="actionGroupDefinitions"
           defaultArea="left"
           :sticky="stickyToolbar"
           :wrapperRef="markdownWrapper"
@@ -1183,7 +1158,6 @@ defineExpose({ removeImageLoader, removeAllImageLoaders, repleaceImageLoader, ge
           :id="`${id}-link-modal`"
           :label="displayTexts.modalLabel"
           size="s"
-          kind="native"
           :button-secondary-is-cancel="false"
           :action-definitions="modalActionDefinitions"
           @close="handleEditUrlModalClose"

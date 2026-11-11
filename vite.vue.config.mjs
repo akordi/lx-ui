@@ -60,7 +60,7 @@ const vueConfig = defineConfig({
     onUnhandledError(error) {
       if (
         error?.name === 'TypeError' &&
-        error?.message?.includes("reading 'getSSRProps'") &&
+        error?.message?.includes('getSSRProps') &&
         error?.stack?.includes('ssrGetDirectiveProps')
       ) {
         return false;

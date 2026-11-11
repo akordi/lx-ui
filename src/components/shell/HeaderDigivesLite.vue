@@ -1,5 +1,6 @@
 <script setup>
-import { computed, watch, ref, provide, inject, defineAsyncComponent } from 'vue';
+import { computed, watch, ref, provide, inject } from 'vue';
+import { lxDefineAsyncComponent } from '@/utils/dynamicImportUtils';
 
 import { buildVueDompurifyHTMLDirective } from 'vue-dompurify-html';
 import { useWindowSize } from '@vueuse/core';
@@ -17,8 +18,8 @@ import {
   secondsToMinutesAndSeconds,
 } from '@/utils/generalUtils';
 
-const LxInfoBox = defineAsyncComponent(() => import('@/components/InfoBox.vue'));
-const LxEmptyState = defineAsyncComponent(() => import('@/components/EmptyState.vue'));
+const LxInfoBox = lxDefineAsyncComponent(() => import('@/components/InfoBox.vue'));
+const LxEmptyState = lxDefineAsyncComponent(() => import('@/components/EmptyState.vue'));
 
 const props = defineProps({
   systemNameShort: { type: String, default: null },
@@ -265,6 +266,8 @@ const fullName = computed(() => {
   }
   return '';
 });
+
+const userIcon = computed(() => props.userInfo?.icon || 'doctor');
 
 const navBarSwitchModel = computed({
   get() {
@@ -890,7 +893,7 @@ watch(
         <LxDropDownMenu ref="dropDownMenu" :disabled="headerNavDisable">
           <div class="lx-user-button" tabindex="-1" role="button">
             <div class="lx-avatar" v-if="!hasAvatar">
-              <LxIcon value="doctor" customClass="lx-icon" />
+              <LxIcon :value="userIcon" customClass="lx-icon" />
             </div>
 
             <div class="lx-user-info">
@@ -913,7 +916,7 @@ watch(
             <div class="user-menu-panel" :class="[{ 'has-timeout': hasSessionTimeoutBadge }]">
               <div class="lx-region user-menu-context">
                 <div class="lx-avatar-display lx-avatar-display-xl">
-                  <LxIcon value="doctor" />
+                  <LxIcon :value="userIcon" />
                 </div>
                 <div class="lx-data">{{ fullName }}</div>
                 <div class="lx-description" v-if="userInfo?.description">

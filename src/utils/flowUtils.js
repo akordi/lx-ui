@@ -147,13 +147,24 @@ function checkAuthorizationAndScope(to, authStore) {
   return { isAuthorized, hasScopeInternal };
 }
 
-function redirectTo(routeName, path) {
+function redirectTo(routeName, to) {
   return {
-    params: { pathMatch: path.substring(1) },
-    query: { returnPath: path },
+    params: { ...to.params, pathMatch: to.path.substring(1) },
+    query: { returnPath: to.path },
     replace: true,
     name: routeName,
   };
+}
+
+// vue-router skips afterEach when a navigation throws, so the store is kept to stop it there
+let navigatingAppStore = null;
+
+/**
+ * Stops the navigation started in `beforeEach`; call it from `router.onError`.
+ */
+export function onError() {
+  navigatingAppStore?.stopNavigating();
+  navigatingAppStore = null;
 }
 
 /**
@@ -166,6 +177,7 @@ function redirectTo(routeName, path) {
 export async function beforeEach(to, from, appStore, authStore, successCallbackFn = null) {
   appStore.$reset();
   appStore.startNavigating();
+  navigatingAppStore = appStore;
 
   // Track navigation state for version checking
   trackNavigationState(to);
@@ -191,7 +203,7 @@ export async function beforeEach(to, from, appStore, authStore, successCallbackF
   const { isAuthorized, hasScopeInternal } = checkAuthorizationAndScope(to, authStore);
 
   if (!isAuthorized) {
-    return redirectTo('notAuthorized', to.path);
+    return redirectTo('notAuthorized', to);
   }
 
   // If authorized, but route requires scopes:
@@ -203,16 +215,17 @@ export async function beforeEach(to, from, appStore, authStore, successCallbackF
   }
 
   if (isAuthorized && !hasScopeInternal) {
-    return redirectTo('forbidden', to.path);
+    return redirectTo('forbidden', to);
   }
 
   // Default error case
-  return redirectTo('error', to.path);
+  return redirectTo('error', to);
 }
 
 export async function afterEach(to, from, appStore, viewStore) {
   if (viewStore) viewStore.$reset();
   appStore.stopNavigating();
+  navigatingAppStore = null;
 
   // Reset navigation tracking after route change
   resetNavigationTracking();

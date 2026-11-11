@@ -29,6 +29,7 @@ const props = defineProps({
   zoomLevel: { type: Number, default: null }, //  50, 75, 100, 125, 150, 175, 200, 250, 300
   downloadType: { type: String, default: 'default' }, // "default" - component will start download, "emit" - component will emit download event
   actionDefinitions: { type: Array, default: () => [] },
+  actionGroupDefinitions: { type: Array, default: null },
   texts: { type: Object, default: () => ({}) },
   /** @description list of mime types that should load they library on component initialization, useful when you already know that you will use pdf viewer and want to load it as soon as possible */
   preloadLibs: { type: Array, default: () => [] },
@@ -295,10 +296,8 @@ function drawImage(providedScale) {
     fetch(props.modelValue)
       .then((response) => response.text())
       .then((svgText) => {
-        const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(svgBlob);
         const svgImg = new Image();
-        svgImg.src = url;
+        svgImg.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
 
         svgImg.onload = () => {
           // Ensure the SVG has width and height attributes
@@ -318,7 +317,6 @@ function drawImage(providedScale) {
           imgCanvas.height = newHeight;
           ctx.clearRect(0, 0, imgCanvas.width, imgCanvas.height);
           ctx.drawImage(svgImg, 0, 0, newWidth, newHeight);
-          URL.revokeObjectURL(url); // Clean up the object URL
         };
       })
       .catch((error) => {
@@ -1666,6 +1664,7 @@ onUnmounted(() => {
       class="lx-file-viewer-toolbar lx-embedded-toolbar"
       :loading="renderingInProgress"
       :actionDefinitions="toolbarActions"
+      :actionGroupDefinitions="actionGroupDefinitions"
       defaultArea="right"
       :sticky="stickyToolbar"
       :texts="displayTexts"

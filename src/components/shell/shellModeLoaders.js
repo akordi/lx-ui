@@ -1,4 +1,4 @@
-import { defineAsyncComponent } from 'vue';
+import { lxDefineAsyncComponent } from '@/utils/dynamicImportUtils';
 
 export const shellModeLoaders = {
   cover: () => import('@/components/shell/modes/ShellCover.vue'),
@@ -15,5 +15,5 @@ export const shellModeLoaders = {
 };
 
 export const shellModeComponents = Object.fromEntries(
-  Object.entries(shellModeLoaders).map(([mode, loader]) => [mode, defineAsyncComponent(loader)])
+  Object.entries(shellModeLoaders).map(([mode, loader]) => [mode, lxDefineAsyncComponent(loader)])
 );

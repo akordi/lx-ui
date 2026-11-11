@@ -1,5 +1,6 @@
 <script setup>
-import { computed, defineAsyncComponent, watch } from 'vue';
+import { computed, watch } from 'vue';
+import { lxDefineAsyncComponent } from '@/utils/dynamicImportUtils';
 import { generateUUID } from '@/utils/stringUtils';
 import LxButton from '@/components/Button.vue';
 import LxListItem from '@/components/list/ListItem.vue';
@@ -8,7 +9,7 @@ import LxRadioButton from '@/components/RadioButton.vue';
 import LxCheckbox from '@/components/Checkbox.vue';
 import LxIcon from '@/components/Icon.vue';
 // eslint-disable-next-line import/no-self-import
-const LxTreeItem = defineAsyncComponent(() => import('@/components/list/TreeItem.vue'));
+const LxTreeItem = lxDefineAsyncComponent(() => import('@/components/list/TreeItem.vue'));
 
 const props = defineProps({
   id: { type: String, default: () => generateUUID() },
@@ -29,6 +30,7 @@ const props = defineProps({
   areSomeExpandable: { type: Boolean, default: null },
   query: { type: String, default: '' },
   actionDefinitions: { type: Array, default: null },
+  actionGroupDefinitions: { type: Array, default: null },
   actionsLayout: { type: String, default: 'default' }, // default, vertical
   icon: { type: String, default: 'open' },
   iconSet: {
@@ -195,6 +197,7 @@ watch(
           :href="item[hrefAttribute]"
           :clickable="item[clickableAttribute]"
           :actionDefinitions="actionDefinitions"
+          :actionGroupDefinitions="actionGroupDefinitions"
           :actionsLayout="actionsLayout"
           :icon="item[iconAttribute] ? item[iconAttribute] : icon"
           :iconSet="item[iconSetAttribute] ? item[iconSetAttribute] : iconSet"
@@ -272,7 +275,8 @@ watch(
       :tooltipAttribute="tooltipAttribute"
       :categoryAttribute="categoryAttribute"
       :selectable-attribute="selectableAttribute"
-      :action-definitions="actionDefinitions"
+      :actionDefinitions="actionDefinitions"
+      :actionGroupDefinitions="actionGroupDefinitions"
       :actionsLayout="actionsLayout"
       :icon="icon"
       :iconSet="iconSet"

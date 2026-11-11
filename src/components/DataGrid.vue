@@ -9,8 +9,6 @@ import {
   watch,
   nextTick,
   useSlots,
-  getCurrentInstance,
-  onUnmounted,
 } from 'vue';
 import {
   useWindowSize,
@@ -21,6 +19,7 @@ import {
 } from '@vueuse/core';
 
 import { logError } from '@/utils/devUtils';
+import { getCategoryClass } from '@/utils/decorationUtils';
 import useLx from '@/hooks/useLx';
 import useScrollVirtualizer, {
   extractVirtualRangeWithPinned,
@@ -34,6 +33,7 @@ import { foldToAscii, generateUUID } from '@/utils/stringUtils';
 import { getDisplayTexts, parsePaddingRem, remToPx, resolveRemToken } from '@/utils/generalUtils';
 
 import LxButton from '@/components/Button.vue';
+import LxActionButton from '@/components/ActionButton.vue';
 import LxCheckbox from '@/components/Checkbox.vue';
 import LxRadioButton from '@/components/RadioButton.vue';
 import LxIcon from '@/components/Icon.vue';
@@ -50,7 +50,8 @@ import LxRow from '@/components/forms/Row.vue';
 import LxToolbar from '@/components/Toolbar.vue';
 import LxPersonDisplay from '@/components/PersonDisplay.vue';
 import LxBadge from '@/components/Badge.vue';
-import { registerBuilderInstance, unregisterBuilderInstance } from '@/utils/builderUtils';
+import { useBuilderRegistration } from '@/utils/builderUtils';
+import { flattenNestedActions, resolveActionGroups } from '@/utils/actionDefinitionsUtils';
 
 const lvCollator = new Intl.Collator('lv');
 const numberFormatters = new Map();
@@ -102,7 +103,8 @@ const props = defineProps({
     group: 'main',
     sequence: 2,
   },
-  idAttribute: { type: String, default: 'id', group: 'additional', sequence: 98 },
+  idAttribute: { type: String, default: 'id', group: 'additional', sequence: 97 },
+  categoryAttribute: { type: String, default: 'category', group: 'additional', sequence: 98 },
   actionDefinitions: { type: Array, default: () => [], group: 'main', sequence: 3 },
   actionAdditionalParameter: { type: String, default: null, group: 'additional', sequence: 11 },
   defaultActionName: { type: String, default: 'open', group: 'additional', sequence: 7 },
@@ -156,6 +158,10 @@ const props = defineProps({
   selectionActionDefinitions: { type: Array, default: () => [], group: 'additional', sequence: 2 },
   toolbarActionDefinitions: { type: Array, default: () => [], group: 'additional', sequence: 1 },
   emptyStateActionDefinitions: { type: Array, default: null, group: 'additional', sequence: 8 },
+  actionGroupDefinitions: { type: Array, default: null },
+  toolbarActionGroupDefinitions: { type: Array, default: null },
+  selectionActionGroupDefinitions: { type: Array, default: null },
+  emptyStateActionGroupDefinitions: { type: Array, default: null },
   emptyStateIcon: { type: String, default: '', group: 'additional', sequence: 10 },
   clickableRole: {
     type: String,
@@ -174,6 +180,7 @@ const props = defineProps({
   },
   searchString: { type: String, default: '' },
   searchSide: { type: String, default: 'server' }, // server, TODO add client search
+  searchItems: { type: Array, default: () => [] }, // Suggestions for the typed searchString
   locale: { type: String, default: null }, // lv, en
   fullBleed: { type: Boolean, default: true, group: 'main', sequence: 23 },
   badgeDefinitions: { type: Array, default: () => [], group: 'additional', sequence: 12 },
@@ -247,6 +254,8 @@ const textsDefault = {
   close: 'Aizvērt',
   skipHeader: 'Pāriet uz tabulas datiem',
   overflowMenu: 'Atvērt papildu iespējas',
+  expand: 'Atvērt',
+  collapse: 'Aizvērt',
   loadingStart: 'Notiek ielāde',
   loadingEnd: 'Ielāde ir pabeigta',
   defaultSortingTooltips: {
@@ -306,6 +315,11 @@ let scrollCompensationRaf = null;
 const { width, height } = useWindowSize();
 
 const isResponsiveLayout = computed(() => width.value <= 800);
+
+function getRowCategoryClass(row) {
+  const category = row?.[props.categoryAttribute];
+  return getCategoryClass(category);
+}
 
 const bounding = useElementBounding(container, {
   windowScroll: false,
@@ -904,6 +918,45 @@ function isValidString(value) {
   return value && value.trim() !== '';
 }
 
+function isNonEmptyString(value) {
+  return typeof value === 'string' && isValidString(value);
+}
+
+function getIconInfoText(value) {
+  if (!isObject(value)) return null;
+  return [value.title, value.label].find(isNonEmptyString) || null;
+}
+
+// Icon cell value is an icon name or { icon, iconSet, label, title, category }
+function getIconBadge(col, row) {
+  const value = row?.[col?.attributeName];
+  if (isValueEmpty(value)) return null;
+  if (!isObject(value)) {
+    return {
+      icon: String(value),
+      value: null,
+      iconSet: undefined,
+      tooltip: col?.name,
+      category: null,
+    };
+  }
+
+  const icon = isNonEmptyString(value.icon) ? value.icon : null;
+  const label = isNonEmptyString(value.label) ? value.label : null;
+  if (!icon && !label) return null;
+
+  // xs columns show only the icon; the label is still available in the tooltip
+  const showLabel = !(col?.size === 'xs' && icon);
+
+  return {
+    icon,
+    value: showLabel ? label : null,
+    iconSet: value.iconSet || undefined,
+    tooltip: getIconInfoText(value) || col?.name,
+    category: isNonEmptyString(value.category) ? value.category : null,
+  };
+}
+
 function compareExistence(aExists, bExists, ascending) {
   if (aExists && !bExists) {
     return ascending ? -1 : 1;
@@ -1117,8 +1170,8 @@ function compareIcons(a, b, colCode, ascending) {
   const iconExistanceComparison = compareExistence(isIconAEmpty, isIconBEmpty, ascending);
   if (iconExistanceComparison !== 0) return iconExistanceComparison;
 
-  const valueA = (typeof iconA === 'object' ? iconA.icon : iconA) || '';
-  const valueB = (typeof iconB === 'object' ? iconB.icon : iconB) || '';
+  const valueA = iconNameA || '';
+  const valueB = iconNameB || '';
   return lvCollator.compare(valueA, valueB);
 }
 
@@ -1472,7 +1525,19 @@ const selectedLabel = computed(() => {
   return ret;
 });
 
-const hasActionButtons = computed(() => props.actionDefinitions?.length > 0);
+const rowActionDefinitions = computed(() =>
+  flattenNestedActions(resolveActionGroups(props.actionDefinitions, props.actionGroupDefinitions))
+);
+
+const selectionActionsResolved = computed(() =>
+  props.selectionActionGroupDefinitions
+    ? flattenNestedActions(
+        resolveActionGroups(props.selectionActionDefinitions, props.selectionActionGroupDefinitions)
+      )
+    : props.selectionActionDefinitions
+);
+
+const hasActionButtons = computed(() => rowActionDefinitions.value?.length > 0);
 
 const itemsCountSelector = computed(() => [10, 20, 30, 40, 50]);
 
@@ -1536,10 +1601,10 @@ function toolbarClick(action, value) {
   }
 }
 
-const actionDefinitionsGroup = computed(() => props.actionDefinitions?.slice(1));
+const actionDefinitionsGroup = computed(() => rowActionDefinitions.value?.slice(1));
 
 function getRowVisibleActions(row) {
-  return props.actionDefinitions?.filter((a) =>
+  return rowActionDefinitions.value?.filter((a) =>
     a.visibleByAttribute ? row[a.visibleByAttribute] : true
   );
 }
@@ -1573,14 +1638,15 @@ function emptyStateActionClicked(actionName) {
   emits('emptyStateActionClick', actionName);
 }
 
-const shouldShowIconRow = computed(() => {
-  const iconColumns = columnsComputed.value?.filter((col) => col.type === 'icon');
-  const extraIconColumns = iconColumns?.filter((col) => col.kind === 'extra');
-  return (
-    iconColumns.length > 0 &&
-    (props.showAllColumns || extraIconColumns.length !== iconColumns.length)
-  );
-});
+// Icon columns shown in the responsive icons row
+const visibleIconColumns = computed(
+  () => columnsComputed.value?.filter((col) => col.type === 'icon' && col.kind !== 'extra') || []
+);
+
+// The responsive icons row is shown only if the item has at least one icon to display
+function hasVisibleIcons(item) {
+  return visibleIconColumns.value.some((col) => getIconBadge(col, item));
+}
 
 const gridColumnWidths = {
   xs: 'minmax(4rem, 1fr)',
@@ -1590,19 +1656,6 @@ const gridColumnWidths = {
   xl: 'minmax(30rem, 7.5fr)',
   '*': 'minmax(auto, 20fr)',
 };
-
-function modifyColumn(templateColumns, condition, columnValue, prepend) {
-  const index = templateColumns.indexOf(columnValue);
-  if (condition && index === -1) {
-    if (prepend) {
-      templateColumns.unshift(columnValue);
-    } else {
-      templateColumns.push(columnValue);
-    }
-  } else if (!condition && index !== -1) {
-    templateColumns.splice(index, 1);
-  }
-}
 
 function updateGridTemplateColumns() {
   const templateColumns = columnsComputed.value
@@ -1619,7 +1672,7 @@ function updateGridTemplateColumns() {
     const { actionWidthRem, horizontalPaddingRem, gapRem } = getActionColumnVars();
 
     if (needsActionColumn) {
-      const rawCount = props.actionDefinitions?.length || 1;
+      const rawCount = rowActionDefinitions.value?.length || 1;
       const actionCount = Math.min(Math.max(0, rawCount), 2);
 
       if (actionCount > 0) {
@@ -1635,10 +1688,11 @@ function updateGridTemplateColumns() {
     }
   }
 
-  modifyColumn(templateColumns, needsActionColumn, actionColumnWidth, false);
-  modifyColumn(templateColumns, needsSelectingColumn, selectingColumnWidth, true);
-
-  gridTemplateColumns.value = templateColumns.join(' ');
+  gridTemplateColumns.value = [
+    ...(needsSelectingColumn ? [selectingColumnWidth] : []),
+    ...templateColumns,
+    ...(needsActionColumn ? [actionColumnWidth] : []),
+  ].join(' ');
 }
 
 // Row heights only change when column widths do.
@@ -1774,12 +1828,7 @@ watch(showSelecting, (isSelecting) => {
 });
 
 watch(
-  [
-    columnsComputed,
-    () => hasActionButtons.value,
-    () => props.showAllColumns,
-    () => props.hasSelecting,
-  ],
+  [columnsComputed, () => hasActionButtons.value, () => props.showAllColumns, showSelecting],
   () => {
     updateGridTemplateColumns();
     nextTick(() => {
@@ -1881,14 +1930,21 @@ onMounted(() => {
     passive: true,
   });
 
+  let scrollLeftBeforeLoading = 0;
   watch(
     () => props.loading,
-    (newValue) => {
-      if (!newValue) {
-        nextTick(() => {
-          syncContainerScroll();
-        });
+    (isLoading) => {
+      if (isLoading) {
+        scrollLeftBeforeLoading = container.value?.scrollLeft ?? 0;
+        return;
       }
+      nextTick(() => {
+        if (!container.value) return;
+        mirroredHeaderLeft = null;
+        mirroredContainerLeft = null;
+        container.value.scrollLeft = scrollLeftBeforeLoading;
+        syncHeaderScroll();
+      });
     },
     { immediate: false }
   );
@@ -2052,7 +2108,7 @@ const computedGridHeaderColumnCount = computed(() => {
 });
 
 const computedGridColumnCount = computed(() => {
-  const actionColumns = hasActionButtons.value ? Math.min(props.actionDefinitions.length, 2) : 0;
+  const actionColumns = hasActionButtons.value ? Math.min(rowActionDefinitions.value.length, 2) : 0;
   const selectingColumn = showSelecting.value ? 0 : 1;
   return colCount.value + actionColumns - selectingColumn;
 });
@@ -2067,24 +2123,7 @@ const stickyToolbarAdditionalHeight = computed(() => {
   )}px - var(--row-size));`;
 });
 
-if (props.builderOptions?.useRegistry) {
-  const instance = getCurrentInstance();
-  // Adds default texts to ensure they are available in the builder instance
-  instance.type.props.texts.options = textsDefault;
-  registerBuilderInstance({
-    name: 'LxDataGrid',
-    instance,
-    props,
-    builderName: props.builderOptions?.schemaPath,
-    componentStack: props.builderOptions?.componentStack?.concat([
-      { id: props?.id, name: 'LxDataGrid' },
-    ]),
-  });
-
-  onUnmounted(() => {
-    unregisterBuilderInstance(props?.id);
-  });
-}
+useBuilderRegistration('LxDataGrid', props, { texts: textsDefault });
 
 defineExpose({ cancelSelection, selectRows, sortBy });
 </script>
@@ -2132,11 +2171,13 @@ defineExpose({ cancelSelection, selectRows, sortBy });
         :class="[{ 'lx-selection-toolbar': hasSelecting && selectedRows && selectedRows.length }]"
         :id="`${id}-toolbar`"
         :actionDefinitions="toolbarActions"
+        :actionGroupDefinitions="toolbarActionGroupDefinitions"
         :disabled="busy"
         :loading="loading"
         :busy="busy"
         :hasSearch="hasSearch"
         :searchSide="searchSide"
+        :searchItems="searchItems"
         :searchMode="autoSearchMode"
         v-model:searchString="reactiveSearchString"
         :hasSelectAll="showSelecting && (selectionKind !== 'single' || selectedRows.length > 0)"
@@ -2175,33 +2216,21 @@ defineExpose({ cancelSelection, selectRows, sortBy });
         <template #rightArea v-else-if="hasSelecting && selectedRows.length > 0">
           <div class="selection-action-button-toolbar">
             <div class="selection-action-buttons">
-              <LxButton
-                v-for="selectAction in selectionActionDefinitions"
+              <LxActionButton
+                v-for="selectAction in selectionActionsResolved"
                 :key="selectAction.id"
+                :action="selectAction"
+                :omit="['href', 'variant']"
                 :id="selectAction.id"
-                :label="selectAction.name || selectAction.label"
-                :title="selectAction.title || selectAction.tooltip"
-                :icon="selectAction.icon"
-                :iconSet="selectAction.iconSet"
-                :loading="selectAction.loading"
-                :busy="selectAction.busy"
-                :destructive="selectAction.destructive"
                 :disabled="selectAction.disabled || busy || loading"
-                :active="selectAction.active"
-                :badge="selectAction.badge"
-                :badge-type="selectAction.badgeType"
-                :badgeIcon="selectAction.badgeIcon"
-                :badgeTitle="selectAction.badgeTitle"
                 kind="ghost"
                 @click="handleSelectionActionClick(selectAction.id, undefined, selectedRows)"
               />
             </div>
-            <div
-              class="selection-action-buttons-small"
-              v-if="selectionActionDefinitions?.length > 0"
-            >
+            <div class="selection-action-buttons-small" v-if="selectionActionsResolved?.length > 0">
               <LxDropDownMenu
-                :actionDefinitions="selectionActionDefinitions"
+                :actionDefinitions="selectionActionsResolved"
+                :actionGroupDefinitions="selectionActionGroupDefinitions"
                 :disabled="isDisabled"
                 @actionClick="
                   (id, actionValue) => handleSelectionActionClick(id, actionValue, selectedRows)
@@ -2400,7 +2429,10 @@ defineExpose({ cancelSelection, selectRows, sortBy });
             <div
               v-for="{ row, rowIndex, rowKey, style } in displayedRows"
               class="lx-grid-row"
-              :class="[{ 'lx-selected': selectedRowsRaw[row[idAttribute]] && hasSelecting }]"
+              :class="[
+                { 'lx-selected': selectedRowsRaw[row[idAttribute]] && hasSelecting },
+                getRowCategoryClass(row),
+              ]"
               :id="`row-${row[idAttribute]}`"
               :style="style"
               :ref="shouldVirtualizeDataGrid ? measureDataGridVirtualElement : null"
@@ -2410,6 +2442,7 @@ defineExpose({ cancelSelection, selectRows, sortBy });
               :data-index="shouldVirtualizeDataGrid ? rowIndex : null"
               @dblclick="defaultActionClicked(row[idAttribute], row)"
             >
+              <div class="lx-category-displayer" aria-hidden="true" />
               <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events -->
               <div
                 v-if="showSelecting"
@@ -2573,20 +2606,8 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                       !isValueEmpty(row?.[col?.attributeName])
                     "
                   >
-                    <div
-                      class="lx-grid-icon-wrapper"
-                      :class="{
-                        'lx-icon-has-tooltip':
-                          row?.[col?.attributeName]?.title || row?.[col?.attributeName]?.label,
-                        'only-icon': !isValidString(row?.[col?.attributeName]?.label),
-                      }"
-                    >
-                      <template
-                        v-if="
-                          isValidString(row?.[col?.attributeName]?.icon) ||
-                          isValidString(row?.[col?.attributeName]?.label)
-                        "
-                      >
+                    <div class="lx-grid-icon-wrapper">
+                      <template v-if="getIconBadge(col, row)">
                         <LxInfoWrapper
                           :focusable="
                             isCellDelegated(
@@ -2614,39 +2635,22 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                                   )
                               : null
                           "
-                          :disabled="
-                            !isValidString(row?.[col?.attributeName]?.title) &&
-                            !isValidString(row?.[col?.attributeName]?.label)
-                          "
+                          :disabled="!getIconInfoText(row?.[col?.attributeName])"
                         >
-                          <div
-                            class="lx-grid-icon-content-wrapper lx-aligned-row lx-aligned-row-inverse lx-aligned-row-4"
-                          >
-                            <LxIcon
-                              :value="
-                                isValidString(row?.[col?.attributeName]?.icon)
-                                  ? row?.[col?.attributeName]?.icon
-                                  : 'default'
-                              "
-                              :icon-set="row?.[col?.attributeName]?.iconSet"
-                              :customClass="`lx-grid-column-icon ${
-                                row?.[col?.attributeName]?.category
-                              }`"
+                          <div class="lx-grid-icon-content-wrapper">
+                            <LxBadge
+                              :id="`${id}-${row[idAttribute]}-${col.id}-badge`"
+                              :icon="getIconBadge(col, row).icon"
+                              :iconSet="getIconBadge(col, row).iconSet"
+                              :value="getIconBadge(col, row).value"
+                              :tooltip="getIconBadge(col, row).tooltip"
+                              :tooltipDisabled="!!getIconInfoText(row?.[col?.attributeName])"
+                              :class="['lx-grid-column-icon', getIconBadge(col, row).category]"
                             />
-                            <p
-                              v-if="
-                                col.size !== 'xs' && isValidString(row?.[col?.attributeName]?.label)
-                              "
-                              class="lx-grid-icon-text"
-                            >
-                              {{ row?.[col?.attributeName].label }}
-                            </p>
                           </div>
                           <template #panel>
                             <p class="lx-data">
-                              {{
-                                row?.[col?.attributeName]?.title || row?.[col?.attributeName]?.label
-                              }}
+                              {{ getIconInfoText(row?.[col?.attributeName]) }}
                             </p>
                           </template>
                         </LxInfoWrapper>
@@ -2666,9 +2670,11 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                     "
                   >
                     <div class="lx-grid-icon-wrapper">
-                      <LxIcon
-                        :value="row?.[col?.attributeName]"
-                        customClass="lx-grid-column-icon"
+                      <LxBadge
+                        :id="`${id}-${row[idAttribute]}-${col.id}-badge`"
+                        :icon="getIconBadge(col, row).icon"
+                        :tooltip="getIconBadge(col, row).tooltip"
+                        :class="['lx-grid-column-icon', getIconBadge(col, row).category]"
                       />
                     </div>
                   </template>
@@ -2757,28 +2763,17 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                           : null
                       "
                     />
-                    <LxButton
+                    <LxActionButton
                       v-if="
                         col?.options?.actionDefinitions?.[0] &&
                         (!col.options.actionDefinitions[0]?.visibleByAttribute ||
                           row[col.options.actionDefinitions[0]?.visibleByAttribute])
                       "
+                      :action="col.options.actionDefinitions[0]"
+                      :omit="['href']"
                       :id="`${id}-${row[idAttribute]}-action-${col.options.actionDefinitions[0]?.id}`"
                       variant="icon-only"
                       kind="ghost"
-                      :label="
-                        col.options.actionDefinitions[0]?.name ||
-                        col.options.actionDefinitions[0]?.label
-                      "
-                      :title="
-                        col.options.actionDefinitions[0]?.title ||
-                        col.options.actionDefinitions[0]?.tooltip
-                      "
-                      :icon="col.options.actionDefinitions[0]?.icon"
-                      :iconSet="col.options.actionDefinitions[0]?.iconSet"
-                      :loading="col.options.actionDefinitions[0]?.loading"
-                      :busy="col.options.actionDefinitions[0]?.busy"
-                      :destructive="col.options.actionDefinitions[0]?.destructive"
                       :disabled="
                         isDisabled ||
                         col.options.actionDefinitions[0]?.disabled ||
@@ -2786,11 +2781,6 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                           ? !row[col.options.actionDefinitions[0]?.enableByAttribute]
                           : false)
                       "
-                      :active="col.options.actionDefinitions[0]?.active"
-                      :badge="col.options.actionDefinitions[0]?.badge"
-                      :badgeType="col.options.actionDefinitions[0]?.badgeType"
-                      :badgeIcon="col.options.actionDefinitions[0]?.badgeIcon"
-                      :badgeTitle="col.options.actionDefinitions[0]?.badgeTitle"
                       :tabindex="
                         getTabIndex(
                           getGridRowIndex(rowIndex),
@@ -2924,29 +2914,18 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                       )
                   "
                 >
-                  <LxButton
+                  <LxActionButton
                     v-for="(action, actionIndex) in getRowVisibleActions(row)"
                     :key="action.id"
+                    :action="action"
                     :id="`${id}-${row[idAttribute]}-action-${action.id}`"
-                    :label="action.name || action.label"
-                    :title="action.title || action.tooltip"
-                    :icon="action.icon"
-                    :iconSet="action.iconSet"
-                    :loading="action.loading"
-                    :busy="action.busy"
                     kind="ghost"
                     variant="icon-only"
-                    :destructive="action.destructive"
                     :disabled="
                       isDisabled ||
                       action.disabled ||
                       (action.enableByAttribute ? !row[action.enableByAttribute] : false)
                     "
-                    :active="action.active"
-                    :badge="action.badge"
-                    :badgeType="action.badgeType"
-                    :badgeIcon="action.badgeIcon"
-                    :badgeTitle="action.badgeTitle"
                     :tabindex="
                       getTabIndex(
                         getGridRowIndex(rowIndex),
@@ -2963,7 +2942,6 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                           actionIndex
                         )
                     "
-                    :href="action.href"
                     @click="
                       handleActionClick(action.id, row[idAttribute], actionAdditionalParameter)
                     "
@@ -2982,33 +2960,22 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                     )
                   "
                 >
-                  <LxButton
+                  <LxActionButton
                     v-if="
-                      !actionDefinitions?.[0]?.visibleByAttribute ||
-                      row[actionDefinitions?.[0]?.visibleByAttribute]
+                      !rowActionDefinitions?.[0]?.visibleByAttribute ||
+                      row[rowActionDefinitions?.[0]?.visibleByAttribute]
                     "
-                    :id="`${id}-${row[idAttribute]}-action-${actionDefinitions?.[0]?.id}`"
-                    :label="actionDefinitions?.[0]?.name || actionDefinitions?.[0]?.label"
-                    :title="actionDefinitions?.[0]?.title || actionDefinitions?.[0]?.tooltip"
-                    :icon="actionDefinitions?.[0]?.icon"
-                    :iconSet="actionDefinitions?.[0]?.iconSet"
-                    :loading="actionDefinitions?.[0]?.loading"
-                    :busy="actionDefinitions?.[0]?.busy"
-                    :destructive="actionDefinitions?.[0]?.destructive"
+                    :action="rowActionDefinitions?.[0]"
+                    :id="`${id}-${row[idAttribute]}-action-${rowActionDefinitions?.[0]?.id}`"
                     :disabled="
                       isDisabled ||
-                      actionDefinitions?.[0]?.disabled ||
-                      (actionDefinitions?.[0]?.enableByAttribute
-                        ? !row[actionDefinitions?.[0]?.enableByAttribute]
+                      rowActionDefinitions?.[0]?.disabled ||
+                      (rowActionDefinitions?.[0]?.enableByAttribute
+                        ? !row[rowActionDefinitions?.[0]?.enableByAttribute]
                         : false)
                     "
                     kind="ghost"
                     variant="icon-only"
-                    :active="actionDefinitions?.[0]?.active"
-                    :badge="actionDefinitions?.[0]?.badge"
-                    :badgeType="actionDefinitions?.[0]?.badgeType"
-                    :badgeIcon="actionDefinitions?.[0]?.badgeIcon"
-                    :badgeTitle="actionDefinitions?.[0]?.badgeTitle"
                     :tabindex="
                       getTabIndex(
                         getGridRowIndex(rowIndex),
@@ -3023,10 +2990,9 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                           showSelecting ? colCount + 1 : colCount
                         )
                     "
-                    :href="actionDefinitions?.[0]?.href"
                     @click="
                       handleActionClick(
-                        actionDefinitions?.[0]?.id,
+                        rowActionDefinitions?.[0]?.id,
                         row[idAttribute],
                         actionAdditionalParameter
                       )
@@ -3039,6 +3005,7 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                     :disabled="isDisabled"
                     :tabindex="-1"
                     :actionDefinitions="getRowActionDefinitionsGroup(row)"
+                    :actionGroupDefinitions="actionGroupDefinitions"
                     @actionClick="
                       (id) => handleActionClick(id, row[idAttribute], actionAdditionalParameter)
                     "
@@ -3110,6 +3077,7 @@ defineExpose({ cancelSelection, selectRows, sortBy });
         :description="displayTexts.noItemsDescription"
         :icon="emptyStateIcon"
         :actionDefinitions="emptyStateActionDefinitions"
+        :actionGroupDefinitions="emptyStateActionGroupDefinitions"
         @actionClick="emptyStateActionClicked"
       />
 
@@ -3125,6 +3093,7 @@ defineExpose({ cancelSelection, selectRows, sortBy });
         :selectionKind="selectionKind"
         :selectableAttribute="selectableAttribute"
         :actionDefinitions="actionDefinitions"
+        :actionGroupDefinitions="actionGroupDefinitions"
         :uppercase="false"
         :columnCount="2"
         :defaultExpanded="false"
@@ -3299,28 +3268,17 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                         : null
                     "
                   />
-                  <LxButton
+                  <LxActionButton
                     v-if="
                       col?.options?.actionDefinitions?.[0] &&
                       (!col.options.actionDefinitions[0]?.visibleByAttribute ||
                         item[col.options.actionDefinitions[0]?.visibleByAttribute])
                     "
+                    :action="col.options.actionDefinitions[0]"
+                    :omit="['href']"
                     :id="`${id}-${item[idAttribute]}-action-${col.options.actionDefinitions[0]?.id}`"
                     variant="icon-only"
                     kind="ghost"
-                    :label="
-                      col.options.actionDefinitions[0]?.name ||
-                      col.options.actionDefinitions[0]?.label
-                    "
-                    :title="
-                      col.options.actionDefinitions[0]?.title ||
-                      col.options.actionDefinitions[0]?.tooltip
-                    "
-                    :icon="col.options.actionDefinitions[0]?.icon"
-                    :iconSet="col.options.actionDefinitions[0]?.iconSet"
-                    :loading="col.options.actionDefinitions[0]?.loading"
-                    :busy="col.options.actionDefinitions[0]?.busy"
-                    :destructive="col.options.actionDefinitions[0]?.destructive"
                     :disabled="
                       isDisabled ||
                       col.options.actionDefinitions[0]?.disabled ||
@@ -3328,11 +3286,6 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                         ? !item[col.options.actionDefinitions[0]?.enableByAttribute]
                         : false)
                     "
-                    :active="col.options.actionDefinitions[0]?.active"
-                    :badge="col.options.actionDefinitions[0]?.badge"
-                    :badgeType="col.options.actionDefinitions[0]?.badgeType"
-                    :badgeIcon="col.options.actionDefinitions[0]?.badgeIcon"
-                    :badgeTitle="col.options.actionDefinitions[0]?.badgeTitle"
                     @click.stop="
                       handleActionClick(
                         col?.options?.actionDefinitions[0]?.id,
@@ -3346,13 +3299,13 @@ defineExpose({ cancelSelection, selectRows, sortBy });
             </LxRow>
 
             <LxRow
-              v-if="shouldShowIconRow"
+              v-if="hasVisibleIcons(item)"
               class="lx-responsive-grid-icons-row"
               columnSpan="2"
               :label="displayTexts.iconsResponsiveRowLabel"
             >
               <div
-                v-for="col in columnsComputed?.filter((col) => col.type === 'icon')"
+                v-for="col in visibleIconColumns"
                 :key="col.id"
                 :class="[
                   {
@@ -3373,43 +3326,23 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                   },
                 ]"
               >
-                <template
-                  v-if="
-                    isObject(item?.[col?.attributeName]) &&
-                    !isValueEmpty(item?.[col?.attributeName])
-                  "
-                >
-                  <div
-                    class="lx-grid-icon-wrapper"
-                    :class="{
-                      'lx-icon-has-tooltip':
-                        item?.[col?.attributeName]?.title || item?.[col?.attributeName]?.label,
-                      'only-icon': !isValidString(item?.[col?.attributeName]?.label),
-                    }"
-                  >
-                    <LxInfoWrapper
-                      :disabled="
-                        !isValidString(item?.[col?.attributeName]?.title) &&
-                        !isValidString(item?.[col?.attributeName]?.label)
-                      "
-                    >
-                      <div class="lx-grid-icon-content-wrapper lx-aligned-row">
-                        <LxIcon
-                          :value="item?.[col?.attributeName]?.icon"
-                          :icon-set="item?.[col?.attributeName]?.iconSet"
-                          :customClass="`lx-grid-column-icon ${
-                            item?.[col?.attributeName]?.category
-                          }`"
+                <template v-if="isObject(item?.[col?.attributeName]) && getIconBadge(col, item)">
+                  <div class="lx-grid-icon-wrapper">
+                    <LxInfoWrapper :disabled="!getIconInfoText(item?.[col?.attributeName])">
+                      <div class="lx-grid-icon-content-wrapper">
+                        <LxBadge
+                          :id="`${id}-${item[idAttribute]}-${col.id}-badge-responsive`"
+                          :icon="getIconBadge(col, item).icon"
+                          :iconSet="getIconBadge(col, item).iconSet"
+                          :value="getIconBadge(col, item).value"
+                          :tooltip="getIconBadge(col, item).tooltip"
+                          :tooltipDisabled="!!getIconInfoText(item?.[col?.attributeName])"
+                          :class="['lx-grid-column-icon', getIconBadge(col, item).category]"
                         />
-                        <p v-if="col.size !== 'xs'" class="lx-grid-icon-text">
-                          {{ item?.[col?.attributeName].label }}
-                        </p>
                       </div>
                       <template #panel>
                         <p class="lx-data">
-                          {{
-                            item?.[col?.attributeName]?.title || item?.[col?.attributeName]?.label
-                          }}
+                          {{ getIconInfoText(item?.[col?.attributeName]) }}
                         </p>
                       </template>
                     </LxInfoWrapper>
@@ -3422,7 +3355,12 @@ defineExpose({ cancelSelection, selectRows, sortBy });
                   "
                 >
                   <div class="lx-grid-icon-wrapper">
-                    <LxIcon :value="item?.[col?.attributeName]" customClass="lx-grid-column-icon" />
+                    <LxBadge
+                      :id="`${id}-${item[idAttribute]}-${col.id}-badge-responsive`"
+                      :icon="getIconBadge(col, item).icon"
+                      :tooltip="getIconBadge(col, item).tooltip"
+                      :class="['lx-grid-column-icon', getIconBadge(col, item).category]"
+                    />
                   </div>
                 </template>
                 <LxEmptyValue
@@ -3434,8 +3372,62 @@ defineExpose({ cancelSelection, selectRows, sortBy });
             </LxRow>
           </template>
         </template>
-        <template #customHeader="{ item, expanded }" v-if="$slots.customResponsiveHeader">
-          <slot name="customResponsiveHeader" v-bind="{ item, expanded }" />
+        <template #customHeader="{ item, expanded }">
+          <slot
+            v-if="$slots.customResponsiveHeader"
+            name="customResponsiveHeader"
+            v-bind="{ item, expanded }"
+          />
+          <template v-else>
+            <div v-if="showSelecting && isSelectable(item)" class="lx-icons" @click.stop>
+              <LxCheckbox
+                v-if="selectionKind === 'multiple'"
+                :id="`select-${id}-${item[idAttribute]}`"
+                v-model="selectedRowsRaw[item[idAttribute]]"
+                :value="item[idAttribute]?.toString()"
+                :disabled="isDisabled"
+                @keyup.space.stop
+              />
+              <LxRadioButton
+                v-else-if="selectionKind === 'single'"
+                :id="`select-${id}-${item[idAttribute]}`"
+                v-model="selectedRowsRaw[item[idAttribute]]"
+                :value="item[idAttribute]?.toString()"
+                :disabled="isDisabled"
+                @click="selectRow(item[idAttribute])"
+                @keyup.space.stop="selectRow(item[idAttribute])"
+              />
+            </div>
+            <div
+              v-else-if="showSelecting && !isSelectable(item)"
+              class="lx-icons"
+              aria-hidden="true"
+            >
+              <span />
+            </div>
+            <div v-else class="lx-icons" />
+            <div class="lx-content lx-custom-content">
+              <div class="lx-primary lx-title" v-tooltip="item[primaryColumnDisplayAttribute()]">
+                {{ item[primaryColumnDisplayAttribute()] }}
+              </div>
+              <div v-if="getRowCategoryClass(item)" class="lx-indications">
+                <LxBadge
+                  :id="`${id}-${item[idAttribute]}-category-badge`"
+                  class="lx-data-grid-category-badge"
+                  :class="getRowCategoryClass(item)"
+                  value=" "
+                  :tooltip="item[primaryColumnDisplayAttribute()]"
+                />
+              </div>
+            </div>
+            <div class="lx-indications">
+              <LxIcon
+                :value="item.invalid ? 'invalid' : expanded ? 'chevron-up' : 'chevron-down'"
+                :title="item.invalid ? '' : expanded ? displayTexts.collapse : displayTexts.expand"
+                :meaningful="!!item.invalid"
+              />
+            </div>
+          </template>
         </template>
       </LxAppendableList>
 
