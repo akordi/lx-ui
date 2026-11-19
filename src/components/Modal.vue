@@ -41,7 +41,6 @@ const modalHeader = ref();
 const modalContent = ref();
 const modalFooter = ref();
 const contentPaddingTop = ref('0px');
-const lxElement = document.querySelector('.lx');
 
 const headerSize = useElementSize(modalHeader, undefined, { box: 'border-box' });
 const footerSize = useElementSize(modalFooter, undefined, { box: 'border-box' });
@@ -169,6 +168,7 @@ const bottomOutOfBounds = computed(() => {
 const paddingTopToken = computed(() => `--lx-modal-top-padding: ${contentPaddingTop.value};`);
 
 onMounted(() => {
+  const lxElement = document.querySelector('.lx');
   if (!lxElement) return;
 
   const computedStyle = getComputedStyle(lxElement);
