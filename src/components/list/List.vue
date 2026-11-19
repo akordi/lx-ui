@@ -558,7 +558,8 @@ function convertItemsArray() {
         return item;
       }
 
-      const { [props.orderAttribute]: order, ...itemWithoutOrder } = item;
+      const itemWithoutOrder = { ...item };
+      delete itemWithoutOrder[props.orderAttribute];
       return itemWithoutOrder;
     });
 
@@ -737,7 +738,8 @@ function prepareUnGroupedItemsArray() {
     );
 
     if (originalItem && !(props.orderAttribute in originalItem)) {
-      const { [props.orderAttribute]: order, ...itemWithoutOrder } = item;
+      const itemWithoutOrder = { ...item };
+      delete itemWithoutOrder[props.orderAttribute];
       return itemWithoutOrder;
     }
 
@@ -962,7 +964,7 @@ async function moveGroupedItem(element, direction) {
 
 const dragOptions = computed(() => ({
   animation: 200,
-  group: 'list',
+  group: `list-${props.id}`,
   disabled: false,
   ghostClass: 'ghost',
 }));
@@ -1001,8 +1003,13 @@ const selectedItems = computed(() => {
       }
     }
   });
-  emits('selectionChange', ret);
   return ret;
+});
+
+watch(selectedItems, (newValue, oldValue) => {
+  if (JSON.stringify(newValue) !== JSON.stringify(oldValue)) {
+    emits('selectionChange', newValue);
+  }
 });
 
 function selectRow(id) {
@@ -1430,6 +1437,11 @@ const selectionActionsResolved = computed(() =>
     : props.selectionActionDefinitions
 );
 
+// A single selection action with an icon stays a button on narrow screens, shown icon-only
+const hasSingleSelectionAction = computed(
+  () => selectionActionsResolved.value?.length === 1 && !!selectionActionsResolved.value[0]?.icon
+);
+
 const toolbarActions = computed(() => {
   if (selectedItems.value?.length > 0) {
     return [];
@@ -1455,6 +1467,22 @@ const listColsClass = computed(() => {
 
   return null;
 });
+
+const dataState = computed(() =>
+  JSON.stringify({
+    kind: props.kind,
+    listType: normalizedListType.value,
+    mode: props.mode,
+    hasGroups: Boolean(props.groupDefinitions),
+    hasSelecting: props.hasSelecting,
+    selectionKind: props.selectionKind,
+    hasSearch: props.hasSearch,
+    searchSide: props.searchSide,
+    searchMode: autoSearchMode.value,
+    actionsLayout: props.actionsLayout,
+    virtualized: wantsDefaultListVirtualization.value,
+  })
+);
 
 useBuilderRegistration('LxList', props, { texts: textsDefault });
 
@@ -1505,6 +1533,8 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
       'is-narrow': isNarrow,
       'list-inside-form': insideForm,
     }"
+    data-component="lx-list"
+    :data-state="dataState"
   >
     <p class="lx-invisible" role="status" aria-live="polite" aria-atomic="true">
       <template v-if="shouldAnnounceLoading">{{ displayTexts.loadingStart }}</template>
@@ -1556,6 +1586,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
           <div
             v-if="hasSelecting && insideForm && selectedItems?.length > 0"
             class="selection-action-button-toolbar"
+            :class="{ 'single-action': hasSingleSelectionAction }"
           >
             <div class="selection-action-buttons">
               <LxActionButton
@@ -1566,11 +1597,15 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
                 :id="selectAction.id"
                 :disabled="selectAction.disabled || busy || loading"
                 kind="ghost"
+                :variant="isNarrow && hasSingleSelectionAction ? 'icon-only' : undefined"
                 @click="selectionActionClick(selectAction.id, undefined, selectedItems)"
               />
             </div>
 
-            <div v-if="selectionActionsResolved?.length > 0" class="selection-action-buttons-small">
+            <div
+              v-if="selectionActionsResolved?.length > 0 && !hasSingleSelectionAction"
+              class="selection-action-buttons-small"
+            >
               <LxDropDownMenu
                 :disabled="loading || busy"
                 :actionDefinitions="selectionActionsResolved"
@@ -1606,7 +1641,11 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
           />
 
           <template v-if="selectedItems?.length > 0">
-            <div v-if="hasSelecting && !insideForm" class="selection-action-button-toolbar">
+            <div
+              v-if="hasSelecting && !insideForm"
+              class="selection-action-button-toolbar"
+              :class="{ 'single-action': hasSingleSelectionAction }"
+            >
               <div class="selection-action-buttons">
                 <LxActionButton
                   v-for="selectAction in selectionActionsResolved"
@@ -1616,12 +1655,13 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
                   :id="selectAction.id"
                   :disabled="selectAction.disabled || busy || loading"
                   kind="ghost"
+                  :variant="isNarrow && hasSingleSelectionAction ? 'icon-only' : undefined"
                   @click="selectionActionClick(selectAction.id, undefined, selectedItems)"
                 />
               </div>
 
               <div
-                v-if="selectionActionsResolved?.length > 0"
+                v-if="selectionActionsResolved?.length > 0 && !hasSingleSelectionAction"
                 class="selection-action-buttons-small"
               >
                 <LxDropDownMenu
@@ -1669,6 +1709,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             v-for="item in itemsArray[prepareCode(UNSPECIFIED_GROUP_CODE)]"
             :key="item[idAttribute]"
             class="lx-list-item-container lx-region-component"
+            data-container="list-item"
           >
             <LxListItem
               :id="item[idAttribute]"
@@ -1743,7 +1784,6 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             drag-class="drag"
             v-bind="dragOptions"
             :item-key="idAttribute"
-            group="list"
             tag="ul"
             :disabled="loading || busy || draggableIsDisabledByQuery"
             :aria-labelledby="labelledBy"
@@ -1761,7 +1801,10 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
               >
                 <div class="lx-transition-layer" :key="element[idAttribute]">
                   <div v-if="!element.placeholder" class="lx-draggable-group-list-item">
-                    <div class="lx-list-item-container lx-region-component">
+                    <div
+                      class="lx-list-item-container lx-region-component"
+                      data-container="list-item"
+                    >
                       <LxDropDownMenu
                         triggerClick="right"
                         :disabled="loading || busy || draggableIsDisabledByQuery"
@@ -1873,6 +1916,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
                 v-for="item in filteredGroupedItems[prepareCode(group.id)]"
                 :key="item[idAttribute]"
                 class="lx-list-item-container lx-region-component"
+                data-container="list-item"
               >
                 <LxListItem
                   :id="item[idAttribute]"
@@ -1987,6 +2031,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
               :key="item[idAttribute]"
               class="tree-list-search-item lx-list-item-container lx-region-component"
               role="listitem"
+              data-container="list-item"
             >
               <LxListItem
                 :id="item[idAttribute]"
@@ -2128,6 +2173,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
                   :key="item[idAttribute]"
                   class="tree-list-search-item lx-list-item-container lx-region-component"
                   role="listitem"
+                  data-container="list-item"
                 >
                   <LxListItem
                     :id="item[idAttribute]"
@@ -2203,6 +2249,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             :key="row.virtualKey"
             :data-index="row.virtualRow.index"
             class="lx-list-item-container lx-region-component"
+            data-container="list-item"
             :ref="measureDefaultListRow"
             :style="{
               position: 'absolute',
@@ -2283,6 +2330,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             v-for="item in filteredItems"
             :key="item[idAttribute]"
             class="lx-list-item-container lx-region-component"
+            data-container="list-item"
           >
             <LxListItem
               :id="item[idAttribute]"
@@ -2357,7 +2405,6 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
             drag-class="drag"
             v-bind="dragOptions"
             :item-key="idAttribute"
-            group="list"
             :disabled="loading || busy || draggableIsDisabledByQuery"
             :aria-labelledby="labelledBy"
             @start="changeDragging"
@@ -2374,7 +2421,10 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
               >
                 <div class="lx-transition-layer" :key="element[idAttribute]">
                   <div v-if="!element.placeholder" class="lx-draggable-group-list-item">
-                    <div class="lx-list-item-container lx-region-component">
+                    <div
+                      class="lx-list-item-container lx-region-component"
+                      data-container="list-item"
+                    >
                       <LxDropDownMenu
                         triggerClick="right"
                         :disabled="loading || busy || draggableIsDisabledByQuery"
@@ -2457,6 +2507,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
           :badge-type="group?.badgeType"
           :badge-title="group?.badgeTitle"
           :label="group.name"
+          :id="`${id}-${prepareCode(group.id)}-group`"
         >
           <template #customHeader v-if="$slots.customExpanderHeader">
             <slot
@@ -2483,7 +2534,6 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
               drag-class="drag"
               v-bind="dragOptions"
               :item-key="idAttribute"
-              group="list"
               tag="ul"
               :disabled="loading || busy || draggableIsDisabledByQuery"
               :aria-labelledby="labelledBy"
@@ -2501,7 +2551,10 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
                 >
                   <div class="lx-transition-layer" :key="element[idAttribute]">
                     <div v-if="!element.placeholder" class="lx-draggable-group-list-item">
-                      <div class="lx-list-item-container lx-region-component">
+                      <div
+                        class="lx-list-item-container lx-region-component"
+                        data-container="list-item"
+                      >
                         <LxDropDownMenu
                           triggerClick="right"
                           :disabled="loading || busy || draggableIsDisabledByQuery"
@@ -2627,6 +2680,7 @@ defineExpose({ validate, cancelSelection, selectRows, toggleSearch });
           :key="element?.[idAttribute]"
           class="tree-list-search-item lx-list-item-container"
           role="listitem"
+          data-container="list-item"
         >
           <LxListItem
             :id="element[idAttribute]"

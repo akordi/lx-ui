@@ -111,6 +111,14 @@ onBeforeUnmount(() => {
   observer?.disconnect();
 });
 
+const dataState = computed(() =>
+  JSON.stringify({
+    kind: props.kind,
+    mode: props.mode,
+    size: size.value,
+  })
+);
+
 const sizeClass = computed(() => `lx-chat-${size.value}`);
 const kindClass = computed(() => `lx-chat-${props.kind}`);
 const modeClass = computed(() => `lx-chat-mode-${props.mode}`);
@@ -168,15 +176,17 @@ provide('lxChatTypingActionClick', (id) => emits('typing-action-click', { id }))
 <template>
   <div
     ref="wrapperRef"
-    class="lx-chat-wrapper"
+    class="lx-chat-wrapper lx-shadow-top lx-shadow-inset"
     :class="[sizeClass, kindClass, modeClass]"
-    :style="{ '--lx-chat-top-shadow-opacity': topShadowOpacity }"
+    :style="{ '--lx-shadow-top-opacity': topShadowOpacity }"
     :id="id"
     data-component="lx-chat"
     :data-id="id"
+    :data-state="dataState"
   >
     <LxButton
       v-if="showScrollDown"
+      :id="`${id}-scroll-down`"
       class="lx-chat-scroll-down"
       kind="ghost"
       variant="icon-only"
@@ -208,8 +218,8 @@ provide('lxChatTypingActionClick', (id) => emits('typing-action-click', { id }))
 
     <div
       ref="footerRef"
-      class="lx-chat-footer"
-      :style="{ '--lx-chat-footer-shadow-opacity': scrollShadowOpacity }"
+      class="lx-chat-footer lx-shadow-top"
+      :style="{ '--lx-shadow-top-opacity': scrollShadowOpacity }"
     >
       <MessageComposer
         :id="id"

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick, provide, computed, watch, onUnmounted } from 'vue';
+import { ref, nextTick, provide, computed, watch, onMounted, onUnmounted } from 'vue';
 import LxButton from '@/components/Button.vue';
 import LxActionButton from '@/components/ActionButton.vue';
 import { logWarn } from '@/utils/devUtils';
@@ -7,8 +7,9 @@ import useLx from '@/hooks/useLx';
 import { generateUUID } from '@/utils/stringUtils';
 import { flattenNestedActions, resolveActionGroups } from '@/utils/actionDefinitionsUtils';
 import { useFocusTrap } from '@vueuse/integrations/useFocusTrap';
-import { useElementSize, useScroll } from '@vueuse/core';
-import { getDisplayTexts } from '@/utils/generalUtils';
+import { useElementSize } from '@vueuse/core';
+import { useScrollShadows } from '@/hooks/useScrollShadows';
+import { getDisplayTexts, parsePaddingRem, remToPx } from '@/utils/generalUtils';
 
 const props = defineProps({
   id: { type: String, default: () => generateUUID() },
@@ -39,11 +40,13 @@ const insideModal = ref(true);
 const modalHeader = ref();
 const modalContent = ref();
 const modalFooter = ref();
+const contentPaddingTop = ref('0px');
+const lxElement = document.querySelector('.lx');
 
 const headerSize = useElementSize(modalHeader, undefined, { box: 'border-box' });
 const footerSize = useElementSize(modalFooter, undefined, { box: 'border-box' });
 
-const { y: scrollYPos } = useScroll(modalContent);
+const { top: topShadowOpacity, bottom: bottomShadowOpacity } = useScrollShadows(modalContent);
 
 let returnFocusElement = null;
 
@@ -152,45 +155,29 @@ const actionDefinitionsDisplay = computed(() => {
 });
 
 const topOutOfBounds = computed(() => {
-  const keyOpacity = '--modal-top-shadow-opacity';
-  const keySize = '--modal-header-size';
-  const limit = 100;
-  const size = headerSize.height?.value;
-
   if (!modalContent.value || !modalHeader.value)
-    return `${keyOpacity}: 0; ${keySize}: var(--row-size);`;
-
-  const scrollTop = scrollYPos.value || 0;
-
-  if (scrollTop > limit) {
-    return `${keyOpacity}: 1; ${keySize}: ${size}px;`;
-  }
-  if (scrollTop > 0) {
-    return `${keyOpacity}: ${scrollTop / limit}; ${keySize}: ${size}px;`;
-  }
-  return `${keyOpacity}: 0; ${keySize}: ${size}px;`;
+    return '--modal-top-shadow-opacity: 0; --modal-header-size: var(--row-size);';
+  return `--modal-top-shadow-opacity: ${topShadowOpacity.value}; --modal-header-size: ${headerSize.height?.value}px;`;
 });
 
 const bottomOutOfBounds = computed(() => {
-  const keyOpacity = '--modal-bottom-shadow-opacity';
-  const keySize = '--modal-footer-size';
-  const limit = 100;
-  const size = footerSize.height?.value;
-
   if (!modalContent.value || !modalFooter.value)
-    return `${keyOpacity}: 0; ${keySize}: var(--row-size);`;
+    return '--modal-bottom-shadow-opacity: 0; --modal-footer-size: var(--row-size);';
+  return `--modal-bottom-shadow-opacity: ${bottomShadowOpacity.value}; --modal-footer-size: ${footerSize.height?.value}px;`;
+});
 
-  const maxScrollDistance = modalContent.value.scrollHeight - modalContent.value.clientHeight;
-  const scrollTop = scrollYPos.value || 0;
-  const v = maxScrollDistance - scrollTop;
+const paddingTopToken = computed(() => `--lx-modal-top-padding: ${contentPaddingTop.value};`);
 
-  if (v > limit) {
-    return `${keyOpacity}: 1; ${keySize}: ${size}px;`;
-  }
-  if (v > 0) {
-    return `${keyOpacity}: ${v / limit}; ${keySize}: ${size}px;`;
-  }
-  return `${keyOpacity}: 0; ${keySize}: ${size}px;`;
+onMounted(() => {
+  if (!lxElement) return;
+
+  const computedStyle = getComputedStyle(lxElement);
+  const paddingTopRem = parsePaddingRem(
+    computedStyle.getPropertyValue('--modal-content-padding'),
+    lxElement,
+    'top'
+  );
+  contentPaddingTop.value = `${remToPx(paddingTopRem)}px`;
 });
 
 function ifModalsExist() {
@@ -202,7 +189,7 @@ watch([isOpen, isOpenModal], ([newIsOpen, newIsOpenModal]) => {
   if (newIsOpen || newIsOpenModal) {
     nextTick(() => {
       if (modalContent.value) {
-        scrollYPos.value = 0;
+        modalContent.value.scrollTop = 0;
       }
     });
     document.body.classList.add('no-scroll-modal');
@@ -250,11 +237,11 @@ defineExpose({ open, close });
             { 'lx-modal-l': size === 'l' },
             { 'lx-modal-xl': size === 'xl' },
           ]"
-          :style="`${topOutOfBounds}; ${bottomOutOfBounds}`"
+          :style="`${topOutOfBounds}; ${bottomOutOfBounds}; ${paddingTopToken}`"
           role="dialog"
           :aria-labelledby="`${id}-label`"
         >
-          <header ref="modalHeader">
+          <header ref="modalHeader" class="lx-shadow-bottom">
             <div :id="`${id}-label`" class="lx-primary" v-tooltip="label">{{ label }}</div>
             <LxButton
               v-if="!disableClosing"
@@ -273,7 +260,7 @@ defineExpose({ open, close });
 
           <footer
             ref="modalFooter"
-            class="lx-button-set"
+            class="lx-button-set lx-shadow-top"
             :class="[
               {
                 'lx-two-buttons': actionDefinitionsDisplay?.length === 2,
@@ -313,12 +300,12 @@ defineExpose({ open, close });
             { 'lx-modal-xl': size === 'xl' },
           ]"
           tabindex="-1"
-          :style="`${topOutOfBounds}; ${bottomOutOfBounds}`"
+          :style="`${topOutOfBounds}; ${bottomOutOfBounds}; ${paddingTopToken}`"
           :aria-labelledby="`${id}-label`"
           @close="close"
           @keydown="handleKeyDown"
         >
-          <header ref="modalHeader">
+          <header ref="modalHeader" class="lx-shadow-bottom">
             <p :id="`${id}-label`" class="lx-primary">{{ label }}</p>
             <LxButton
               v-if="!disableClosing"
@@ -337,7 +324,7 @@ defineExpose({ open, close });
 
           <footer
             ref="modalFooter"
-            class="lx-button-set"
+            class="lx-button-set lx-shadow-top"
             :class="[
               {
                 'lx-two-buttons': actionDefinitionsDisplay?.length === 2,

@@ -246,7 +246,15 @@
     border-color 0.2s cubic-bezier(0.76, 0.11, 0.11, 0.83);
 }
 
-.lx:not(.lx-no-animations) .lx-number-slider-container .lx-number-slider::-webkit-slider-thumb,
+.lx:not(.lx-no-animations) .lx-number-slider-container .lx-number-slider::-webkit-slider-thumb {
+  transition:
+    background 0.2s cubic-bezier(0.76, 0.11, 0.11, 0.83),
+    border-color 0.2s cubic-bezier(0.76, 0.11, 0.11, 0.83),
+    width 0.1s ease,
+    height 0.1s ease,
+    transform 0.1s ease;
+}
+
 .lx:not(.lx-no-animations) .lx-number-slider-container .lx-number-slider::-moz-range-thumb {
   transition:
     background 0.2s cubic-bezier(0.76, 0.11, 0.11, 0.83),
@@ -438,14 +446,16 @@
 .lx:not(.lx-no-animations) .lx-calendar-container .lx-time-list-item.scroll-down-leave-active,
 .lx:not(.lx-no-animations) .lx-calendar-container .lx-time-list-item.scroll-up-leave-active {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: var(--space-0);
+  right: var(--space-0);
 }
+
 .lx:not(.lx-no-animations) .lx-calendar-container .lx-time-list-item.scroll-down-leave-active {
-  top: 0;
+  top: var(--space-0);
 }
+
 .lx:not(.lx-no-animations) .lx-calendar-container .lx-time-list-item.scroll-up-leave-active {
-  bottom: 0;
+  bottom: var(--space-0);
 }
 
 /* lx-expanders */
@@ -629,8 +639,7 @@
 /* lx-shell-flex */
 
 .lx:not(.lx-no-animations) .lx-layout-default .lx-nav-panel,
-.lx:not(.lx-no-animations) .lx-layout-public .lx-nav-panel,
-.lx:not(.lx-no-animations) .lx-layout-latvijalv .lx-nav-panel {
+.lx:not(.lx-no-animations) .lx-layout-public-shell .lx-nav-panel {
   transition:
     0.1s ease-in-out width,
     0.1s ease-in-out box-shadow;
