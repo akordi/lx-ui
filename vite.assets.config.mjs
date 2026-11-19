@@ -144,12 +144,12 @@ function generateFontsRollupInput(baseDir) {
       return;
     }
 
-    const { name, ext } = path.parse(file);
-    if (!allowedExtensions.has(ext.toLowerCase())) {
+    if (!allowedExtensions.has(path.extname(file).toLowerCase())) {
       return;
     }
 
-    input[name] = filePath;
+    // Keyed by full filename: the same font often ships as both .ttf and .woff2.
+    input[file] = filePath;
   });
 
   return input;
