@@ -52,6 +52,7 @@ import LxPersonDisplay from '@/components/PersonDisplay.vue';
 import LxBadge from '@/components/Badge.vue';
 import { useBuilderRegistration } from '@/utils/builderUtils';
 import { flattenNestedActions, resolveActionGroups } from '@/utils/actionDefinitionsUtils';
+import { shadowOpacity } from '@/utils/shadowUtils';
 
 const lvCollator = new Intl.Collator('lv');
 const numberFormatters = new Map();
@@ -1537,6 +1538,11 @@ const selectionActionsResolved = computed(() =>
     : props.selectionActionDefinitions
 );
 
+// A single selection action with an icon stays a button on narrow screens, shown icon-only
+const hasSingleSelectionAction = computed(
+  () => selectionActionsResolved.value?.length === 1 && !!selectionActionsResolved.value[0]?.icon
+);
+
 const hasActionButtons = computed(() => rowActionDefinitions.value?.length > 0);
 
 const itemsCountSelector = computed(() => [10, 20, 30, 40, 50]);
@@ -1752,24 +1758,14 @@ function getInlineDisplayValue(styleText = '') {
 }
 
 const topOutOfBounds = computed(() => {
-  const keyOpacity = '--grid-top-shadow-opacity';
-  const keySize = '--data-grid-header-size';
-  const limit = 100;
   const headerHeight = headerSize.height?.value || 0;
-
   if (!container.value || !header.value) {
-    return `${keyOpacity}: 0; ${keySize}: ${headerHeight}px;`;
+    return `--grid-top-shadow-opacity: 0; --data-grid-header-size: ${headerHeight}px;`;
   }
-
   const v = bounding.top ? bounding.top.value - calculateOffset(container.value) : 0;
-
-  if (v < 0 - limit) {
-    return `${keyOpacity}: 1; ${keySize}: ${headerHeight}px;`;
-  }
-  if (v < 0) {
-    return `${keyOpacity}: ${(0 - v) / limit}; ${keySize}: ${headerHeight}px;`;
-  }
-  return `${keyOpacity}: 0; ${keySize}: ${headerHeight}px;`;
+  return `--grid-top-shadow-opacity: ${shadowOpacity(
+    -v
+  )}; --data-grid-header-size: ${headerHeight}px;`;
 });
 
 const fullBleedMargin = computed(() => {
@@ -2134,8 +2130,8 @@ defineExpose({ cancelSelection, selectRows, sortBy });
     class="lx-data-grid-wrapper"
     :style="`${topOutOfBounds} ${fullBleedMargin} ${stickyToolbarAdditionalHeight}`"
     :class="[
-      { 'lx-grid-sticky': stickyHeader },
-      { 'lx-grid-sticky-toolbar': props.stickyToolbar },
+      { 'lx-grid-has-sticky-header': stickyHeader },
+      { 'lx-grid-has-sticky-toolbar': props.stickyToolbar },
       { 'lx-scrollable': scrollable === true || autoScrollable === true },
     ]"
   >
@@ -2160,102 +2156,104 @@ defineExpose({ cancelSelection, selectRows, sortBy });
         />
       </div>
     </header>
-
-    <div
+    <LxToolbar
       v-if="isToolbarVisible"
       ref="toolbarRef"
-      :class="[{ 'lx-sticky-toolbar-list-wrapper': props.stickyToolbar }]"
+      class="lx-grid-toolbar lx-floating-toolbar"
+      :class="[{ 'lx-selection-toolbar': hasSelecting && selectedRows && selectedRows.length }]"
+      :id="`${id}-toolbar`"
+      :actionDefinitions="toolbarActions"
+      :actionGroupDefinitions="toolbarActionGroupDefinitions"
+      :disabled="busy"
+      :loading="loading"
+      :busy="busy"
+      :hasSearch="hasSearch"
+      :searchSide="searchSide"
+      :searchItems="searchItems"
+      :searchMode="autoSearchMode"
+      v-model:searchString="reactiveSearchString"
+      :hasSelectAll="showSelecting && (selectionKind !== 'single' || selectedRows.length > 0)"
+      :selectionState="selectionState"
+      selectAllSide="left"
+      :texts="{
+        ...displayTexts,
+        clear: displayTexts.clearSearch,
+        clearSelected: displayTexts.clear,
+      }"
+      :sticky="stickyToolbar"
+      :wrapperRef="dataGridWrapperRef"
+      @actionClick="toolbarClick"
+      @search="search"
+      @selectAll="selectRows"
+      @deselectAll="cancelSelection"
     >
-      <LxToolbar
-        class="lx-grid-toolbar lx-floating-toolbar"
-        :class="[{ 'lx-selection-toolbar': hasSelecting && selectedRows && selectedRows.length }]"
-        :id="`${id}-toolbar`"
-        :actionDefinitions="toolbarActions"
-        :actionGroupDefinitions="toolbarActionGroupDefinitions"
-        :disabled="busy"
-        :loading="loading"
-        :busy="busy"
-        :hasSearch="hasSearch"
-        :searchSide="searchSide"
-        :searchItems="searchItems"
-        :searchMode="autoSearchMode"
-        v-model:searchString="reactiveSearchString"
-        :hasSelectAll="showSelecting && (selectionKind !== 'single' || selectedRows.length > 0)"
-        :selectionState="selectionState"
-        selectAllSide="left"
-        :texts="{
-          ...displayTexts,
-          clear: displayTexts.clearSearch,
-          clearSelected: displayTexts.clear,
-        }"
-        :sticky="stickyToolbar"
-        :wrapperRef="dataGridWrapperRef"
-        @actionClick="toolbarClick"
-        @search="search"
-        @selectAll="selectRows"
-        @deselectAll="cancelSelection"
+      <template #leftArea>
+        <slot
+          v-if="(hasSelecting && selectedRows?.length === 0) || !hasSelecting"
+          name="leftToolbar"
+        />
+
+        <p v-if="hasSelecting && selectedRows && selectedRows.length !== 0">
+          {{ selectedLabel }}
+        </p>
+      </template>
+
+      <template
+        #rightArea
+        v-if="(!hasSelecting && props.showToolbar) || (hasSelecting && selectedRows.length === 0)"
       >
-        <template #leftArea>
-          <slot
-            v-if="(hasSelecting && selectedRows?.length === 0) || !hasSelecting"
-            name="leftToolbar"
-          />
+        <slot name="toolbar" />
+      </template>
 
-          <p v-if="hasSelecting && selectedRows && selectedRows.length !== 0">
-            {{ selectedLabel }}
-          </p>
-        </template>
-
-        <template
-          #rightArea
-          v-if="(!hasSelecting && props.showToolbar) || (hasSelecting && selectedRows.length === 0)"
+      <template #rightArea v-else-if="hasSelecting && selectedRows.length > 0">
+        <div
+          class="selection-action-button-toolbar"
+          :class="{ 'single-action': hasSingleSelectionAction }"
         >
-          <slot name="toolbar" />
-        </template>
-
-        <template #rightArea v-else-if="hasSelecting && selectedRows.length > 0">
-          <div class="selection-action-button-toolbar">
-            <div class="selection-action-buttons">
-              <LxActionButton
-                v-for="selectAction in selectionActionsResolved"
-                :key="selectAction.id"
-                :action="selectAction"
-                :omit="['href', 'variant']"
-                :id="selectAction.id"
-                :disabled="selectAction.disabled || busy || loading"
-                kind="ghost"
-                @click="handleSelectionActionClick(selectAction.id, undefined, selectedRows)"
-              />
-            </div>
-            <div class="selection-action-buttons-small" v-if="selectionActionsResolved?.length > 0">
-              <LxDropDownMenu
-                :actionDefinitions="selectionActionsResolved"
-                :actionGroupDefinitions="selectionActionGroupDefinitions"
-                :disabled="isDisabled"
-                @actionClick="
-                  (id, actionValue) => handleSelectionActionClick(id, actionValue, selectedRows)
-                "
-              >
-                <LxButton
-                  :id="`${id}-selection-actions-button`"
-                  icon="menu"
-                  kind="ghost"
-                  :label="displayTexts.overflowMenu"
-                  variant="icon-only"
-                  tabindex="-1"
-                  :disabled="isDisabled"
-                />
-              </LxDropDownMenu>
-            </div>
+          <div class="selection-action-buttons">
+            <LxActionButton
+              v-for="selectAction in selectionActionsResolved"
+              :key="selectAction.id"
+              :action="selectAction"
+              :omit="['href', 'variant']"
+              :id="selectAction.id"
+              :disabled="selectAction.disabled || busy || loading"
+              kind="ghost"
+              :variant="isResponsiveLayout && hasSingleSelectionAction ? 'icon-only' : undefined"
+              @click="handleSelectionActionClick(selectAction.id, undefined, selectedRows)"
+            />
           </div>
-        </template>
-      </LxToolbar>
-    </div>
+          <div
+            class="selection-action-buttons-small"
+            v-if="selectionActionsResolved?.length > 0 && !hasSingleSelectionAction"
+          >
+            <LxDropDownMenu
+              :actionDefinitions="selectionActionDefinitions"
+              :actionGroupDefinitions="selectionActionGroupDefinitions"
+              :disabled="isDisabled"
+              @actionClick="
+                (id, actionValue) => handleSelectionActionClick(id, actionValue, selectedRows)
+              "
+            >
+              <LxButton
+                :id="`${id}-selection-actions-button`"
+                icon="menu"
+                kind="ghost"
+                :label="displayTexts.overflowMenu"
+                variant="icon-only"
+                tabindex="-1"
+                :disabled="isDisabled"
+              />
+            </LxDropDownMenu>
+          </div>
+        </div>
+      </template>
+    </LxToolbar>
     <div class="lx-data-grid-table-wrapper">
       <div
         v-if="stickyHeader"
         ref="headerWrapperRef"
-        class="lx-grid-header-wrapper"
+        class="lx-grid-header-wrapper lx-shadow-bottom"
         aria-hidden="true"
         tabindex="-1"
         @focusin="handleStickyHeaderFocusIn"

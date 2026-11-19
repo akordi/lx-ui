@@ -42,6 +42,7 @@
   --space-0375: 0.375rem;
   --space-0500: 0.5rem;
   --space-0750: 0.75rem;
+  --space-0875: 0.875rem;
   --space-1000: 1rem;
   --space-1250: 1.25rem;
   --space-1500: 1.5rem;
@@ -72,8 +73,10 @@
   --gap-form-small: var(--space-2000) var(--gap-form-small-side) var(--space-1000) var(--gap-form-small-side);
 
   --row-size: 3rem;
+  --sticky-row-size: 3rem;
   --row-dynamic: var(--row-size);
   --nav-row-size: 3rem;
+  --sticky-nav-row-size: 3rem;
   --public-nav-header-size: calc(var(--nav-row-size) + var(--row-size));
   --body-column-size: 1300px;
   --form-column-size: 30rem;
@@ -100,7 +103,7 @@
   --data-grid-action-border-radius: var(--button-border-radius);
   --data-grid-action-height: var(--row-size);
   --data-grid-action-width: var(--row-size);
-  --data-grid-action-outline-offset: var(--button-ghost-outline-offset);
+  --data-grid-action-outline-offset: -2px;
   --data-grid-footer-divider-border: var(--border-width-1) solid var(--color-chrome);
   --data-grid-footer-divider-height: stretch;
   --data-grid-footer-button-icon-size: var(--button-icon-size);
@@ -111,7 +114,7 @@
   --data-grid-footer-button-min-width: 5.5rem;
   --data-grid-footer-button-icon-only-width: var(--button-icon-only-width);
   --data-grid-footer-button-icon-only-min-width: var(--button-icon-only-min-width);
-  --data-grid-footer-button-outline-offset: var(--button-ghost-outline-offset);
+  --data-grid-footer-button-outline-offset: -2px;
   --data-grid-footer-grid-template-columns: auto 1fr auto;
   --data-grid-footer-grid-areas: 'count-selector count-display paging-buttons';
   --data-grid-column-header-icon-size: var(--icon-size-s);
@@ -245,6 +248,7 @@
   --list-draggable-handle-width: var(--row-size);
   --list-treelist-expander-height: var(--row-size);
   --list-treelist-expander-width: var(--row-size);
+  --list-treelist-expander-outline-offset: var(--list-button-outline-offset);
   --list-treelist-grid-areas: 'expander treelist-content';
   --list-treelist-grid-template-columns: auto 1fr;
   --list-treelist-indent-left: var(--row-size);
@@ -289,7 +293,8 @@
   --nav-tile-text-secondary-padding: var(--space-0);
   --nav-tile-text-secondary-margin: var(--space-1250) var(--space-0) var(--space-0) var(--space-0);
 
-  --tile-height: 12rem;
+  --tile-height: 100%;
+  --tile-min-height: 12rem;
   --tile-width: 20rem;
   --tile-border-radius: var(--space-0);
   --tile-set-gap: var(--space-0250);
@@ -404,7 +409,7 @@
   --input-text-font-weight: var(--font-weight);
   --input-text-line-height: 1.5;
   --input-button-border: var(--button-ghost-border);
-  --input-button-outline-offset: var(--button-ghost-outline-offset);
+  --input-button-outline-offset: -2px;
   --input-button-border-radius: var(--border-radius-0);
   --input-button-height: 2.5rem;
   --input-button-indent-left: var(--space-0);
@@ -601,7 +606,7 @@
   --button-ghost-height: var(--button-height);
   --button-ghost-icon-size: var(--button-icon-size);
   --button-ghost-min-width: var(--button-min-width);
-  --button-ghost-outline-offset: -2px;
+  --button-ghost-outline-offset: var(--button-outline-offset);
   --button-ghost-padding: var(--button-padding);
   --button-ghost-width: var(--button-width);
   --button-ghost-icon-only-height: var(--button-icon-only-height);
@@ -623,6 +628,7 @@
   --popover-item-border-radius-selected: var(--border-radius-default);
   --popover-item-text-font-size: var(--font-size);
   --popover-item-text-font-weight: var(--font-weight);
+  --popover-item-text-line-height: 1.25;
   --popover-item-text-alignment: left;
   --popover-item-text-decoration: none;
   --popover-item-alignment: left;
@@ -637,11 +643,10 @@
   --popover-item-button-grid-template-columns: var(--popover-item-grid-template-columns);
   --popover-item-button-grid-template-rows: var(--popover-item-grid-template-rows);
   --popover-item-height: var(--row-size-dynamic);
-  --popover-item-icon-size-s: var(--icon-size-s);
-  --popover-item-icon-size-l: var(--icon-size-m);
+  --popover-item-icon-size: var(--icon-size-s);
   --popover-item-outline-offset: 0;
-  --popover-item-padding-s: var(--space-0250) var(--space-0750);
-  --popover-item-padding-l: var(--space-0750);
+  --popover-item-padding-s: var(--space-0375) var(--space-0750);
+  --popover-item-padding-l: var(--space-0875) var(--space-0750);
   --popover-label-padding: var(--space-0500) var(--space-0750);
   --popover-label-font-size: var(--font-size-label);
   --popover-checkmark-inset-s: var(--space-0375) var(--space-0750) auto auto;
@@ -661,6 +666,8 @@
   --popover-item-tag-border-width: var(--border-width-2);
   --popover-item-tag-border-style: solid;
   --popover-item-tag-gap: var(--space-0250);
+  --popover-selecting-block-height: 1.25rem;
+  --popover-selecting-block-width: 1.25rem;
 
   --toolbar-box-shadow: none;
   --toolbar-gap-top: var(--space-0);
@@ -924,6 +931,7 @@
 
   --nav-header-divider-border: var(--border-width-1) solid var(--color-nav-foreground);
   --nav-header-divider-height: 2rem;
+  --nav-header-button-outline-offset: -2px;
 
   --modal-header-grid-areas: 'content button';
   --modal-header-grid-template-columns: 1fr auto;
@@ -1047,7 +1055,7 @@
   --info-box-button-width: var(--button-ghost-icon-only-width);
   --info-box-button-border: var(--button-ghost-border);
   --info-box-button-border-radius: var(--border-radius-0);
-  --info-box-button-outline-offset: var(--button-ghost-outline-offset);
+  --info-box-button-outline-offset: -2px;
   --info-box-button-icon-size: var(--button-ghost-icon-size);
 
   --notification-width: 28rem;
@@ -1095,7 +1103,7 @@
   --sheet-button-min-width: var(--space-3000);
   --sheet-button-border: var(--button-ghost-border);
   --sheet-button-border-radius: var(--button-ghost-border-radius);
-  --sheet-button-outline-offset: var(--button-ghost-outline-offset);
+  --sheet-button-outline-offset: -2px;
   --sheet-button-icon-size: var(--button-ghost-icon-size);
 
   --tooltip-padding: var(--space-0250) var(--space-0500);
@@ -1211,6 +1219,7 @@
   --form-section-divider-margin: var(--space-0);
   --form-header-footer-divider-display: block;
   --form-section-padding: var(--space-2000);
+  --form-index-item-outline-offset: -2px;
 
   --link-inline-text-decoration: underline;
   --link-inline-text-decoration-hover: none;

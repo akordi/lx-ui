@@ -26,6 +26,7 @@ import {
   remToPx,
 } from '@/utils/generalUtils';
 import { useBuilderRegistration } from '@/utils/builderUtils';
+import { shadowOpacity } from '@/utils/shadowUtils';
 
 const slots = useSlots();
 const emits = defineEmits(['actionClick', 'update:index']);
@@ -391,28 +392,30 @@ function scrollTo(id) {
   });
 }
 
+const formHeaderSize = computed(() => {
+  const header = formHeader.value;
+  const measuredHeight = headerSize.height.value ?? 0;
+
+  if (!header) return measuredHeight;
+
+  const before = getComputedStyle(header, '::before');
+  if (before.display === 'none') return measuredHeight;
+
+  return measuredHeight + Number.parseFloat(before.borderBottomWidth || '0');
+});
+
 /**
  * Computed property that calculates the CSS properties for the top out of bounds effect.
  * @returns {string} The CSS properties for the top out of bounds effect.
  * @since 1.2.2
  */
 const topOutOfBounds = computed(() => {
-  const keyOpacity = '--form-top-shadow-opacity';
-  const keySize = '--form-header-size';
-  const limit = 100;
-  const size = headerSize.height?.value;
-
-  if (!form.value || !formHeader.value) return `${keyOpacity}: 0; ${keySize}: var(--row-size);`;
-
+  if (!form.value || !formHeader.value)
+    return '--form-top-shadow-opacity: 0; --form-header-size: var(--row-size);';
   const v = bounding.top ? bounding.top.value - calculateOffset(form.value, false) : 0;
-
-  if (v < 0 - limit) {
-    return `${keyOpacity}: 1; ${keySize}: ${size}px;`;
-  }
-  if (v < 0) {
-    return `${keyOpacity}: ${(0 - v) / limit}; ${keySize}: ${size}px;`;
-  }
-  return `${keyOpacity}: 0; ${keySize}: ${size}px;`;
+  return `--form-top-shadow-opacity: ${shadowOpacity(-v)}; --form-header-size: ${
+    formHeaderSize.value
+  }px;`;
 });
 /**
  * Computes the CSS properties for the bottom shadow and footer size of the form component.
@@ -420,23 +423,13 @@ const topOutOfBounds = computed(() => {
  * @since 1.2.2
  */
 const bottomOutOfBounds = computed(() => {
-  const keyOpacity = '--form-bottom-shadow-opacity';
-  const keySize = '--form-footer-size';
-  const limit = 100;
-  const size = footerSize.height?.value;
-
-  if (!form.value || !formFooter.value) return `${keyOpacity}: 0; ${keySize}: var(--row-size);`;
-
+  if (!form.value || !formFooter.value)
+    return '--form-bottom-shadow-opacity: 0; --form-footer-size: var(--row-size);';
   const v =
     bounding.bottom && windowSize.height ? bounding.bottom.value - windowSize.height.value : 0;
-
-  if (v > limit) {
-    return `${keyOpacity}: 1; ${keySize}: ${size}px;`;
-  }
-  if (v > 0) {
-    return `${keyOpacity}: ${v / limit}; ${keySize}: ${size}px;`;
-  }
-  return `${keyOpacity}: 0; ${keySize}: ${size}px;`;
+  return `--form-bottom-shadow-opacity: ${shadowOpacity(v)}; --form-footer-size: ${
+    footerSize.height?.value
+  }px;`;
 });
 
 const indexTypeRef = computed(() => props.indexType);
@@ -844,9 +837,9 @@ watch(
       const allElements = document
         .getElementById(props.id)
         .getElementsByClassName('lx-form-section');
-      for (let i = 0; i < allElements.length; i += 1) {
-        allElements[i].style.display = 'grid';
-      }
+      Array.from(allElements).forEach((element) => {
+        element.style.display = 'grid';
+      });
       nextTick(() => {
         const elementForm = document.getElementById(props.id);
         props.index?.forEach((o) => {
@@ -1063,7 +1056,7 @@ useBuilderRegistration('LxForm', props, { texts: textsDefault, addToStack: false
       ref="formHeader"
       class="lx-form-grid-header"
       :class="[
-        { 'lx-form-grid-header-sticky': stickyHeader },
+        { 'lx-form-grid-header-sticky lx-shadow-bottom': stickyHeader },
         { 'lx-simple': slots.preHeader === undefined },
         { 'lx-form-with-aside': props.indexType === 'default' && index?.length > 0 },
       ]"
@@ -1376,7 +1369,7 @@ useBuilderRegistration('LxForm', props, { texts: textsDefault, addToStack: false
     <footer
       class="lx-form-grid-footer"
       :class="[
-        { 'lx-form-grid-footer-sticky': stickyFooter },
+        { 'lx-form-grid-footer-sticky lx-shadow-top': stickyFooter },
         { 'crowded-primary-buttons': primaryButtons?.length > 1 },
         { 'crowded-not-primary-buttons': notPrimaryButtonCount > 2 },
       ]"
